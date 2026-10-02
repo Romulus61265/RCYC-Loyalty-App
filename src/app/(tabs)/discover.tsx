@@ -43,18 +43,20 @@ export default function DiscoverScreen() {
   const [filter, setFilter] = useState<Filter>('all');
 
   const { data, loading, error, reload } = useAsync(async () => {
-    const [catalogue, collections, destinations, recs] = await Promise.all([
+    const [voyage, catalogue, collections, destinations, recs] = await Promise.all([
+      services.voyage.getVoyage(voyageId),
       services.experience.listCatalogue(voyageId),
       services.experience.listCollections(voyageId),
       services.experience.listDestinations(voyageId),
       services.personalization.getRecommendations(guestId, 'discover', { reservationId, limit: 4 }),
     ]);
-    return { catalogue, collections, destinations, recs };
+    return { voyage, catalogue, collections, destinations, recs };
   }, [voyageId, guestId, reservationId]);
 
   if (loading && !data) return <LoadingState />;
   if (error || !data) return <ErrorState error={error} onRetry={reload} />;
-  const { catalogue, collections, destinations, recs } = data;
+  const { voyage, catalogue, collections, destinations, recs } = data;
+  const portCount = new Set(voyage.itinerary.filter((p) => p.type !== 'sea').map((p) => p.portName)).size;
   const byId = (id: string) => catalogue.find((e) => e.id === id);
 
   const showDestinations = filter === 'all' || filter === 'destination';
@@ -67,7 +69,7 @@ export default function DiscoverScreen() {
 
   return (
     <Screen>
-      <PageHeader eyebrow="Discover" title="The Riviera, curated" subtitle="Seven ports, chosen moments — arranged around you." />
+      <PageHeader eyebrow="Discover" title={`${voyage.name}, curated`} subtitle={`${portCount} ports, chosen moments, arranged around you.`} />
       <SegmentedTabs options={FILTERS} value={filter} onChange={setFilter} />
 
       {filter === 'all' && (
@@ -103,7 +105,7 @@ export default function DiscoverScreen() {
               <Carousel>
                 {items.map((e) => (
                   <View key={e.id} style={{ width: 260 }}>
-                    <MediaTile media={e.hero} eyebrow={e.destination ?? 'Aboard Aurelia'} title={e.title} />
+                    <MediaTile media={e.hero} eyebrow={e.destination ?? 'Aboard'} title={e.title} />
                     <Text variant="caption" color={colors.textSecondary} style={{ marginTop: spacing.sm }} numberOfLines={2}>
                       {e.subtitle}
                     </Text>

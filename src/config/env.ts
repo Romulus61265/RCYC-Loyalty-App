@@ -36,8 +36,8 @@ export const env = {
   supabaseAnonKey: raw.supabaseAnonKey ?? '',
   apiBaseUrl: raw.apiBaseUrl ?? '',
   logLevel: pick(raw.logLevel, ['debug', 'info', 'warn', 'error'] as const, appEnv === 'production' ? 'warn' : 'debug'),
-  /** Mock-only: pin "now" to demo a journey phase. */
-  demoNow: raw.demoNow || '2026-10-15T10:00:00+01:00',
+  /** Mock-only: pin "now" to demo a journey phase. Empty = the dataset's reference moment. */
+  demoNow: raw.demoNow ?? '',
 } as const;
 
 export type Env = typeof env;
@@ -54,7 +54,7 @@ export function validateEnv(e: Env = env): string[] {
     if (e.serviceMode === 'supabase' && !/^https:\/\//.test(e.supabaseUrl)) issues.push('EXPO_PUBLIC_SUPABASE_URL must be an https:// URL in supabase mode.');
     if (e.serviceMode === 'supabase' && !e.supabaseAnonKey) issues.push('EXPO_PUBLIC_SUPABASE_ANON_KEY is required in supabase mode.');
   }
-  if (Number.isNaN(Date.parse(e.demoNow))) issues.push('EXPO_PUBLIC_DEMO_NOW is not a valid ISO date-time.');
+  if (e.demoNow && Number.isNaN(Date.parse(e.demoNow))) issues.push('EXPO_PUBLIC_DEMO_NOW is not a valid ISO date-time.');
   if (e.appEnv === 'production' && e.serviceMode === 'mock') issues.push('Production build is running on mock services.');
   return issues;
 }

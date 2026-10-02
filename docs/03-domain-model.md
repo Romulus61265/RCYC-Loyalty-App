@@ -145,6 +145,17 @@ classDiagram
 | **Continuity** | `JourneyEvent` → `JourneyAlert` | Event bus |
 | **Personalization** | `Recommendation`, signals, feedback | Decisioning platform |
 
+## Supporting types
+
+| Type | Context | Purpose |
+|---|---|---|
+| `FlightSegment` | Voyage | Inbound and outbound flights the transfer team tracks (`VoyageOverview.flights`) |
+| `ExcursionPreferences`, `SpaPreferences` | Guest | Private or small-group style, pace, favourite treatments, pressure |
+| `GuestNotification` | Continuity | Outbound push, e-mail, SMS and in-app history and schedule (`JourneyEventService.listNotifications`). It is distinct from `JourneyAlert`, which is an in-app card that needs attention. |
+| `PersonalizationSignal` | Personalization | An observed fact (rating, source, weight, tags) that feeds scoring |
+
+The development dataset in `src/data/fixtures` is typed end to end by `DevDataset`, which is built entirely from these domain types.
+
 ## Modelling rules
 
 * **Times carry the port's offset.** For example, `2026-10-17T20:30:00+02:00`. The UI shows wall-clock port time, so a guest at home in London still sees "20:30" for dinner in Barcelona.

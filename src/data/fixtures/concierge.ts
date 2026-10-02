@@ -1,0 +1,88 @@
+/** FICTIONAL concierge state for the Laurent party, as of the dataset's reference "now". */
+import type { DevConciergeData } from './types';
+import { IDS } from './ids';
+
+const R = IDS.reservation;
+
+export const conciergeData: DevConciergeData = {
+  ambassador: { name: 'Elena Moreau', title: 'Suite Ambassador' },
+
+  // Prefixed at runtime with a time-of-day salutation ("Good morning, Alexander.").
+  greeting: 'Everything is in hand for Barcelona on Saturday. How may I help?',
+
+  suggestedQuestions: [
+    'What is planned for my first day?',
+    'Can you move my dinner reservation?',
+    'What private experiences are available in Monte Carlo?',
+    'Can you arrange transportation?',
+    'What benefits do I have because of my Bonvoy status?',
+    'Can I arrange something special for our anniversary?',
+  ],
+
+  requests: [
+    {
+      id: 'dev_srq_anniv_dinner', reservationId: R, type: 'occasion',
+      summary: 'Anniversary dinner on a private terrace, 20 May',
+      details: '20th anniversary. Menu with the chef; a 2007 red to mark the wedding year. Keep it discreet.',
+      status: 'in_progress', priority: 'priority',
+      assignedTeam: 'suite-ambassador', assignedTo: 'Elena Moreau, Suite Ambassador',
+      createdAt: '2027-04-26T15:20:00-04:00', updatedAt: '2027-05-07T11:05:00-04:00',
+      nextUpdateBy: '2027-05-13T17:00:00-04:00',
+    },
+    {
+      id: 'dev_srq_wine_2007', reservationId: R, type: 'general',
+      summary: 'Source a 2007 Barolo for the anniversary',
+      details: 'The head sommelier has secured a 2007 Barolo Riserva, to be decanted at the table.',
+      status: 'confirmed', priority: 'routine',
+      assignedTeam: 'guest-services', assignedTo: 'Luca Ferraro, Head Sommelier',
+      createdAt: '2027-04-26T15:24:00-04:00', updatedAt: '2027-05-04T09:40:00-04:00',
+    },
+    {
+      id: 'dev_srq_bridge', reservationId: R, type: 'excursion',
+      summary: 'Bridge visit on the sea day, 17 May',
+      details: 'The Captain can welcome you at 16:30 or 17:30. Please choose a time.',
+      status: 'awaiting_guest', priority: 'routine',
+      assignedTeam: 'guest-services', assignedTo: 'Guest Services',
+      createdAt: '2027-05-02T10:12:00-04:00', updatedAt: '2027-05-10T14:30:00-04:00',
+    },
+    {
+      id: 'dev_srq_bedding', reservationId: R, type: 'suite',
+      summary: 'Feather-free pillows and duvet in Grand Suite 612',
+      status: 'completed', priority: 'routine',
+      assignedTeam: 'suite-ambassador', assignedTo: 'Elena Moreau, Suite Ambassador',
+      createdAt: '2027-04-20T08:55:00-04:00', updatedAt: '2027-04-21T10:00:00-04:00',
+    },
+    {
+      id: 'dev_srq_heli', reservationId: R, type: 'transport',
+      summary: 'Helicopter to Nice and lunch in Saint-Paul-de-Vence, 19 May',
+      details: 'Requested as an alternative afternoon plan. Awaiting the charter operator’s confirmation.',
+      status: 'received', priority: 'routine',
+      assignedTeam: 'destination-services',
+      createdAt: '2027-05-10T19:45:00-04:00', updatedAt: '2027-05-10T19:45:00-04:00',
+      nextUpdateBy: '2027-05-12T12:00:00-04:00',
+    },
+  ],
+
+  history: [
+    {
+      id: 'dev_msg_h1', author: 'guest', createdAt: '2027-04-26T15:02:00-04:00',
+      body: 'Our 20th anniversary falls during the voyage. Could you arrange something special in Monaco?',
+    },
+    {
+      id: 'dev_msg_h2', author: 'ai', createdAt: '2027-04-26T15:02:20-04:00', intent: 'occasion.plan',
+      body: 'Congratulations, Mr. Laurent. Your anniversary on 20 May falls on your second day in Monte Carlo. I’ve asked Elena, your Suite Ambassador, to plan it with you personally.',
+    },
+    {
+      id: 'dev_msg_h3', author: 'human', authorName: 'Elena, Suite Ambassador', createdAt: '2027-04-26T15:18:00-04:00',
+      body: 'Good afternoon, Alexander. I would love to help. A private terrace dinner, a menu with the chef, and a red from 2007, perhaps? I will keep it entirely between us.',
+    },
+    {
+      id: 'dev_msg_h4', author: 'guest', createdAt: '2027-04-26T15:20:00-04:00',
+      body: 'Perfect. A Barolo if possible. And a couples spa that afternoon.',
+    },
+    {
+      id: 'dev_msg_h5', author: 'human', authorName: 'Elena, Suite Ambassador', createdAt: '2027-04-26T15:31:00-04:00',
+      body: 'Done: the couples terrace ritual at 16:00 is reserved, and Luca, our head sommelier, is sourcing the Barolo. I will share the menu with you before you sail.',
+    },
+  ],
+};

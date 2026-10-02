@@ -1,7 +1,8 @@
 import type { ExperienceBooking, ExperienceCategory, ID, ISODateTime } from '@/domain';
 import type { AvailabilityQuery, ExperienceService } from '@/services/contracts';
-import { bookings, catalogue, collections, daySchedules, destinations } from '@/data/fixtures/experiences';
-import { latency, mockId, mockNow, notFound } from './support';
+import { data, latency, mockId, mockNow, notFound } from './support';
+
+const { bookings, catalogue, collections, daySchedules, destinations } = data.experiences;
 
 export class MockExperienceService implements ExperienceService {
   private bookings: ExperienceBooking[] = [...bookings];
@@ -63,7 +64,7 @@ export class MockExperienceService implements ExperienceService {
       experienceId,
       category: exp.category,
       title: exp.title,
-      venue: exp.destination ?? 'Aboard Aurelia',
+      venue: exp.destination ?? `Aboard ${data.voyage.yacht.name}`,
       start: slot,
       partySize,
       status: 'received',

@@ -34,6 +34,32 @@ export interface JourneyEvent<TPayload = Record<string, unknown>> {
   dedupeKey: string;
 }
 
+export type NotificationChannel = 'push' | 'email' | 'sms' | 'whatsapp' | 'in-app';
+
+export type NotificationCategory = 'pre-voyage' | 'travel' | 'onboard' | 'reservation' | 'concierge' | 'occasion' | 'post-voyage';
+
+/**
+ * A message sent (or scheduled) to the guest through a channel. Distinct
+ * from JourneyAlert: alerts are in-app cards that need attention; notifications
+ * are the outbound communication history.
+ */
+export interface GuestNotification {
+  id: ID;
+  guestId: ID;
+  reservationId?: ID;
+  channel: NotificationChannel;
+  category: NotificationCategory;
+  title: string;
+  body: string;
+  /** In-app route opened when tapped. */
+  deepLink?: string;
+  scheduledFor: ISODateTime;
+  deliveredAt?: ISODateTime;
+  readAt?: ISODateTime;
+  /** Respect quiet hours unless urgent. */
+  bypassQuietHours: boolean;
+}
+
 /** Guest-facing projection of an event. Calm wording, clear next step. */
 export interface JourneyAlert {
   id: ID;

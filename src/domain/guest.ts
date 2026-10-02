@@ -14,6 +14,8 @@ export interface Guest {
   dateOfBirth?: ISODate;
   nationality?: string;
   homeCity?: string;
+  /** IATA code of the guest's usual departure airport, e.g. "MIA". */
+  homeAirport?: string;
   portrait?: MediaAsset;
   /** Relationship tenure with the Yacht Collection (not loyalty programme). */
   guestSince: ISODate;
@@ -48,7 +50,7 @@ export interface SpecialOccasion {
 
 export interface DiningPreferences {
   cuisines: string[];
-  tablePreference?: 'terrace' | 'quiet-corner' | 'chefs-table' | 'no-preference';
+  tablePreference?: 'window' | 'terrace' | 'quiet-corner' | 'chefs-table' | 'no-preference';
   preferredSeating?: string;
   notes?: string;
 }
@@ -74,6 +76,21 @@ export interface SuitePreferences {
   newspapers?: string[];
 }
 
+export interface ExcursionPreferences {
+  style: 'private' | 'small-group' | 'any';
+  pace: 'leisurely' | 'moderate' | 'active';
+  /** Maximum comfortable duration ashore, in minutes. */
+  maxDurationMinutes?: number;
+  notes?: string;
+}
+
+export interface SpaPreferences {
+  favouriteTreatments: string[];
+  pressure?: 'light' | 'medium' | 'firm';
+  preferredTime?: 'morning' | 'afternoon' | 'evening';
+  notes?: string;
+}
+
 export interface CommunicationPreferences {
   channels: { push: boolean; email: boolean; sms: boolean; whatsapp: boolean };
   /** Quiet hours in ship local time — no non-urgent notifications. */
@@ -90,6 +107,8 @@ export interface GuestPreferences {
   beverage: BeveragePreferences;
   suite: SuitePreferences;
   activityInterests: string[];
+  excursions: ExcursionPreferences;
+  spa: SpaPreferences;
   communication: CommunicationPreferences;
 }
 

@@ -1,164 +1,182 @@
 /**
- * Fictional guest data. Any resemblance to real persons is coincidental.
+ * FICTIONAL guest: Alexander Laurent. Any resemblance to real persons is
+ * coincidental. Privileges below are illustrative for this concept and are
+ * NOT actual Marriott Bonvoy terms or benefits.
  */
-import type {
-  GuestPrivilege,
-  GuestProfile,
-  GuestRelationship,
-  LoyaltyMembership,
-} from '@/domain';
+import type { DevGuestData } from './types';
+import { IDS } from './ids';
 
-export const LEAD_GUEST_ID = 'gst_7f3a91';
-export const COMPANION_GUEST_ID = 'gst_7f3a92';
+export const guestData: DevGuestData = {
+  profile: {
+    guest: {
+      id: IDS.guest,
+      salutation: 'Mr. Laurent',
+      firstName: 'Alexander',
+      lastName: 'Laurent',
+      preferredName: 'Alexander',
+      emailMasked: 'a•••••••@example.com',
+      phoneMasked: '+1 (305) •••-••47',
+      dateOfBirth: '1968-09-23',
+      nationality: 'American',
+      homeCity: 'Miami, Florida',
+      homeAirport: 'MIA',
+      guestSince: '2023-12-02',
+      source: { system: 'mock' },
+    },
+    preferences: {
+      guestId: IDS.guest,
+      preferredDestinations: ['French Riviera', 'Italian Riviera', 'Balearic Islands', 'Adriatic', 'Greek Islands'],
+      dining: {
+        cuisines: ['Mediterranean', 'Ligurian', 'Provençal', 'Catalan'],
+        tablePreference: 'window',
+        preferredSeating: 'Window table for two, facing the sea',
+        notes: 'Prefers dinner from 20:30. Enjoys a word with the chef; dislikes long tasting menus on port days.',
+      },
+      dietary: {
+        restrictions: [],
+        allergies: [],
+      },
+      beverage: {
+        wine: ['Red wine — Barolo, Brunello di Montalcino, Saint-Émilion', 'Champagne for celebrations'],
+        spirits: ['Aged rum (neat)'],
+        nonAlcoholic: ['Sparkling water — San Pellegrino, no ice, with lemon', 'Espresso after dinner'],
+        welcomeAmenity: 'A bottle of Brunello di Montalcino, decanted on request, with chilled sparkling water',
+      },
+      suite: {
+        pillow: 'Feather-free (synthetic down alternative) — all pillows and duvet',
+        bedConfiguration: 'king',
+        temperatureCelsius: 21,
+        turndown: 'Blinds half-closed to keep the sea view; sparkling water on both nightstands',
+        minibar: ['Sparkling water (case)', 'Dark chocolate', 'No sugary soft drinks'],
+        newspapers: ['The Wall Street Journal', 'Financial Times (digital)'],
+      },
+      activityInterests: ['Fine dining', 'Wine', 'Private cultural experiences', 'Spa', 'Yachting & sailing'],
+      excursions: {
+        style: 'private',
+        pace: 'leisurely',
+        maxDurationMinutes: 300,
+        notes: 'Private guide and vehicle always. Prefers early access before crowds; avoids large-group coaches.',
+      },
+      spa: {
+        favouriteTreatments: ['Deep-tissue massage', 'Thalassotherapy', 'Couples ritual (with Camille)'],
+        pressure: 'firm',
+        preferredTime: 'morning',
+        notes: 'Male or female therapist, no preference. Unscented oil.',
+      },
+      communication: {
+        channels: { push: true, email: true, sms: true, whatsapp: false },
+        quietHours: { start: '23:00', end: '07:00' },
+        language: 'en-US',
+        marketingConsent: true,
+      },
+    },
+    companions: [
+      {
+        id: IDS.companion,
+        guestId: IDS.companion,
+        firstName: 'Camille',
+        lastName: 'Laurent',
+        relationship: 'spouse',
+        isMinor: false,
+        notes: 'Enjoys art and gardens; prefers lighter afternoon activities. Shares the spa ritual on the anniversary.',
+      },
+    ],
+    occasions: [
+      {
+        id: 'dev_occ_anniv_20',
+        type: 'anniversary',
+        label: '20th wedding anniversary',
+        date: '2027-05-20',
+        personIds: [IDS.guest, IDS.companion],
+        recognition: 'discreet',
+      },
+      {
+        id: 'dev_occ_bday_alexander',
+        type: 'birthday',
+        label: "Alexander's birthday",
+        date: '2027-09-23',
+        personIds: [IDS.guest],
+        recognition: 'discreet',
+      },
+    ],
+  },
 
-export const guestProfile: GuestProfile = {
-  guest: {
-    id: LEAD_GUEST_ID,
-    salutation: 'Mrs. Laurent-Hale',
-    firstName: 'Isabelle',
-    lastName: 'Laurent-Hale',
-    preferredName: 'Isabelle',
-    emailMasked: 'i•••••@l•••••.co.uk',
-    phoneMasked: '+44 •••• ••• 218',
-    dateOfBirth: '1972-03-14',
-    nationality: 'British',
-    homeCity: 'London',
-    guestSince: '2024-05-18',
+  membership: {
+    programme: 'marriott-bonvoy',
+    memberNumberMasked: '•••• •••• 7314',
+    tier: 'titanium',
+    tierLabel: 'Titanium Elite',
+    lifetimeStatus: 'Lifetime Platinum Elite',
+    memberSince: '2009-03-12',
+    pointsBalance: 486_250,
     source: { system: 'mock' },
   },
-  preferences: {
-    guestId: LEAD_GUEST_ID,
-    preferredDestinations: ['French Riviera', 'Amalfi Coast', 'Greek Islands', 'Dalmatian Coast'],
-    dining: {
-      cuisines: ['Ligurian', 'Provençal', 'Japanese omakase'],
-      tablePreference: 'terrace',
-      preferredSeating: 'Ocean-side, away from service stations',
-      notes: 'Prefers dinner at 20:00 or later. Enjoys meeting the chef.',
-    },
-    dietary: {
-      restrictions: ['Pescatarian (James)'],
-      allergies: [{ allergen: 'Tree nuts', severity: 'allergy' }],
-    },
-    beverage: {
-      wine: ['Barolo', 'White Burgundy', 'Provence rosé'],
-      spirits: ['Japanese whisky'],
-      nonAlcoholic: ['San Pellegrino', 'Fresh mint tea'],
-      welcomeAmenity: 'Ruinart Blanc de Blancs, chilled',
-    },
-    suite: {
-      pillow: 'Firm, hypoallergenic',
-      bedConfiguration: 'king',
-      temperatureCelsius: 20,
-      turndown: 'Shades drawn, terrace doors closed, lavender mist',
-      minibar: ['Still water', 'Dark chocolate (nut-free)', 'Champagne'],
-      newspapers: ['Financial Times', 'Le Figaro'],
-    },
-    activityInterests: ['Wine & viticulture', 'Contemporary art', 'Coastal walking', 'Open-water swimming', 'Architecture'],
-    communication: {
-      channels: { push: true, email: true, sms: false, whatsapp: true },
-      quietHours: { start: '22:30', end: '07:30' },
-      language: 'en-GB',
-      marketingConsent: false,
-    },
+
+  relationship: {
+    guestId: IDS.guest,
+    voyagesCompleted: 3,
+    nightsSailed: 24,
+    firstVoyageDate: '2023-12-02',
+    yachtsSailed: ['Evrima', 'Ilma'],
+    valueSegment: 'distinguished',
+    ambassadorName: 'Elena Moreau',
   },
-  companions: [
+
+  privileges: [
     {
-      id: COMPANION_GUEST_ID,
-      guestId: COMPANION_GUEST_ID,
-      firstName: 'James',
-      lastName: 'Hale',
-      relationship: 'spouse',
-      isMinor: false,
-      notes: 'Pescatarian. Keen sailor; enjoys early-morning swims from the marina.',
+      id: 'dev_prv_embark',
+      title: 'Priority, unhurried embarkation',
+      description: 'A personal arrival window and escort straight to your Grand Suite. No queue at the gangway.',
+      category: 'arrival',
+      basis: 'bonvoy-tier',
+      appliesToVoyageId: IDS.voyage,
+    },
+    {
+      id: 'dev_prv_amenity',
+      title: 'Your welcome amenity',
+      description: 'Brunello di Montalcino and chilled sparkling water, waiting in your suite with a note from Elena.',
+      category: 'suite',
+      basis: 'bonvoy-tier',
+      appliesToVoyageId: IDS.voyage,
+    },
+    {
+      id: 'dev_prv_chefs',
+      title: "An evening at the Chef's Counter",
+      description: 'Reserved seats at the eight-seat counter on the sea day, with the head sommelier pairing red wines.',
+      category: 'dining',
+      basis: 'voyage-tenure',
+      appliesToVoyageId: IDS.voyage,
+    },
+    {
+      id: 'dev_prv_spa',
+      title: 'Preferred spa scheduling',
+      description: 'First choice of morning treatment times, 72 hours before they open to all guests.',
+      category: 'wellness',
+      basis: 'bonvoy-tier',
+    },
+    {
+      id: 'dev_prv_window',
+      title: 'Your window table, held',
+      description: 'A window table for two is held for you each evening in Mediterraneo, unless you choose elsewhere.',
+      category: 'dining',
+      basis: 'voyage-tenure',
+      appliesToVoyageId: IDS.voyage,
+    },
+    {
+      id: 'dev_prv_late',
+      title: 'Late disembarkation',
+      description: 'Remain in your Grand Suite until your car to Fiumicino, with breakfast on your terrace.',
+      category: 'suite',
+      basis: 'suite-category',
+      appliesToVoyageId: IDS.voyage,
+    },
+    {
+      id: 'dev_prv_occasion',
+      title: 'Your anniversary, quietly arranged',
+      description: 'Elena knows about your 20th anniversary in Monte Carlo and will arrange as much, or as little, as you wish.',
+      category: 'recognition',
+      basis: 'occasion',
+      appliesToVoyageId: IDS.voyage,
     },
   ],
-  occasions: [
-    {
-      id: 'occ_25anniv',
-      type: 'anniversary',
-      label: '25th wedding anniversary',
-      date: '2026-10-21',
-      personIds: [LEAD_GUEST_ID, COMPANION_GUEST_ID],
-      recognition: 'discreet',
-    },
-    {
-      id: 'occ_bday_isabelle',
-      type: 'birthday',
-      label: "Isabelle's birthday",
-      date: '2027-03-14',
-      personIds: [LEAD_GUEST_ID],
-      recognition: 'celebrate',
-    },
-  ],
 };
-
-export const loyaltyMembership: LoyaltyMembership = {
-  programme: 'marriott-bonvoy',
-  memberNumberMasked: '•••• •••• 4821',
-  tier: 'titanium',
-  tierLabel: 'Titanium Elite',
-  lifetimeStatus: 'Lifetime Platinum Elite',
-  memberSince: '2006-09-01',
-  pointsBalance: 1_284_350,
-  source: { system: 'mock' },
-};
-
-export const guestRelationship: GuestRelationship = {
-  guestId: LEAD_GUEST_ID,
-  voyagesCompleted: 2,
-  nightsSailed: 17,
-  firstVoyageDate: '2024-05-18',
-  yachtsSailed: ['Serena', 'Aurelia'],
-  valueSegment: 'distinguished',
-  ambassadorName: 'Sophie Marchetti',
-};
-
-export const privileges: GuestPrivilege[] = [
-  {
-    id: 'prv_arrival',
-    title: 'Priority, unhurried embarkation',
-    description: 'A personal arrival window and escort directly to your suite — no queue, no formalities at the gangway.',
-    category: 'arrival',
-    basis: 'bonvoy-tier',
-    appliesToVoyageId: 'voy_riv_1026',
-  },
-  {
-    id: 'prv_amenity',
-    title: 'Welcome amenity of your choosing',
-    description: 'Ruinart Blanc de Blancs awaiting you, chilled, with a note from your Suite Ambassador.',
-    category: 'suite',
-    basis: 'bonvoy-tier',
-    appliesToVoyageId: 'voy_riv_1026',
-  },
-  {
-    id: 'prv_chefs',
-    title: "An evening at the Chef's Counter",
-    description: 'Reserved seating at the eight-seat tasting counter on an evening of your choice, with wine pairing.',
-    category: 'dining',
-    basis: 'voyage-tenure',
-    appliesToVoyageId: 'voy_riv_1026',
-  },
-  {
-    id: 'prv_spa',
-    title: 'Preferred spa scheduling',
-    description: 'First access to treatment times before they open to all guests, 72 hours ahead of each port day.',
-    category: 'wellness',
-    basis: 'bonvoy-tier',
-  },
-  {
-    id: 'prv_late',
-    title: 'Late disembarkation',
-    description: 'Remain in your suite until 11:00 on the final morning, with breakfast served on your terrace.',
-    category: 'suite',
-    basis: 'suite-category',
-    appliesToVoyageId: 'voy_riv_1026',
-  },
-  {
-    id: 'prv_occasion',
-    title: 'A quiet celebration, arranged',
-    description: 'Your Suite Ambassador is aware of your anniversary and will arrange anything you wish — or nothing at all.',
-    category: 'recognition',
-    basis: 'occasion',
-    appliesToVoyageId: 'voy_riv_1026',
-  },
-];

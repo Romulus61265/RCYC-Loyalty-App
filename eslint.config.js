@@ -31,6 +31,16 @@ module.exports = defineConfig([
     rules: { 'no-restricted-imports': ['error', presentationBoundary] },
   },
   {
+    // Dev scripts report to the terminal.
+    files: ['scripts/**/*.ts'],
+    rules: { 'no-console': 'off' },
+  },
+  {
+    // Fixtures are dev-only data: production adapters must never read them.
+    files: ['src/services/remote/**/*.ts', 'src/services/contracts/**/*.ts', 'src/core/**/*.ts', 'src/config/**/*.ts'],
+    rules: { 'no-restricted-imports': ['error', { patterns: [{ group: ['@/data/*', '@/data', '@/services/mock/*'], message: 'Production code must not depend on development fixtures or mocks.' }] }] },
+  },
+  {
     files: ['src/domain/**/*.ts'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [{ group: ['react', 'react-native', 'expo*', '@/*'], message: 'Domain is pure TypeScript with no dependencies.' }] }],

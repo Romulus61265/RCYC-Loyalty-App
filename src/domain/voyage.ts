@@ -104,6 +104,24 @@ export interface TravelDocument {
   dueBy?: ISODate;
 }
 
+/** Air travel to/from the voyage, as known to the reservation (fictional in dev data). */
+export interface FlightSegment {
+  id: ID;
+  reservationId: ID;
+  direction: 'inbound' | 'outbound';
+  carrier: string;
+  flightNumber: string;
+  /** IATA codes. */
+  origin: string;
+  destination: string;
+  departure: ISODateTime;
+  arrival: ISODateTime;
+  cabin: 'economy' | 'premium-economy' | 'business' | 'first';
+  status: 'scheduled' | 'delayed' | 'departed' | 'landed' | 'cancelled';
+  /** Whether the yacht's transfer team is tracking this flight. */
+  trackedForTransfer: boolean;
+}
+
 /** Composite read model for the Voyage tab. */
 export interface VoyageOverview {
   reservation: VoyageReservation;
@@ -112,6 +130,7 @@ export interface VoyageOverview {
   suite: Suite;
   embarkation: Embarkation;
   documents: TravelDocument[];
+  flights: FlightSegment[];
 }
 
 /** Where the guest is in the end-to-end journey; drives contextual UI. */

@@ -1,7 +1,8 @@
 import type { ID } from '@/domain';
 import type { LoyaltyService } from '@/services/contracts';
-import { guestRelationship, loyaltyMembership, privileges } from '@/data/fixtures/guest';
-import { latency } from './support';
+import { data, latency } from './support';
+
+const { membership: loyaltyMembership, relationship: guestRelationship, privileges } = data.guest;
 
 /**
  * MVP stand-in for Marriott Bonvoy. A future `MarriottBonvoyService` will

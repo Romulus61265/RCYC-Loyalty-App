@@ -59,7 +59,7 @@ export default function VoyageScreen() {
       <PageHeader
         eyebrow={`${overview.yacht.name} · ${formatDateRange(overview.voyage.startDate, overview.voyage.endDate)}`}
         title={overview.voyage.name}
-        subtitle={`${overview.voyage.nights} nights · Barcelona to Rome`}
+        subtitle={`${overview.voyage.nights} nights · ${overview.voyage.itinerary[0]?.portName ?? ''} to ${overview.voyage.itinerary.at(-1)?.portName.replace(/ \(.*\)$/, '') ?? ''}`}
       />
       <SegmentedTabs options={TABS} value={tab} onChange={setTab} />
       {tab === 'itinerary' && <Itinerary overview={overview} />}
@@ -259,6 +259,25 @@ function Travel({ overview, bookings }: { overview: VoyageOverview; bookings: Ex
           ))}
         </Card>
       </Section>
+      {overview.flights.length > 0 && (
+        <Section eyebrow="Flights">
+          <Card>
+            {overview.flights.map((f, i) => (
+              <View key={f.id}>
+                {i > 0 && <Divider />}
+                <Eyebrow>{f.direction === 'inbound' ? 'To the yacht' : 'Home'}</Eyebrow>
+                <Text variant="bodyStrong" style={{ marginTop: 2 }}>
+                  {f.origin} → {f.destination} · {f.flightNumber}
+                </Text>
+                <Caption>
+                  Departs {formatLongDate(f.departure)}, {formatTime(f.departure)} · arrives {formatTime(f.arrival)} local
+                </Caption>
+                {f.trackedForTransfer ? <Caption color={colors.calm}>Tracked by your transfer team</Caption> : null}
+              </View>
+            ))}
+          </Card>
+        </Section>
+      )}
       <Section eyebrow="Transfers">
         {transfers.map((t) => (
           <Card key={t.id} style={{ marginBottom: spacing.sm }}>

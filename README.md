@@ -10,26 +10,29 @@ A mobile digital guest experience concept for an ultra-luxury yacht cruise brand
 npm install
 cp .env.example .env        # optional: defaults to mock mode
 npx expo start              # press i / a / w for iOS, Android or web
-npm run verify              # typecheck + lint (incl. architecture boundaries)
+npm run verify              # typecheck + lint (incl. architecture boundaries) + dataset checks
+npm run check:fixtures      # 75 integrity checks on the development dataset
 npm run doctor              # expo-doctor dependency health
 ```
 
 The manual QA steps are in [docs/manual-testing-checklist.md](docs/manual-testing-checklist.md).
 
-The demo is pinned to **15 October 2026**, two days before embarkation. Change `EXPO_PUBLIC_DEMO_NOW` to explore other journey phases.
+The demo is pinned to **11 May 2027, 09:00 in Miami**, four days before embarkation. Change `EXPO_PUBLIC_DEMO_NOW` to explore other journey phases.
 
-### Demo story (fictional)
+### Demo story (fictional development dataset)
 
-**Isabelle Laurent-Hale** (Bonvoy Titanium Elite, Lifetime Platinum) and her husband **James** sail aboard the fictional yacht **Aurelia** in **Loft Suite 712**, on *Riviera & the Ligurian Coast*. The route runs Barcelona → Saint-Tropez → Monte Carlo (overnight) → Portofino → Portovenere → Bonifacio → Rome, from 17 to 24 October 2026. It is their third voyage, and their 25th wedding anniversary falls in Portofino. Their Suite Ambassador is Sophie Marchetti.
+**Alexander Laurent** (Marriott Bonvoy Titanium Elite, Lifetime Platinum; three previous voyages; flies from Miami) and his wife **Camille** sail aboard *Evrima* in **Grand Suite 612**. The 7-night voyage, *Balearics & the Riviera*, runs Barcelona → Palma de Mallorca → (at sea) → Saint-Tropez → Monte Carlo (overnight) → Portofino → Rome, from 15 to 22 May 2027. Their 20th wedding anniversary falls on 20 May in Monaco, and their Suite Ambassador is Elena Moreau.
+
+He likes Mediterranean cuisine, window tables, sparkling water, red wine, feather-free pillows and private excursions. His interests are fine dining, wine, private cultural experiences, the spa and yachting. The dataset, how it's kept separate from production and how to validate it are described in [`src/data/fixtures/README.md`](src/data/fixtures/README.md).
 
 In **Concierge**, try:
 
-* What is planned for tomorrow?
+* What is planned for my first day?
 * Can you move my dinner reservation?
 * What private experiences are available in Monte Carlo?
 * Can you arrange transportation?
 * What benefits do I have because of my Bonvoy status?
-* Can I arrange something special for my anniversary? *(This one hands the conversation to Sophie.)*
+* Can I arrange something special for our anniversary? *(This one hands the conversation to Elena.)*
 
 ## Screens
 

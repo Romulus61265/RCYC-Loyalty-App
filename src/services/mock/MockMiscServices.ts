@@ -1,4 +1,4 @@
-import type { ID, JourneyAlert, JourneyEvent, RecommendationSurface } from '@/domain';
+import type { GuestNotification, ID, JourneyAlert, JourneyEvent, RecommendationSurface } from '@/domain';
 import type {
   AuditEntry,
   AuditService,
@@ -10,10 +10,13 @@ import type {
   Unsubscribe,
 } from '@/services/contracts';
 import { ServiceError } from '@/services/contracts';
-import { guestProfile, LEAD_GUEST_ID } from '@/data/fixtures/guest';
-import { alerts, recommendations } from '@/data/fixtures/experiences';
 import { logger } from '@/core/logging';
-import { latency, mockId } from './support';
+import { data, latency, mockId, mockNow } from './support';
+
+const LEAD_GUEST_ID = data.guest.profile.guest.id;
+const guestProfile = data.guest.profile;
+const { alerts, notifications } = data.communication;
+const { recommendations } = data.personalization;
 
 /** Pre-authenticated demo session. Real auth: Supabase Auth + Bonvoy OIDC. */
 export class MockAuthService implements AuthService {
@@ -89,6 +92,15 @@ export class MockJourneyEventService implements JourneyEventService {
 
   listAlerts(_reservationId: ID) {
     return latency(this.alerts.filter((a) => !a.acknowledged));
+  }
+  listNotifications(guestId: ID, opts?: { includeScheduled?: boolean; now?: Date }): Promise<GuestNotification[]> {
+    const now = (opts?.now ?? mockNow()).getTime();
+    return latency(
+      notifications
+        .filter((n) => n.guestId === guestId)
+        .filter((n) => opts?.includeScheduled || Date.parse(n.scheduledFor) <= now)
+        .sort((a, b) => Date.parse(b.scheduledFor) - Date.parse(a.scheduledFor)),
+    );
   }
   async acknowledge(alertId: ID) {
     this.alerts = this.alerts.map((a) => (a.id === alertId ? { ...a, acknowledged: true } : a));

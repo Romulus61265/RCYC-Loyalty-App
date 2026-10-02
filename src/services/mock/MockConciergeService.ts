@@ -8,10 +8,13 @@ import type {
   ServiceRequestType,
 } from '@/domain';
 import type { ConciergeAIProvider, ConciergeService, Unsubscribe } from '@/services/contracts';
-import { latency, mockId, notFound } from './support';
+import { greeting } from '@/utils/format';
+import { data, latency, mockId, mockNow, notFound } from './support';
 import { MockConciergeAI } from './MockConciergeAI';
 
-const AMBASSADOR = 'Sophie, Suite Ambassador';
+const { concierge } = data;
+const AMBASSADOR = `${concierge.ambassador.name.split(' ')[0]}, ${concierge.ambassador.title}`;
+const GUEST_FIRST_NAME = data.guest.profile.guest.preferredName ?? data.guest.profile.guest.firstName;
 
 /**
  * Orchestrates AI responses, human hand-off and service requests.
@@ -20,22 +23,7 @@ const AMBASSADOR = 'Sophie, Suite Ambassador';
  */
 export class MockConciergeService implements ConciergeService {
   private conversations = new Map<ID, ConciergeMessage[]>();
-  private requests: ServiceRequest[] = [
-    {
-      id: 'srq_riva',
-      reservationId: 'rsv_88412',
-      type: 'excursion',
-      summary: 'San Fruttuoso by Riva — 21 October',
-      details: 'Private launch with lunch at the water’s edge.',
-      status: 'in_progress',
-      priority: 'routine',
-      assignedTeam: 'destination-services',
-      assignedTo: 'Luca, Destination Services',
-      createdAt: '2026-10-09T14:12:00+01:00',
-      updatedAt: '2026-10-14T16:40:00+01:00',
-      nextUpdateBy: '2026-10-16T12:00:00+01:00',
-    },
-  ];
+  private requests: ServiceRequest[] = [...concierge.requests];
   private listeners = new Map<ID, Set<(m: ConciergeMessage) => void>>();
 
   constructor(private readonly ai: ConciergeAIProvider = new MockConciergeAI()) {}
@@ -44,20 +32,15 @@ export class MockConciergeService implements ConciergeService {
     const conversationId = `cnv_${reservationId}`;
     if (!this.conversations.has(conversationId)) {
       this.conversations.set(conversationId, [
+        // Earlier exchange (pre-voyage), then today's greeting.
+        ...concierge.history.map((m) => ({ ...m, conversationId })),
         {
           id: mockId('msg'),
           conversationId,
           author: 'ai',
-          createdAt: new Date().toISOString(),
-          body: 'Good morning, Isabelle. Everything is in hand for Barcelona on Saturday. How may I help?',
-          suggestions: [
-            'What is planned for tomorrow?',
-            'Can you move my dinner reservation?',
-            'What private experiences are available in Monte Carlo?',
-            'Can you arrange transportation?',
-            'What benefits do I have because of my Bonvoy status?',
-            'Can I arrange something special for my anniversary?',
-          ],
+          createdAt: mockNow().toISOString(),
+          body: `${greeting(mockNow())}, ${GUEST_FIRST_NAME}. ${concierge.greeting}`,
+          suggestions: concierge.suggestedQuestions,
         },
       ]);
     }
@@ -106,7 +89,7 @@ export class MockConciergeService implements ConciergeService {
         body:
           team === 'medical'
             ? 'This is Dr. Vos. I have your details and I am available now. Are you able to tell me what is happening?'
-            : 'Hello Isabelle, it’s Sophie. I’ve read the conversation and I’ll take it from here — leave it with me.',
+            : `Hello ${GUEST_FIRST_NAME}, it’s ${concierge.ambassador.name.split(' ')[0]}. I’ve read the conversation and I’ll take it from here — leave it with me.`,
       };
       this.conversations.get(request.conversationId)?.push(msg);
       this.listeners.get(request.conversationId)?.forEach((l) => l(msg));

@@ -4,19 +4,49 @@
  * Implements `ConciergeAIProvider` so it can be replaced by an
  * `EnterpriseConciergeAIProvider` (server-side LLM with tool calls into the
  * Voyage / Experience / Loyalty services) without touching the UI.
+ *
+ * Every answer is composed from the development dataset, so changing the
+ * fixtures changes the replies.
  */
-import type { ConciergeIntent, ConciergeMessage } from '@/domain';
+import type { ConciergeIntent, ConciergeMessage, DaySchedule } from '@/domain';
 import type { ConciergeAIProvider } from '@/services/contracts';
-import { bookings, catalogue } from '@/data/fixtures/experiences';
-import { privileges } from '@/data/fixtures/guest';
-import { mockId } from './support';
+import { formatLongDate, formatTime } from '@/utils/format';
+import { data, mockId, mockNow } from './support';
+
+type Reply = Omit<ConciergeMessage, 'id' | 'conversationId' | 'author' | 'createdAt'>;
 
 interface Rule {
   intent: ConciergeIntent;
   match: RegExp;
-  reply: (ctx: Parameters<ConciergeAIProvider['respond']>[0]) => Omit<ConciergeMessage, 'id' | 'conversationId' | 'author' | 'createdAt'>;
+  reply: (body: string) => Reply;
   confidence: number;
   escalate?: boolean;
+}
+
+const { guest, voyage, experiences, concierge } = data;
+const ambassadorFirstName = concierge.ambassador.name.split(' ')[0] ?? concierge.ambassador.name;
+const companionName = guest.profile.companions[0]?.firstName;
+
+const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth'];
+const bullet = (lines: string[]) => lines.map((l) => `• ${l}`).join('\n');
+
+function scheduleLines(day: DaySchedule): string[] {
+  return day.items.map((i) => `${formatTime(i.start)} — ${i.title}`);
+}
+
+/**
+ * Which day the guest is asking about: an explicit "day N" or "sea day",
+ * else tomorrow relative to the mock clock, else the first day aboard.
+ */
+function resolveDay(body: string): { day: DaySchedule; label: 'tomorrow' | 'first' | 'asked' } {
+  const days = experiences.daySchedules;
+  const dayN = /\bday (\d)\b/i.exec(body)?.[1];
+  const seaDay = /sea day/i.test(body) ? voyage.voyage.itinerary.find((p) => p.type === 'sea') : undefined;
+  const asked = dayN ? days.find((d) => d.dayNumber === Number(dayN)) : seaDay ? days.find((d) => d.portCallId === seaDay.id) : undefined;
+  if (asked) return { day: asked, label: 'asked' };
+  const tomorrow = new Date(mockNow().getTime() + 86_400_000).toISOString().slice(0, 10);
+  const match = days.find((d) => d.date === tomorrow);
+  return match ? { day: match, label: 'tomorrow' } : { day: days[0]!, label: 'first' };
 }
 
 const rules: Rule[] = [
@@ -27,24 +57,7 @@ const rules: Rule[] = [
     escalate: true,
     reply: () => ({
       intent: 'medical.assist',
-      body: 'I am connecting you with our medical team and your Suite Ambassador right now. If this is an emergency aboard, please also press the red emergency key on any suite telephone.',
-    }),
-  },
-  {
-    intent: 'schedule.query',
-    match: /(tomorrow|planned|schedule|itinerary|what.*(on|happening))/i,
-    confidence: 0.92,
-    reply: () => ({
-      intent: 'schedule.query',
-      body:
-        'Tomorrow is a quiet day at home — nothing is required of you. Here is your first day aboard, Saturday 17 October:\n\n' +
-        '• 12:15 — Jordi meets you at Barcelona arrivals\n' +
-        '• 14:00 — Your personal embarkation window at Port Vell\n' +
-        '• 19:30 — Sail-away Champagne on the Pool Deck\n' +
-        '• 20:30 — Dinner at Lumière, window table for two\n\n' +
-        'Sunset is at 19:23. Dress is elegant casual.',
-      attachments: [{ kind: 'schedule', dayNumber: 1 }],
-      suggestions: ['Move my dinner to 21:00', 'What about day two?'],
+      body: 'I am connecting you with our medical team and your Suite Ambassador now. If this is an emergency aboard, please also press the red emergency key on any suite telephone.',
     }),
   },
   {
@@ -52,11 +65,33 @@ const rules: Rule[] = [
     match: /(move|change|reschedul|later|earlier).*(dinner|reservation|table|lunch)|(dinner|reservation).*(move|change|later)/i,
     confidence: 0.86,
     reply: () => {
-      const dinner = bookings.find((b) => b.id === 'bkg_dinner_1');
+      const dinner = experiences.bookings.find((b) => b.category === 'dining');
+      if (!dinner) return { intent: 'dining.modify', body: 'You have no dinner reservations yet. Shall I arrange one?' };
       return {
         intent: 'dining.modify',
-        body: `Of course. You are currently at ${dinner?.venue ?? 'Lumière'} at 20:30 on 17 October. I can request 21:00 or 21:15 — the window table is available at both. Which would you prefer?`,
-        suggestions: ['21:00, please', '21:15, please', 'Keep 20:30'],
+        body: `Of course. You are at ${dinner.venue.split(',')[0]} on ${formatLongDate(dinner.start)} at ${formatTime(dinner.start)}, at your window table. I can request 21:00 or 21:15, and the window table is held at both. Which would you prefer?`,
+        suggestions: ['21:00, please', '21:15, please', 'Keep it as it is'],
+      };
+    },
+  },
+  {
+    intent: 'schedule.query',
+    match: /\b(tomorrow|first day|planned|schedule|itinerary|sea day)\b|\bwhat(?:'s| is)? (?:on|happening)\b/i,
+    confidence: 0.92,
+    reply: (body) => {
+      const { day, label } = resolveDay(body);
+      const intro =
+        label === 'asked'
+          ? `${day.headline}, ${formatLongDate(day.date)}:`
+          : label === 'tomorrow'
+            ? `Tomorrow, ${formatLongDate(day.date)}:`
+            : `Tomorrow is a quiet day at home. Here is your first day aboard, ${formatLongDate(day.date)}:`;
+      const extras = [day.sunset && `Sunset is at ${formatTime(day.sunset)}.`, day.dressCode && `Dress is ${day.dressCode.toLowerCase()}.`].filter(Boolean).join(' ');
+      return {
+        intent: 'schedule.query',
+        body: `${intro}\n\n${bullet(scheduleLines(day))}\n\n${extras}`.trim(),
+        attachments: [{ kind: 'schedule', dayNumber: day.dayNumber }],
+        suggestions: ['Move my dinner to 21:00', 'What about the sea day?'],
       };
     },
   },
@@ -65,59 +100,71 @@ const rules: Rule[] = [
     match: /(private|exclusive|special).*(experience|monte|monaco)|monte carlo|monaco/i,
     confidence: 0.9,
     reply: () => {
-      const ids = catalogue.filter((e) => e.destination === 'Monte Carlo' && e.privateAvailable).map((e) => e.id);
+      const monaco = experiences.catalogue.filter((e) => e.destination === 'Monte Carlo' && e.privateAvailable);
+      const bookedIds = new Set(experiences.bookings.map((b) => b.experienceId));
+      const open = monaco.filter((e) => !bookedIds.has(e.id));
+      const held = monaco.filter((e) => bookedIds.has(e.id));
       return {
         intent: 'experience.discover',
         body:
-          'In Monte Carlo, these can be arranged for the two of you alone:\n\n' +
-          '• Villa Ephrussi de Rothschild before opening, with a curator\n' +
-          '• Box seats at the Opéra de Monte-Carlo, with supper aboard afterwards\n' +
-          '• Private atelier appointments on Avenue des Beaux-Arts\n' +
-          '• A helicopter to Saint-Paul-de-Vence for lunch\n\n' +
-          'You already have the Grande Corniche drive with Margaux on the 19th.',
-        attachments: [{ kind: 'experiences', experienceIds: ids }],
-        suggestions: ['Tell me about the Opéra', 'Reserve Villa Ephrussi'],
+          `In Monte Carlo, these can be arranged ${companionName ? `for you and ${companionName}` : 'for your party'} alone:\n\n${bullet(open.map((e) => `${e.title}: ${e.subtitle}`))}` +
+          (held.length ? `\n\nYou already have ${held.map((e) => e.title).join(' and ')}.` : ''),
+        attachments: [{ kind: 'experiences', experienceIds: monaco.map((e) => e.id) }],
+        suggestions: open.slice(0, 2).map((e) => `Tell me about ${e.title}`),
       };
     },
   },
   {
     intent: 'transport.arrange',
-    match: /(transport|car|driver|transfer|taxi|helicopter|pick ?up)/i,
+    match: /\b(transport\w*|cars?|driver|transfers?|taxi|helicopter|pick ?up|flights?)\b/i,
     confidence: 0.84,
-    reply: () => ({
-      intent: 'transport.arrange',
-      body:
-        'Happily. Your Barcelona arrival transfer is confirmed with Jordi at 12:15, adjusted for BA478’s new time. ' +
-        'For your departure from Civitavecchia on the 24th, would you like a car to Rome or to Fiumicino?',
-      suggestions: ['A car to Rome', 'A car to Fiumicino', 'Something in Monaco'],
-    }),
+    reply: () => {
+      const transfers = experiences.bookings.filter((b) => b.category === 'transfer');
+      const inbound = voyage.flights.find((f) => f.direction === 'inbound');
+      const lines = transfers.map((t) => `${formatLongDate(t.start)}, ${formatTime(t.start)}: ${t.title.toLowerCase()} (${t.venue})`);
+      return {
+        intent: 'transport.arrange',
+        body:
+          `Happily. Your private cars are confirmed:\n\n${bullet(lines)}` +
+          (inbound ? `\n\nWe are tracking ${inbound.flightNumber}, and your driver will adjust if it lands early or late.` : '') +
+          '\n\nWould you like anything else, perhaps a car or helicopter in Monaco?',
+        suggestions: ['A helicopter to Nice', 'A car in Monaco on the 19th'],
+      };
+    },
   },
   {
     intent: 'loyalty.benefits',
     match: /(benefit|bonvoy|status|privilege|titanium|elite|perk)/i,
     confidence: 0.95,
-    reply: () => ({
-      intent: 'loyalty.benefits',
-      body:
-        'As a Titanium Elite member returning for your third voyage, this time you’ll enjoy:\n\n' +
-        privileges.slice(0, 5).map((p) => `• ${p.title}`).join('\n'),
-      attachments: [{ kind: 'privileges', privilegeIds: privileges.map((p) => p.id) }],
-    }),
+    reply: () => {
+      const ordinal = ORDINALS[guest.relationship.voyagesCompleted] ?? `${guest.relationship.voyagesCompleted + 1}th`;
+      const forVoyage = guest.privileges.filter((p) => !p.appliesToVoyageId || p.appliesToVoyageId === voyage.voyage.id);
+      return {
+        intent: 'loyalty.benefits',
+        body: `As a Marriott Bonvoy ${guest.membership.tierLabel} member returning for your ${ordinal} voyage, you'll enjoy:\n\n${bullet(forVoyage.map((p) => p.title))}`,
+        attachments: [{ kind: 'privileges', privilegeIds: forVoyage.map((p) => p.id) }],
+      };
+    },
   },
   {
     intent: 'occasion.plan',
     match: /(anniversary|birthday|celebrat|surprise|special.*(something|occasion))/i,
     confidence: 0.8,
     escalate: true,
-    reply: () => ({
-      intent: 'occasion.plan',
-      body:
-        'Your 25th anniversary falls on the 21st, in Portofino — a beautiful place for it. ' +
-        'A few thoughts: the Couples Terrace Suite that morning, Champagne aboard the Riva at San Fruttuoso, ' +
-        'or your dinner at Il Giardino moved to a private corner of the terrace with a menu from the chef. ' +
-        'I’ve asked Sophie, your Suite Ambassador, to help plan it personally — she will be in touch shortly.',
-      suggestions: ['The Couples Terrace Suite', 'A private dinner', 'Keep it a surprise for James'],
-    }),
+    reply: () => {
+      const occasion = guest.profile.occasions.find((o) => o.date >= voyage.voyage.startDate && o.date <= voyage.voyage.endDate);
+      if (!occasion) return { intent: 'occasion.plan', body: `I’ll ask ${ambassadorFirstName} to plan something special with you.` };
+      const port = voyage.voyage.itinerary.find((p) => p.date === occasion.date);
+      const plans = experiences.bookings.filter((b) => b.start.startsWith(occasion.date));
+      return {
+        intent: 'occasion.plan',
+        body:
+          `Your ${occasion.label} falls on ${formatLongDate(occasion.date)}${port ? `, in ${port.portName}` : ''}. Here is what's already in place:\n\n` +
+          bullet(plans.map((b) => `${formatTime(b.start)}: ${b.title}${b.status === 'confirmed' ? '' : ' (being arranged)'}`)) +
+          `\n\nI’ve let ${ambassadorFirstName} know you asked. She is handling it personally, discreetly as you wished.`,
+        suggestions: ['Add flowers to the suite', companionName ? `Keep it a surprise for ${companionName}` : 'Keep it a surprise'],
+      };
+    },
   },
 ];
 
@@ -127,21 +174,20 @@ const fallback: Rule = {
   confidence: 0.4,
   reply: () => ({
     intent: 'general',
-    body: 'Let me make sure this is handled properly. Would you like me to pass it to Sophie, your Suite Ambassador?',
-    suggestions: ['Yes, please connect me', 'What is planned for tomorrow?'],
+    body: `Let me make sure this is handled properly. Would you like me to pass it to ${ambassadorFirstName}, your ${concierge.ambassador.title}?`,
+    suggestions: ['Yes, please connect me', 'What is planned for my first day?'],
   }),
 };
 
 export class MockConciergeAI implements ConciergeAIProvider {
-  async respond({ conversationId, body, context }: Parameters<ConciergeAIProvider['respond']>[0]) {
+  async respond({ conversationId, body }: Parameters<ConciergeAIProvider['respond']>[0]) {
     const rule = rules.find((r) => r.match.test(body)) ?? fallback;
-    const reply = rule.reply({ conversationId, body, context, history: [] });
     const message: ConciergeMessage = {
       id: mockId('msg'),
       conversationId,
       author: 'ai',
       createdAt: new Date().toISOString(),
-      ...reply,
+      ...rule.reply(body),
     };
     return {
       messages: [message],

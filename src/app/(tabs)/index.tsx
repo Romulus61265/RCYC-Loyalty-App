@@ -25,6 +25,8 @@ import { useAsync } from '@/hooks/useAsync';
 import { colors, spacing } from '@/theme';
 import { daysUntil, formatDateRange, formatLongDate, formatTime, greeting } from '@/utils/format';
 
+const SHORE: ExperienceCategory[] = ['excursion', 'private', 'culture', 'wine'];
+
 const RESERVED: { category: ExperienceCategory; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
   { category: 'dining', label: 'Dining', icon: 'restaurant-outline' },
   { category: 'excursion', label: 'Ashore', icon: 'map-outline' },
@@ -60,6 +62,7 @@ export default function HomeScreen() {
   const { voyage, yacht, suite, embarkation } = overview;
   const name = profile.guest.preferredName ?? profile.guest.firstName;
   const days = daysUntil(embarkation.arrivalWindowStart, now);
+  const embarkPort = voyage.itinerary[0]?.portName ?? 'your yacht';
   const upcoming = bookings.filter((b) => Date.parse(b.start) >= now.getTime());
   const next = upcoming[0];
   const firstOf = (c: ExperienceCategory) => upcoming.find((b) => b.category === c);
@@ -70,7 +73,7 @@ export default function HomeScreen() {
         media={voyage.hero}
         topInset={insets.top}
         eyebrow={`${greeting(now)}, ${name}`}
-        title={days > 1 ? `${days} days until Barcelona` : days === 1 ? 'Tomorrow, Barcelona' : 'Welcome aboard'}
+        title={days > 1 ? `${days} days until ${embarkPort}` : days === 1 ? `Tomorrow, ${embarkPort}` : 'Welcome aboard'}
         subtitle={voyage.name}
       />
 
@@ -122,7 +125,8 @@ export default function HomeScreen() {
       <Section eyebrow="Reserved for you">
         <Card>
           {RESERVED.map((r, i) => {
-            const b = firstOf(r.category) ?? (r.category === 'excursion' ? firstOf('private') : undefined);
+            // "Ashore" covers every shore category: guided, private, cultural and wine experiences.
+            const b = r.category === 'excursion' ? upcoming.find((x) => SHORE.includes(x.category)) : firstOf(r.category);
             return (
               <View key={r.category}>
                 {i > 0 && <Divider />}

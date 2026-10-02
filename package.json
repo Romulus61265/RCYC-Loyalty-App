@@ -11,8 +11,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "verify": "npm run typecheck && npm run lint",
-    "doctor": "npx expo-doctor"
+    "verify": "npm run typecheck && npm run lint && npm run check:fixtures",
+    "doctor": "npx expo-doctor",
+    "check:fixtures": "tsx scripts/check-fixtures.ts"
   },
   "dependencies": {
     "@expo-google-fonts/cormorant-garamond": "^0.4.1",
@@ -41,6 +42,7 @@
     "@types/react": "~19.2.2",
     "eslint": "^9.39.5",
     "eslint-config-expo": "~57.0.2",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3"
   }
 }

@@ -120,7 +120,7 @@ export default function ProfileScreen() {
           <DetailRow label="Address as" value={guest.salutation} />
           <DetailRow label="E-mail" value={guest.emailMasked} />
           {guest.phoneMasked ? <DetailRow label="Telephone" value={guest.phoneMasked} /> : null}
-          {guest.homeCity ? <DetailRow label="Home" value={guest.homeCity} /> : null}
+          {guest.homeCity ? <DetailRow label="Home" value={guest.homeCity} detail={guest.homeAirport ? `Departs from ${guest.homeAirport}` : undefined} /> : null}
         </Card>
       </Section>
 
@@ -154,6 +154,12 @@ export default function ProfileScreen() {
           note={p.suite.turndown ? `Turndown: ${p.suite.turndown}` : undefined}
         />
         <PrefGroup label="Interests" values={p.activityInterests} />
+        <PrefGroup
+          label="Excursions"
+          values={[`${capitalise(p.excursions.style)} guides`, `${capitalise(p.excursions.pace)} pace`]}
+          note={p.excursions.notes}
+        />
+        <PrefGroup label="Spa" values={[...p.spa.favouriteTreatments, p.spa.pressure && `${capitalise(p.spa.pressure)} pressure`].filter((v): v is string => Boolean(v))} note={p.spa.notes} />
       </Section>
 
       <Section eyebrow="Communication">

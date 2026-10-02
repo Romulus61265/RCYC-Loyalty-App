@@ -22,6 +22,7 @@ import type {
   ExperienceCategory,
   ConciergeMessage,
   GuestContext,
+  GuestNotification,
   GuestPreferences,
   GuestPrivilege,
   GuestProfile,
@@ -196,6 +197,8 @@ export interface PersonalizationService {
 
 export interface JourneyEventService {
   listAlerts(reservationId: ID): Promise<JourneyAlert[]>;
+  /** Outbound communication history and schedule (push, e-mail, SMS, in-app), newest first. */
+  listNotifications(guestId: ID, opts?: { includeScheduled?: boolean; now?: Date }): Promise<GuestNotification[]>;
   acknowledge(alertId: ID): Promise<void>;
   subscribe(reservationId: ID, listener: (event: JourneyEvent, alert?: JourneyAlert) => void, types?: JourneyEventType[]): Unsubscribe;
 }
