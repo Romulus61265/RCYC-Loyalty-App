@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Yacht Collection",
+    "slug": "rcyc-guest-companion",
+    "scheme": "rcycguest",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.example.rcyc.guest",
+      "config": { "usesNonExemptEncryption": false }
+    },
+    "android": {
+      "package": "com.example.rcyc.guest",
+      "adaptiveIcon": {
+        "backgroundColor": "#F6F2EC",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": { "favicon": "./assets/favicon.png", "bundler": "metro" },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        { "image": "./assets/splash-icon.png", "imageWidth": 160, "backgroundColor": "#F6F2EC" }
+      ]
+    ],
+    "experiments": { "typedRoutes": true }
+  }
+}

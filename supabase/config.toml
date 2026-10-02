@@ -1,0 +1,30 @@
+# Supabase CLI project configuration (local development).
+project_id = "rcyc-guest-companion"
+
+[api]
+port = 54321
+schemas = ["public"]
+max_rows = 200
+
+[auth]
+site_url = "rcycguest://"
+additional_redirect_urls = ["rcycguest://auth/callback"]
+jwt_expiry = 900                 # 15-minute access tokens
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+
+[auth.email]
+enable_signup = false            # guests are provisioned from reservations, not self-signup
+enable_confirmations = true
+otp_length = 6
+otp_expiry = 600
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[storage]
+file_size_limit = "10MiB"
+
+[functions.journey-events]
+verify_jwt = false               # authenticated by HMAC signature instead

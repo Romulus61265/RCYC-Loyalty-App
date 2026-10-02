@@ -1,0 +1,111 @@
+import type { ID, JourneyAlert, JourneyEvent, RecommendationSurface } from '@/domain';
+import type {
+  AuditEntry,
+  AuditService,
+  AuthService,
+  AuthSession,
+  GuestProfileService,
+  JourneyEventService,
+  PersonalizationService,
+  Unsubscribe,
+} from '@/services/contracts';
+import { ServiceError } from '@/services/contracts';
+import { guestProfile, LEAD_GUEST_ID } from '@/data/fixtures/guest';
+import { alerts, recommendations } from '@/data/fixtures/experiences';
+import { scrub } from '@/security/pii';
+import { env } from '@/config/env';
+import { latency, mockId } from './support';
+
+/** Pre-authenticated demo session. Real auth: Supabase Auth + Bonvoy OIDC. */
+export class MockAuthService implements AuthService {
+  private session: AuthSession | null = {
+    userId: 'usr_demo',
+    guestId: LEAD_GUEST_ID,
+    roles: ['guest'],
+    expiresAt: '2099-01-01T00:00:00Z',
+    mfaVerified: true,
+  };
+  private listeners = new Set<(s: AuthSession | null) => void>();
+
+  getSession() {
+    return latency(this.session, 50);
+  }
+  async signInWithOtp(_email: string) {
+    return latency({ challengeId: mockId('otp') });
+  }
+  async verifyOtp(_challengeId: ID, code: string) {
+    if (code.length !== 6) throw new ServiceError('validation', 'Invalid code');
+    return this.signInWithBonvoy();
+  }
+  async signInWithBonvoy() {
+    this.session = { userId: 'usr_demo', guestId: LEAD_GUEST_ID, roles: ['guest'], expiresAt: '2099-01-01T00:00:00Z', mfaVerified: true };
+    this.listeners.forEach((l) => l(this.session));
+    return latency(this.session);
+  }
+  async signOut() {
+    this.session = null;
+    this.listeners.forEach((l) => l(null));
+  }
+  onSessionChange(listener: (s: AuthSession | null) => void): Unsubscribe {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+}
+
+export class MockGuestProfileService implements GuestProfileService {
+  private profile = guestProfile;
+
+  getProfile(_guestId: ID) {
+    return latency(this.profile);
+  }
+  async updatePreferences(_guestId: ID, patch: Parameters<GuestProfileService['updatePreferences']>[1]) {
+    this.profile = { ...this.profile, preferences: { ...this.profile.preferences, ...patch } };
+    return latency(this.profile.preferences, 400);
+  }
+  listCompanions(_guestId: ID) {
+    return latency(this.profile.companions);
+  }
+  listOccasions(_guestId: ID) {
+    return latency(this.profile.occasions);
+  }
+}
+
+export class MockPersonalizationService implements PersonalizationService {
+  getRecommendations(_guestId: ID, surface: RecommendationSurface, opts?: { limit?: number }) {
+    // Guest app must never receive crew-only opportunities.
+    const list = recommendations
+      .filter((r) => r.audience === 'guest')
+      .filter((r) => surface === 'discover' || r.surface === surface)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, opts?.limit ?? 3);
+    return latency(list);
+  }
+  async recordFeedback() {
+    await latency(undefined, 50);
+  }
+}
+
+export class MockJourneyEventService implements JourneyEventService {
+  private alerts: JourneyAlert[] = [...alerts];
+
+  listAlerts(_reservationId: ID) {
+    return latency(this.alerts.filter((a) => !a.acknowledged));
+  }
+  async acknowledge(alertId: ID) {
+    this.alerts = this.alerts.map((a) => (a.id === alertId ? { ...a, acknowledged: true } : a));
+    await latency(undefined, 100);
+  }
+  subscribe(_reservationId: ID, _listener: (event: JourneyEvent, alert?: JourneyAlert) => void): Unsubscribe {
+    // Production: Supabase Realtime channel `journey:<reservationId>` fed by the event bus.
+    return () => undefined;
+  }
+}
+
+/** Dev audit sink. Production forwards to the `audit-log` Edge Function. */
+export class ConsoleAuditService implements AuditService {
+  record(entry: AuditEntry) {
+    if (env.appEnv !== 'production') {
+      console.info('[audit]', entry.action, entry.resource, entry.outcome, entry.metadata ? scrub(entry.metadata) : '');
+    }
+  }
+}
