@@ -10,8 +10,11 @@ A mobile digital guest experience concept for an ultra-luxury yacht cruise brand
 npm install
 cp .env.example .env        # optional: defaults to mock mode
 npx expo start              # press i / a / w for iOS, Android or web
-npm run typecheck
+npm run verify              # typecheck + lint (incl. architecture boundaries)
+npm run doctor              # expo-doctor dependency health
 ```
+
+The manual QA steps are in [docs/manual-testing-checklist.md](docs/manual-testing-checklist.md).
 
 The demo is pinned to **15 October 2026**, two days before embarkation. Change `EXPO_PUBLIC_DEMO_NOW` to explore other journey phases.
 

@@ -19,6 +19,9 @@ import { useAsync } from '@/hooks/useAsync';
 import { colors, radii, spacing } from '@/theme';
 import { formatDateRange, formatShortDate } from '@/utils/format';
 
+/** A failure here is contained to this tab; the tab bar stays usable. */
+export { ErrorFallback as ErrorBoundary } from '@/components';
+
 export default function ProfileScreen() {
   const services = useServices();
   const { guestId, voyageId, reservationId } = useJourney();
@@ -34,7 +37,7 @@ export default function ProfileScreen() {
   }, [guestId, voyageId, reservationId]);
 
   if (loading && !data) return <LoadingState />;
-  if (error || !data) return <ErrorState onRetry={reload} />;
+  if (error || !data) return <ErrorState error={error} onRetry={reload} />;
 
   const { profile, recognition, past, overview } = data;
   const { guest, preferences: p, companions, occasions } = profile;

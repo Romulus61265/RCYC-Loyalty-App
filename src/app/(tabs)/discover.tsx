@@ -34,6 +34,9 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'transfer', label: 'Transport' },
 ];
 
+/** A failure here is contained to this tab; the tab bar stays usable. */
+export { ErrorFallback as ErrorBoundary } from '@/components';
+
 export default function DiscoverScreen() {
   const services = useServices();
   const { guestId, voyageId, reservationId } = useJourney();
@@ -50,7 +53,7 @@ export default function DiscoverScreen() {
   }, [voyageId, guestId, reservationId]);
 
   if (loading && !data) return <LoadingState />;
-  if (error || !data) return <ErrorState onRetry={reload} />;
+  if (error || !data) return <ErrorState error={error} onRetry={reload} />;
   const { catalogue, collections, destinations, recs } = data;
   const byId = (id: string) => catalogue.find((e) => e.id === id);
 

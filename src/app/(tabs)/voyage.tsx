@@ -33,6 +33,9 @@ const TABS: { value: Tab; label: string }[] = [
   { value: 'travel', label: 'Travel' },
 ];
 
+/** A failure here is contained to this tab; the tab bar stays usable. */
+export { ErrorFallback as ErrorBoundary } from '@/components';
+
 export default function VoyageScreen() {
   const services = useServices();
   const { reservationId } = useJourney();
@@ -48,7 +51,7 @@ export default function VoyageScreen() {
   }, [reservationId]);
 
   if (loading && !data) return <LoadingState />;
-  if (error || !data) return <ErrorState onRetry={reload} />;
+  if (error || !data) return <ErrorState error={error} onRetry={reload} />;
   const { overview, bookings, days } = data;
 
   return (

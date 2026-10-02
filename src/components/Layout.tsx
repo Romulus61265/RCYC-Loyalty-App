@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { guestMessage } from '@/core/errors';
 import { colors, elevation, radii, spacing } from '@/theme';
 import { Caption, Eyebrow, Text, Title } from './Typography';
 
@@ -100,12 +101,17 @@ export function LoadingState({ label = 'One moment…' }: { label?: string }) {
   );
 }
 
-export function ErrorState({ onRetry }: { onRetry?: () => void }) {
+/** Inline failure state. Copy is derived from the error code, never the raw message. */
+export function ErrorState({ error, onRetry }: { error?: unknown; onRetry?: () => void }) {
+  const { title, body } = guestMessage(error);
   return (
-    <View style={styles.loading}>
+    <View style={styles.loading} accessibilityRole="alert">
       <Text variant="subtitle" align="center">
-        We couldn’t reach the yacht just now.
+        {title}
       </Text>
+      <Caption align="center" style={{ marginTop: spacing.xs }}>
+        {body}
+      </Caption>
       {onRetry ? (
         <Pressable onPress={onRetry} accessibilityRole="button" style={{ marginTop: spacing.md }}>
           <Eyebrow color={colors.accent}>Try again</Eyebrow>

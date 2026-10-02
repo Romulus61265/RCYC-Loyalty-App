@@ -12,8 +12,7 @@ import type {
 import { ServiceError } from '@/services/contracts';
 import { guestProfile, LEAD_GUEST_ID } from '@/data/fixtures/guest';
 import { alerts, recommendations } from '@/data/fixtures/experiences';
-import { scrub } from '@/security/pii';
-import { env } from '@/config/env';
+import { logger } from '@/core/logging';
 import { latency, mockId } from './support';
 
 /** Pre-authenticated demo session. Real auth: Supabase Auth + Bonvoy OIDC. */
@@ -101,11 +100,11 @@ export class MockJourneyEventService implements JourneyEventService {
   }
 }
 
-/** Dev audit sink. Production forwards to the `audit-log` Edge Function. */
+/** Dev audit sink: writes to the logger. Production forwards to the `audit-log` Edge Function. */
 export class ConsoleAuditService implements AuditService {
+  private readonly log = logger.child('audit');
+
   record(entry: AuditEntry) {
-    if (env.appEnv !== 'production') {
-      console.info('[audit]', entry.action, entry.resource, entry.outcome, entry.metadata ? scrub(entry.metadata) : '');
-    }
+    this.log.info(entry.action, { resource: entry.resource, resourceId: entry.resourceId, outcome: entry.outcome, ...entry.metadata });
   }
 }

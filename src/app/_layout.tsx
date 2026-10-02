@@ -14,9 +14,16 @@ import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-goog
 import { ServiceProvider } from '@/services/ServiceProvider';
 import { JourneyProvider } from '@/hooks/useJourney';
 import { LoadingState } from '@/components';
+import { installGlobalErrorHandlers } from '@/core/errors';
+import { logger } from '@/core/logging';
 import { colors } from '@/theme';
 
 void SplashScreen.preventAutoHideAsync();
+installGlobalErrorHandlers();
+logger.info('app start');
+
+/** Catches render errors anywhere below the root (including service/config failures). */
+export { ErrorFallback as ErrorBoundary } from '@/components';
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -47,6 +54,7 @@ export default function RootLayout() {
           <StatusBar style="dark" />
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="+not-found" options={{ presentation: 'modal' }} />
           </Stack>
         </JourneyProvider>
       </ServiceProvider>

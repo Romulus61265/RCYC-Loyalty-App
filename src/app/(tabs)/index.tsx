@@ -31,6 +31,9 @@ const RESERVED: { category: ExperienceCategory; label: string; icon: React.Compo
   { category: 'spa', label: 'Spa', icon: 'leaf-outline' },
 ];
 
+/** A failure here is contained to this tab; the tab bar stays usable. */
+export { ErrorFallback as ErrorBoundary } from '@/components';
+
 export default function HomeScreen() {
   const services = useServices();
   const { guestId, reservationId, voyageId } = useJourney();
@@ -51,7 +54,7 @@ export default function HomeScreen() {
   }, [guestId, reservationId, voyageId]);
 
   if (loading && !data) return <LoadingState />;
-  if (error || !data) return <ErrorState onRetry={reload} />;
+  if (error || !data) return <ErrorState error={error} onRetry={reload} />;
 
   const { profile, recognition, overview, bookings, alerts, recs, catalogue } = data;
   const { voyage, yacht, suite, embarkation } = overview;

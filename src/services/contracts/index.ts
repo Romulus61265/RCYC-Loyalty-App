@@ -47,6 +47,7 @@ import type {
   SpecialOccasion,
   TravelCompanion,
 } from '@/domain';
+import { AppError } from '@/core/errors/AppError';
 
 export type ServiceErrorCode =
   | 'unauthenticated'
@@ -57,13 +58,10 @@ export type ServiceErrorCode =
   | 'validation'
   | 'unknown';
 
-export class ServiceError extends Error {
-  constructor(
-    public readonly code: ServiceErrorCode,
-    message: string,
-    public readonly retryable = false,
-  ) {
-    super(message);
+/** Error thrown by every service implementation; a specialisation of AppError. */
+export class ServiceError extends AppError {
+  constructor(code: ServiceErrorCode, message: string, retryable?: boolean) {
+    super(code, message, retryable === undefined ? {} : { retryable });
     this.name = 'ServiceError';
   }
 }

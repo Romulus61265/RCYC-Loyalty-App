@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { ConciergeMessage, GuestContext, ServiceRequest } from '@/domain';
 import { Caption, ErrorState, Eyebrow, LoadingState, Text } from '@/components';
+import { reportError } from '@/core/errors';
 import { useServices } from '@/services/ServiceProvider';
 import { useJourney } from '@/hooks/useJourney';
 import { useAsync } from '@/hooks/useAsync';
@@ -20,15 +21,20 @@ const STATUS_LABEL: Record<ServiceRequest['status'], string> = {
   cancelled: 'Cancelled',
 };
 
+/** A failure here is contained to this tab; the tab bar stays usable. */
+export { ErrorFallback as ErrorBoundary } from '@/components';
+
 export default function ConciergeScreen() {
   const services = useServices();
   const journey = useJourney();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
-  const [messages, setMessages] = useState<ConciergeMessage[]>([]);
+  // Messages added this session (guest, AI replies, human pushes), shown after the loaded history.
+  const [appended, setAppended] = useState<ConciergeMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [handoff, setHandoff] = useState<string>();
+  const [sendFailed, setSendFailed] = useState(false);
 
   const { data, loading, error, reload } = useAsync(async () => {
     const [conversation, requests, profile, recognition, overview] = await Promise.all([
@@ -53,11 +59,13 @@ export default function ConciergeScreen() {
     return { conversation, requests, context, ambassador: overview.reservation.suiteAmbassador ?? 'your Suite Ambassador' };
   }, [journey.reservationId]);
 
+  const conversationId = data?.conversation.conversationId;
   useEffect(() => {
-    if (!data) return;
-    setMessages(data.conversation.messages);
-    return services.concierge.subscribe(data.conversation.conversationId, (m) => setMessages((prev) => [...prev, m]));
-  }, [data, services]);
+    if (!conversationId) return;
+    return services.concierge.subscribe(conversationId, (m) => setAppended((prev) => [...prev, m]));
+  }, [conversationId, services]);
+
+  const messages = data ? [...data.conversation.messages, ...appended] : appended;
 
   useEffect(() => {
     const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
@@ -65,28 +73,36 @@ export default function ConciergeScreen() {
   }, [messages.length, sending]);
 
   if (loading && !data) return <LoadingState />;
-  if (error || !data) return <ErrorState onRetry={reload} />;
+  if (error || !data) return <ErrorState error={error} onRetry={reload} />;
 
   const send = async (body: string) => {
     const text = body.trim();
     if (!text || sending) return;
     setDraft('');
     setSending(true);
-    const optimistic: ConciergeMessage = { id: `local_${Date.now()}`, conversationId: data.conversation.conversationId, author: 'guest', body: text, createdAt: new Date().toISOString() };
-    setMessages((prev) => [...prev, optimistic]);
+    setSendFailed(false);
+    setAppended((prev) => [...prev, optimisticMessage(data.conversation.conversationId, text)]);
     try {
       const replies = await services.concierge.sendMessage(data.conversation.conversationId, text, data.context);
-      setMessages((prev) => [...prev, ...replies]);
+      setAppended((prev) => [...prev, ...replies]);
       services.audit.record({ action: 'concierge.message', resource: 'conversation', resourceId: data.conversation.conversationId, outcome: 'success', metadata: { intent: replies[0]?.intent ?? 'unknown' } });
+    } catch (e) {
+      reportError(e, { source: 'concierge.send' });
+      setSendFailed(true);
     } finally {
       setSending(false);
     }
   };
 
   const escalate = async () => {
-    const result = await services.concierge.escalateToHuman({ conversationId: data.conversation.conversationId, reason: 'guest-request', preferredChannel: 'chat' });
-    setHandoff(`${result.agentName} will join within ${result.expectedResponseMinutes} minutes.`);
-    services.audit.record({ action: 'concierge.escalate', resource: 'conversation', resourceId: data.conversation.conversationId, outcome: 'success' });
+    try {
+      const result = await services.concierge.escalateToHuman({ conversationId: data.conversation.conversationId, reason: 'guest-request', preferredChannel: 'chat' });
+      setHandoff(`${result.agentName} will join within ${result.expectedResponseMinutes} minutes.`);
+      services.audit.record({ action: 'concierge.escalate', resource: 'conversation', resourceId: data.conversation.conversationId, outcome: 'success' });
+    } catch (e) {
+      reportError(e, { source: 'concierge.escalate' });
+      setHandoff('We couldn’t reach your Suite Ambassador just now. Please call guest services from your suite telephone.');
+    }
   };
 
   const lastSuggestions = [...messages].reverse().find((m) => m.author !== 'guest')?.suggestions ?? [];
@@ -122,6 +138,11 @@ export default function ConciergeScreen() {
           <Bubble key={m.id} message={m} />
         ))}
         {sending && <Caption style={{ marginTop: spacing.xs }}>The concierge is writing…</Caption>}
+        {sendFailed && (
+          <Caption style={{ marginTop: spacing.xs }} color={colors.attention}>
+            Your message didn’t reach us. Please try again in a moment.
+          </Caption>
+        )}
         {handoff && (
           <View style={styles.handoff}>
             <Ionicons name="checkmark" size={14} color={colors.calm} />
@@ -156,6 +177,14 @@ export default function ConciergeScreen() {
       </View>
     </KeyboardAvoidingView>
   );
+}
+
+let localSeq = 0;
+
+/** Guest message shown immediately, before the service confirms it. */
+function optimisticMessage(conversationId: string, body: string): ConciergeMessage {
+  localSeq += 1;
+  return { id: `local_${localSeq}`, conversationId, author: 'guest', body, createdAt: new Date().toISOString() };
 }
 
 function Bubble({ message }: { message: ConciergeMessage }) {

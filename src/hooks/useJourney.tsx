@@ -1,5 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import type { JourneyPhase } from '@/domain';
+import { AppError } from '@/core/errors';
 import type { AuthSession } from '@/services/contracts';
 import { useServices } from '@/services/ServiceProvider';
 import { useAsync } from './useAsync';
@@ -20,15 +21,18 @@ const JourneyContext = createContext<JourneyContextValue | null>(null);
  */
 export function JourneyProvider({ children, fallback }: { children: ReactNode; fallback: ReactNode }) {
   const services = useServices();
-  const { data } = useAsync(async () => {
+  const { data, error } = useAsync(async () => {
     const session = await services.auth.getSession();
-    if (!session) return null;
+    // Sign-in screens arrive in a later iteration; until then these surface via the route ErrorBoundary.
+    if (!session) throw new AppError('unauthenticated', 'No active session');
     const reservation = await services.voyage.getUpcomingReservation(session.guestId);
-    if (!reservation) return null;
+    if (!reservation) throw new AppError('not_found', 'No upcoming reservation');
     const phase = await services.voyage.getJourneyPhase(reservation.id);
     return { session, guestId: session.guestId, reservationId: reservation.id, voyageId: reservation.voyageId, phase };
   }, [services]);
 
+  // Let the nearest Expo Router ErrorBoundary render a calm, retryable fallback.
+  if (error) throw error;
   if (!data) return <>{fallback}</>;
   return <JourneyContext.Provider value={data}>{children}</JourneyContext.Provider>;
 }
