@@ -58,7 +58,7 @@ echo "✔ $(grep -c '|t$' "$WORK/sql.out") SQL assertions passed"
 pgrun "$PSQL -d app" <<SQL
 create role authenticator noinherit login password 'authenticator';
 insert into auth.users (id, email, email_confirmed_at) values ('b0000000-0000-0000-0000-0000000000a1', 'alexander.laurent@example.com', now());
-grant anon, authenticated to authenticator;
+grant anon, authenticated, service_role to authenticator;
 insert into auth.users (id, email, email_confirmed_at) values ('b0000000-0000-0000-0000-0000000000b2', 'other.guest@example.com', now());
 insert into public.guests (id, auth_user_id, salutation, first_name, last_name, email_masked, source_system)
   values ('c0000000-0000-0000-0000-0000000000b2', 'b0000000-0000-0000-0000-0000000000b2', 'Ms', 'Other', 'Guest', 'o•••@example.com', 'mock');

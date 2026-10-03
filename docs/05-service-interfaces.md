@@ -35,7 +35,7 @@ The mock-only test controls (`?scenario=`, `?now=`) have no effect in `supabase`
 * IDs are checked as UUIDs before use. This also stops them altering PostgREST filter strings.
 * Database errors map to `ServiceError` codes. `42501` → `forbidden`; `PGRST116`/`P0002` → `not_found`; `23505`/`40001` → `conflict`; check violations → `validation`; network and 5xx → `unavailable` (retryable).
 * Times are read from the `*_local` views, so they carry the port's offset as in the mocks.
-* `sendMessage` posts only `{ conversationId, body }` to `concierge-respond`. The server builds its own minimised context; the client's `GuestContext` is never sent.
+* `sendMessage` posts only `{ conversationId, body, requestId }` to `concierge-respond`. `requestId` is a fresh UUID, so a retried call returns the stored reply. The server builds its own minimised context; the client's `GuestContext` is never sent. Replies carry a `classification` (`information` / `recommendation` / `transactional`). See [11 · Concierge AI](11-concierge-ai-architecture.md).
 * Bookings are requests. Changes and cancellations go through database functions that allow nothing else.
 * Known, intentional differences from the mock:
   * the guest record omits the date of birth;

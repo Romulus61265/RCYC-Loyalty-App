@@ -73,7 +73,7 @@ function Message({ item }: { item: Extract<ThreadItem, { kind: 'message' }> }) {
       <Avatar initials={item.initials} tone={person ? 'person' : 'concierge'} />
       <View style={{ flex: 1, marginLeft: spacing.sm }}>
         <View style={styles.byline}>
-          <Eyebrow color={person ? colors.accent : colors.textMuted}>{item.name}</Eyebrow>
+          <Eyebrow color={person ? colors.accent : colors.textMuted}>{item.note ? `${item.name} · ${item.note}` : item.name}</Eyebrow>
           <Caption color={colors.textMuted}>{item.time}</Caption>
         </View>
         <View style={[styles.bubble, styles.theirBubble, person && { borderColor: colors.accent }]}>

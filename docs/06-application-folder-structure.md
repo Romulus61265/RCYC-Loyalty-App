@@ -87,12 +87,13 @@ RCYC-Loyalty-App/
     ├── migrations/               Schema + RLS + storage policies
     ├── functions/
     │   ├── _shared/auth.ts       JWT verification, roles, audit, error handling
-    │   ├── concierge-respond/    AI orchestration + escalation
+    │   ├── _shared/concierge/    Concierge AI pipeline (runtime-agnostic; docs/11)
+    │   ├── concierge-respond/    Endpoint: JWT → clients + provider → pipeline
     │   ├── journey-events/       HMAC webhook ingest → alert projection
     │   └── personalization-next-best/  Next-best-experience scoring
     └── tests/                    Local stubs + SQL smoke tests (RLS, preferences, integration)
 scripts/
-├── check-*.ts                    View-model, fixture and Supabase checks (npm run verify)
+├── check-*.ts                    View-model, fixture, concierge-server and Supabase checks (npm run verify)
 ├── generate-seed.ts              Writes supabase/seed.sql (npm run seed:generate)
 └── supabase/                     Seed row builders, end-to-end runner (npm run test:supabase)
 ```

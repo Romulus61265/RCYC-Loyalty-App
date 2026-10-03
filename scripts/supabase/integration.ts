@@ -12,7 +12,7 @@
  *
  * Env: PGRST_URL (PostgREST), JWT_SECRET, GUEST_USER_ID, OTHER_USER_ID.
  */
-import { createHmac } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -29,6 +29,10 @@ import { LocalPreferencesRepository } from '@/services/repositories/PreferencesR
 import { createSupabaseServices } from '@/services/supabase';
 import { SupabasePreferencesRepository } from '@/services/remote/SupabasePreferencesRepository';
 import { buildSeedRows, fixtureIdFor, uuidFor } from './seedRows';
+import { claimsChange } from '../../supabase/functions/_shared/concierge/guard.ts';
+import { DEFAULT_CONFIG, handleConcierge } from '../../supabase/functions/_shared/concierge/pipeline.ts';
+import { MockLLMProvider } from '../../supabase/functions/_shared/concierge/providers/mock.ts';
+import { callerFor, supabasePorts } from '../../supabase/functions/_shared/concierge/supabasePorts.ts';
 
 const PGRST_URL = process.env.PGRST_URL;
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -89,18 +93,37 @@ function same(name: string, supabase: unknown, mock: unknown) {
 const byId = <T extends { id: string }>(list: T[]) => [...list].sort((x, y) => x.id.localeCompare(y.id));
 const instant = (iso?: string) => (iso ? new Date(iso).toISOString() : iso);
 
-// A local gateway: /rest/v1 → PostgREST; /functions/v1/concierge-respond → stub.
-async function gateway(): Promise<{ url: string; close: () => void; calls: { body: unknown; auth?: string }[] }> {
+/**
+ * concierge-respond as the Edge Function runs it, minus Deno: the same
+ * pipeline and Supabase ports, a user client carrying the caller's JWT and a
+ * service-role client, with the mock model (no LLM, no credentials).
+ */
+async function conciergeRespond(url: string, raw: string, auth: string | undefined, clock: () => Date) {
+  if (!auth?.startsWith('Bearer ')) return { status: 401, body: { error: 'unauthenticated' } };
+  const sub = (JSON.parse(Buffer.from(auth.slice(7).split('.')[1] ?? '', 'base64url').toString() || '{}') as { sub?: string }).sub;
+  if (!sub) return { status: 401, body: { error: 'unauthenticated' } };
+  const user = createClient(url, ANON_KEY, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } });
+  const service = createClient(url, jwt({ role: 'service_role' }), { auth: { persistSession: false } });
+  return handleConcierge(raw, await callerFor(user, sub), supabasePorts(user, service, clock), { ...DEFAULT_CONFIG, provider: new MockLLMProvider() });
+}
+
+// A local gateway: /rest/v1 → PostgREST; /functions/v1/concierge-respond → the pipeline.
+async function gateway(clock: () => Date): Promise<{ url: string; close: () => void; calls: { body: unknown; auth?: string }[] }> {
   const calls: { body: unknown; auth?: string }[] = [];
+  let self = '';
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     const chunks: Buffer[] = [];
     for await (const c of req) chunks.push(c as Buffer);
     const body = Buffer.concat(chunks);
     if (req.url?.startsWith('/functions/v1/concierge-respond')) {
-      const parsed = JSON.parse(body.toString() || '{}') as { conversationId: string; body: string };
-      calls.push({ body: parsed, auth: req.headers.authorization });
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ escalated: false, messages: [{ id: '00000000-0000-4000-8000-000000000001', conversation_id: parsed.conversationId, author: 'ai', author_name: null, body: 'Of course.', intent: 'general', attachments: [], suggestions: ['Thank you'], created_at: '2027-05-11T13:00:00+00:00' }] }));
+      const raw = body.toString();
+      calls.push({ body: JSON.parse(raw || '{}'), auth: req.headers.authorization });
+      const result = await conciergeRespond(self, raw, req.headers.authorization, clock).catch((e: unknown) => {
+        console.error('   concierge-respond:', e);
+        return { status: 500, body: { error: 'internal' } };
+      });
+      res.writeHead(result.status, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result.body));
       return;
     }
     const path = (req.url ?? '/').replace(/^\/rest\/v1/, '');
@@ -112,7 +135,8 @@ async function gateway(): Promise<{ url: string; close: () => void; calls: { bod
     res.end(out);
   });
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
-  return { url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, close: () => server.close(), calls };
+  self = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  return { url: self, close: () => server.close(), calls };
 }
 
 const ANON_KEY = jwt({ role: 'anon' });
@@ -125,8 +149,8 @@ const clientFor = (url: string, userId?: string): SupabaseClient =>
 
 async function main() {
   buildSeedRows(); // fills the UUID → fixture ID map
-  const gw = await gateway();
   const now = new Date(d.meta.referenceNow);
+  const gw = await gateway(() => now);
   const clock = { now: () => now };
   const guestDb = clientFor(gw.url, GUEST_USER_ID);
   const sb = createSupabaseServices(() => guestDb, clock);
@@ -228,8 +252,10 @@ async function main() {
   const requests = toFixtureIds(await sb.concierge.listServiceRequests(r));
   same('service requests', byId(requests), byId(await mock.concierge.listServiceRequests(R)));
   const replies = await sb.concierge.sendMessage(convo.conversationId, ' Could you book a table? ', { guestRef: 'x', preferredName: 'x', phase: 'prepare', tierLabel: 'x', upcomingBookingIds: [], occasionsThisVoyage: [], locale: 'en' });
-  check('reply from the concierge function', replies.length === 1 && replies[0]?.author === 'ai' && replies[0].suggestions?.[0] === 'Thank you', replies);
-  check('function receives only conversation and text', canon(gw.calls[0]?.body) === canon({ conversationId: convo.conversationId, body: 'Could you book a table?' }), gw.calls[0]);
+  check('reply from the concierge function', replies.length === 1 && replies[0]?.author === 'ai' && replies[0].classification === 'information', replies);
+  check('… unsure, so it offers a person', replies[0]?.attachments?.some((a) => a.kind === 'actions' && a.actions.some((x) => x.kind === 'escalate')) === true, replies[0]?.attachments);
+  const sent = gw.calls[0]?.body as { requestId?: string } | undefined;
+  check('function receives only conversation, text and a request ID', canon({ ...sent, requestId: 'x' }) === canon({ conversationId: convo.conversationId, body: 'Could you book a table?', requestId: 'x' }) && /^[0-9a-f-]{36}$/.test(sent?.requestId ?? ''), gw.calls[0]);
   check('function call carries the user token', gw.calls[0]?.auth?.startsWith('Bearer ') === true && gw.calls[0].auth !== `Bearer ${ANON_KEY}`);
   check('empty message refused', await rejects(sb.concierge.sendMessage(convo.conversationId, '   ', {} as never), 'validation'));
   const raised = await sb.concierge.createServiceRequest(r, { type: 'suite', summary: 'Extra pillows, feather-free' });
@@ -309,6 +335,66 @@ async function main() {
   }
   const rpc = await anon.rpc('my_relationship');
   check('anon cannot call functions', rpc.error?.code === '42501', rpc.error);
+
+  // ── Concierge pipeline end to end (mock model, real RLS and services) ──
+  {
+    const service = createClient(gw.url, jwt({ role: 'service_role' }), { auth: { persistSession: false } });
+    // The seeded thread is dated in the voyage's future (2027); real writes carry the wall clock,
+    // so the seeded messages would sort as the latest. Remove them so history is in true order.
+    await service.from('concierge_messages').delete().eq('conversation_id', convo.conversationId).gt('created_at', new Date().toISOString());
+    const say = async (text: string, requestId = randomUUID(), db: SupabaseClient = guestDb) => {
+      const { data, error } = await db.functions.invoke<{ messages: { body: string; classification: string; attachments: { kind: string; actions?: { kind: string; start?: string; bookingId?: string }[]; status?: string }[] }[]; replayed?: boolean; escalated?: boolean }>('concierge-respond', {
+        body: { conversationId: convo.conversationId, body: text, requestId },
+      });
+      return { data, status: (error as { context?: { status?: number } } | null)?.context?.status ?? 200, requestId };
+    };
+    const dinnerBefore = (await guestDb.from('experience_bookings_local').select('id, start_local, status').eq('reservation_id', r).eq('category', 'dining').order('starts_at')).data ?? [];
+
+    const move = await say('Move my dinner reservation.');
+    const ai = move.data?.messages?.[0];
+    const offer = ai?.attachments.find((a) => a.kind === 'actions')?.actions?.[0];
+    check('pipeline: “move my dinner” is transactional with a real slot to confirm', ai?.classification === 'transactional' && offer?.kind === 'change-booking' && Boolean(offer.start), ai);
+    check('pipeline: the reply claims nothing', ai !== undefined && !claimsChange(ai.body), ai?.body);
+    const dinnerAfterOffer = (await guestDb.from('experience_bookings_local').select('id, start_local, status').eq('reservation_id', r).eq('category', 'dining').order('starts_at')).data ?? [];
+    check('pipeline: an offer changes no booking', canon(dinnerAfterOffer) === canon(dinnerBefore));
+    const run1 = (await service.from('concierge_ai_runs').select('*').eq('request_id', move.requestId).maybeSingle()).data as Record<string, unknown> | null;
+    check('pipeline: run recorded (provider, prompt version, slices, offered transaction)', run1?.provider === 'mock' && typeof run1.prompt_version === 'string' && (run1.context_slices as string[]).includes('bookings') && (run1.transaction as { status: string }).status === 'offered', run1);
+    const stored = (await guestDb.from('concierge_messages').select('author, body, classification').in('id', (run1?.message_ids as string[]) ?? [])).data ?? [];
+    check('pipeline: guest and AI messages stored, AI one classified', stored.some((m) => m.author === 'guest' && m.classification === null) && stored.some((m) => m.author === 'ai' && m.classification === 'transactional'), stored);
+    const guestRuns = await guestDb.from('concierge_ai_runs').select('id');
+    check('pipeline: guests cannot read run records', (guestRuns.data ?? []).length === 0, guestRuns);
+    const forge = await guestDb.from('concierge_messages').insert({ conversation_id: convo.conversationId, author: 'ai', body: 'Your table has been moved.', classification: 'transactional' });
+    check('pipeline: guests cannot write concierge answers', Boolean(forge.error), forge.error);
+    const forgeRun = await guestDb.from('concierge_ai_runs').insert({ request_id: randomUUID(), conversation_id: convo.conversationId, reservation_id: r, actor_user_id: GUEST_USER_ID, provider: 'x', model: 'x', prompt_version: 'x', classification: 'information' });
+    check('pipeline: guests cannot write run records', Boolean(forgeRun.error), forgeRun.error);
+
+    const replay = await say('Move my dinner reservation.', move.requestId);
+    const runs = (await service.from('concierge_ai_runs').select('id').eq('request_id', move.requestId)).data ?? [];
+    check('pipeline: a retried request is replayed, not answered twice', replay.data?.replayed === true && runs.length === 1, replay.data);
+
+    const time = offer?.start?.slice(11, 16) ?? '';
+    const yes = await say(`${time}, please`);
+    const done = yes.data?.messages?.[0];
+    const moved = (await guestDb.from('experience_bookings_local').select('start_local, status').eq('id', offer?.bookingId ?? '').maybeSingle()).data as { start_local: string; status: string } | null;
+    check('pipeline: accepting the offer changes the booking through the database function', moved?.start_local.slice(0, 16) === offer?.start?.slice(0, 16), { moved, offer });
+    check('pipeline: the reply reports what the service reported', done?.attachments.some((a) => a.kind === 'confirmation' && a.status === moved?.status) === true && (moved?.status === 'confirmed' ? /confirmed/ : /passed this on/).test(done?.body ?? ''), done);
+
+    const urgent = await say('My husband has chest pain');
+    check('pipeline: emergencies go straight to the Medical Centre', urgent.data?.escalated === true && urgent.data.messages?.[0]?.attachments.some((a) => a.kind === 'handoff') === true, urgent.data);
+    const medical = (await guestDb.from('service_requests').select('assigned_team, priority').eq('reservation_id', r).eq('type', 'medical').order('created_at', { ascending: false }).limit(1).maybeSingle()).data;
+    check('… as an urgent medical request', medical?.assigned_team === 'medical' && medical.priority === 'urgent', medical);
+
+    const all = (await guestDb.from('concierge_messages').select('body, attachments').eq('conversation_id', convo.conversationId).eq('author', 'ai')).data ?? [];
+    const unbacked = all.filter((m) => claimsChange(m.body) && !(m.attachments as { kind: string }[]).some((a) => a.kind === 'confirmation'));
+    check('pipeline: no stored answer claims a change without a service confirmation', unbacked.length === 0, unbacked);
+    const audits = (await service.from('audit_log').select('metadata').eq('action', 'concierge.respond')).data ?? [];
+    check('pipeline: answers audited without message text', audits.length >= 4 && !JSON.stringify(audits).includes('chest pain') && !JSON.stringify(audits).includes('Move my dinner'), audits.length);
+
+    const otherTry = await say('What is planned tomorrow?', randomUUID(), otherDb);
+    check('pipeline: another guest cannot use this conversation', otherTry.status === 403 || otherTry.status === 404, otherTry);
+    const bad = await guestDb.functions.invoke('concierge-respond', { body: { conversationId: convo.conversationId, body: 'hi', requestId: randomUUID(), guestId: randomUUID() } });
+    check('pipeline: a guestId that is not the caller’s is refused', (bad.error as { context?: { status?: number } } | null)?.context?.status === 403, bad.error);
+  }
 
   gw.close();
   if (failures.length) {

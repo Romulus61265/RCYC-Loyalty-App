@@ -78,7 +78,11 @@ See [docs/05](docs/05-service-interfaces.md#implementations-and-modes).
 supabase start && supabase db reset          # applies migrations + supabase/seed.sql (fictional)
 supabase functions serve                     # concierge-respond, journey-events, personalization-next-best
 supabase secrets set CONCIERGE_AI_PROVIDER=mock PSEUDONYM_SALT=... JOURNEY_EVENTS_HMAC_SECRET=...
+# To connect Claude to the concierge (function secrets only, never in the app):
+supabase secrets set CONCIERGE_AI_PROVIDER=anthropic ANTHROPIC_API_KEY=... # optional CONCIERGE_AI_MODEL=...
 ```
+
+The concierge's server pipeline is described in [docs/11](docs/11-concierge-ai-architecture.md). It covers validation, minimised context, structured output, guards, transactions only through the booking services, escalation and audit.
 
 Run the app against it:
 
@@ -93,6 +97,6 @@ Tests: `npm run check:supabase` runs in `verify` and needs nothing. `npm run tes
 ## Security notes
 
 * Only `EXPO_PUBLIC_*` values are bundled into the app. These are the Supabase URL and anon key, both protected by RLS. A service-role key there stops the app at start-up.
-* Service-role, Bonvoy, AI and webhook secrets live only in Edge Function secrets.
+* Service-role, Bonvoy, AI (`ANTHROPIC_API_KEY`) and webhook secrets live only in Edge Function secrets.
 * Tokens are stored in the Keychain or Keystore.
 * All data is fictional.

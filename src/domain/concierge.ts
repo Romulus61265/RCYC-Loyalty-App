@@ -17,6 +17,14 @@ export type ConciergeIntent =
   | 'gratitude'
   | 'general';
 
+/**
+ * What kind of answer a concierge message is. Information answers from the
+ * guest's data; a recommendation suggests something not yet booked; a
+ * transactional reply concerns a change, which only a booking service can
+ * confirm (the reply never claims it on its own).
+ */
+export type ConciergeClassification = 'information' | 'recommendation' | 'transactional';
+
 /** Who a conversation is handed to. */
 export type EscalationTarget = 'suite-ambassador' | 'concierge-team' | 'medical';
 
@@ -54,6 +62,8 @@ export interface ConciergeMessage {
   body: string;
   createdAt: ISODateTime;
   intent?: ConciergeIntent;
+  /** Set on concierge (AI) answers. */
+  classification?: ConciergeClassification;
   attachments?: ConciergeAttachment[];
   /** Quick replies the guest can tap. */
   suggestions?: string[];

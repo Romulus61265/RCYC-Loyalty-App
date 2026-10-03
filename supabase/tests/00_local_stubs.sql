@@ -20,3 +20,9 @@ create function storage.foldername(name text) returns text[] language sql immuta
 create publication supabase_realtime;
 grant usage on schema public to anon, authenticated;
 alter default privileges in schema public grant select, insert, update, delete on tables to authenticated;
+-- As on Supabase: the service role (Edge Functions) has full table access and bypasses RLS.
+grant usage on schema public to service_role;
+alter default privileges in schema public grant all on tables to service_role;
+alter default privileges in schema public grant all on sequences to service_role;
+alter default privileges in schema public grant execute on functions to service_role;
+grant usage on schema auth to service_role;

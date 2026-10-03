@@ -5,6 +5,7 @@
  *    guest message, builds a minimised context server-side (the client's
  *    GuestContext is not sent: the server never trusts it), calls the AI
  *    provider with keys that live only in function secrets, and escalates.
+ *    Each send carries a fresh requestId so a retried call is idempotent.
  *  • Human replies arrive through Realtime; RLS limits them to the party.
  *  • Service requests are inserted directly; RLS accepts only new requests
  *    ('received', unassigned) on the caller's own reservation.
@@ -28,6 +29,17 @@ export const SUGGESTED_QUESTIONS = [
   'Help me celebrate an occasion.',
 ];
 
+/** A v4 UUID; crypto.randomUUID where the runtime has it. */
+function requestId(): string {
+  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  if (c?.randomUUID) return c.randomUUID();
+  const hex = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16));
+  hex[12] = '4';
+  hex[16] = ((parseInt(hex[16]!, 16) & 0x3) | 0x8).toString(16);
+  const h = hex.join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
 interface FunctionsErrorLike {
   message: string;
   context?: { status?: number };
@@ -38,7 +50,8 @@ function functionError(error: FunctionsErrorLike): ServiceError {
   if (status === 401) return new ServiceError('unauthenticated', 'Session expired');
   if (status === 403) return new ServiceError('forbidden', 'Not part of this conversation');
   if (status === 404) return new ServiceError('not_found', 'Conversation not found');
-  if (status === 422) return new ServiceError('validation', 'Message not accepted');
+  if (status === 413 || status === 422) return new ServiceError('validation', 'Message not accepted');
+  if (status === 429) return new ServiceError('unavailable', 'Too many messages; please wait a moment', true);
   return new ServiceError('unavailable', error.message || 'Concierge unavailable', true);
 }
 
@@ -96,7 +109,8 @@ export class SupabaseConciergeService implements ConciergeService {
   }
 
   async sendMessage(conversationId: ID, body: string, _context: GuestContext) {
-    const payload = { conversationId: uuid(conversationId, 'Conversation'), body: text(body, 'Message', MESSAGE_MAX) };
+    // requestId makes a retry safe: the function returns the stored reply instead of answering twice.
+    const payload = { conversationId: uuid(conversationId, 'Conversation'), body: text(body, 'Message', MESSAGE_MAX), requestId: requestId() };
     const { data, error } = await this.db.functions.invoke<{ messages: MessageRow[]; escalated: boolean }>('concierge-respond', { body: payload });
     if (error) throw functionError(error as FunctionsErrorLike);
     return (data?.messages ?? []).filter(Boolean).map(toMessage);

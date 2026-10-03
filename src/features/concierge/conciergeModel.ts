@@ -64,7 +64,7 @@ export type Card =
 
 export type ThreadItem =
   | { kind: 'divider'; key: string; label: string }
-  | { kind: 'message'; key: string; side: 'guest' | 'concierge' | 'person'; name: string; initials?: string; time: string; paragraphs: Paragraph[] }
+  | { kind: 'message'; key: string; side: 'guest' | 'concierge' | 'person'; name: string; initials?: string; time: string; paragraphs: Paragraph[]; note?: string }
   | { kind: 'card'; key: string; card: Card };
 
 export interface RequestCardModel {
@@ -322,6 +322,15 @@ function cardFor(att: ConciergeAttachment, input: ConciergeInputs, ui: UiState):
 
 // ─── Model ─────────────────────────────────────────────────────────────────
 
+/** A quiet word in the byline: a suggestion, or a change that still needs the guest's yes. */
+function noteFor(m: ConciergeMessage): string | undefined {
+  if (m.classification === 'recommendation') return 'Suggestion';
+  if (m.classification !== 'transactional') return undefined;
+  const atts = m.attachments ?? [];
+  if (atts.some((a) => a.kind === 'confirmation' || a.kind === 'handoff')) return undefined;
+  return atts.some((a) => a.kind === 'actions' && a.actions.some((b) => b.kind !== 'open' && b.kind !== 'escalate')) ? 'Needs your confirmation' : undefined;
+}
+
 export function buildConciergeModel(input: ConciergeInputs, ui: UiState): ConciergeModel {
   const { reservation } = input.overview;
   const contact = reservation.suiteAmbassadorContact;
@@ -343,7 +352,7 @@ export function buildConciergeModel(input: ConciergeInputs, ui: UiState): Concie
     if (m.body.trim()) {
       const side = m.author === 'guest' ? 'guest' : m.author === 'human' ? 'person' : 'concierge';
       const name = m.author === 'guest' ? 'You' : m.author === 'human' ? (m.authorName ?? ambFirst) : 'Concierge';
-      thread.push({ kind: 'message', key: m.id, side, name, initials: side === 'person' ? initials(name.split(',')[0] ?? name) : undefined, time: deviceTime(at), paragraphs: paragraphsOf(m.body) });
+      thread.push({ kind: 'message', key: m.id, side, name, initials: side === 'person' ? initials(name.split(',')[0] ?? name) : undefined, time: deviceTime(at), paragraphs: paragraphsOf(m.body), note: m.author === 'ai' ? noteFor(m) : undefined });
     }
     (m.attachments ?? []).forEach((att, i) => {
       const card = cardFor(att, input, ui);

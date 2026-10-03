@@ -186,12 +186,18 @@ Generated from the fictional dataset by `npm run seed:generate`, so do not edit 
 * It creates no auth users or roles, and refuses to run against a database holding non-fictional guests.
 * `npm run check:supabase` fails if the seed is out of date.
 
+## Concierge AI (`20261006000000_concierge_ai.sql`)
+
+* `concierge_messages.classification` (`information` / `recommendation` / `transactional`) is set on AI answers. The guest insert policy refuses a classification or a confidence on guest messages.
+* `concierge_ai_runs` holds one row per answered request, written by `concierge-respond` (service role). It records the provider and model, prompt version, classification, context slices, safety flags, guard findings, escalation, transaction outcome, degradation, attempts, latency, usage and message IDs. It never holds text. `request_id` is unique, which is what makes retries idempotent. Crew on the yacht can read it; guests cannot read or write it.
+* See [11 · Concierge AI](11-concierge-ai-architecture.md).
+
 ## Testing
 
 | Command | Needs | Covers |
 |---|---|---|
 | `npm run check:supabase` (in `verify`) | nothing | Seed freshness; key and URL validation; sign-in logic against a fake client; keychain chunking; mapping and error codes; static scans (no service-role key in app code, RLS on every table, `security_invoker` views, pinned `search_path`) |
-| `npm run test:supabase` | `PG_BIN` (PostgreSQL 15+) and `POSTGREST` (PostgREST 12) | Throwaway cluster: stubs, migrations, seed. Runs the 67 SQL assertions in `supabase/tests/10_*`, `20_*` and `30_*`, then 95 checks running the **app's Supabase services through supabase-js → PostgREST → RLS**, compared with the mock services, plus the writes and refusals for the guest, another guest and the anon key |
+| `npm run test:supabase` | `PG_BIN` (PostgreSQL 15+) and `POSTGREST` (PostgREST 12) | Throwaway cluster: stubs, migrations, seed. Runs the 67 SQL assertions in `supabase/tests/10_*`, `20_*` and `30_*`, then 113 checks running the **app's Supabase services through supabase-js → PostgREST → RLS**, compared with the mock services, plus the writes and refusals for the guest, another guest and the anon key, and the **concierge pipeline end to end** (mock model, real RLS and booking functions) |
 
 ```bash
 PG_BIN=/usr/lib/postgresql/16/bin POSTGREST=~/bin/postgrest npm run test:supabase

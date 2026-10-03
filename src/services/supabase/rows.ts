@@ -556,7 +556,7 @@ export const toSlot = (s: SlotRow) => compact({ start: s.start_local, end: opt(s
 
 // ─── Concierge ─────────────────────────────────────────────────────────────
 
-export const MESSAGE_COLUMNS = 'id, conversation_id, author, author_name, body, intent, attachments, suggestions, created_at';
+export const MESSAGE_COLUMNS = 'id, conversation_id, author, author_name, body, intent, classification, attachments, suggestions, created_at';
 
 export interface MessageRow {
   id: string;
@@ -565,6 +565,7 @@ export interface MessageRow {
   author_name: string | null;
   body: string;
   intent: ConciergeMessage['intent'] | null;
+  classification?: ConciergeMessage['classification'] | null;
   attachments: ConciergeMessage['attachments'] | null;
   suggestions: string[] | null;
   created_at: string;
@@ -579,6 +580,7 @@ export function toMessage(r: MessageRow): ConciergeMessage {
     body: r.body,
     createdAt: new Date(r.created_at).toISOString(),
     intent: opt(r.intent),
+    classification: opt(r.classification ?? null),
     attachments: optList(r.attachments ?? undefined),
     suggestions: optList(r.suggestions ?? undefined),
   });
