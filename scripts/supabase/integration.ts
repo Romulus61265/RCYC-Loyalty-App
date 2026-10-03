@@ -237,6 +237,24 @@ async function main() {
   const handoff = await sb.concierge.escalateToHuman({ conversationId: convo.conversationId, reason: 'guest-request', preferredChannel: 'chat' });
   check('hand-off to the Suite Ambassador', handoff.agentName === 'Elena, Suite Ambassador' && handoff.team === 'suite-ambassador', handoff);
 
+  // ── Concierge actions ──
+  const bridgeReq = toFixtureIds(await sb.concierge.getServiceRequest(uuidFor('dev_srq_bridge')));
+  check('request links to its experience', bridgeReq.experienceId === 'dev_exp_bridge', bridgeReq);
+  const carDone = await sb.concierge.performAction(convo.conversationId, { kind: 'service-request', label: 'Arrange it', type: 'transport', summary: 'Private car in Portofino, 21 May', details: 'Sedan, no music' });
+  const carConf = carDone[0]?.attachments?.[0];
+  check('action: service request raised and confirmed as received', carConf?.kind === 'confirmation' && carConf.status === 'received' && Boolean(carConf.requestId), carDone);
+  const moveDone = await sb.concierge.performAction(convo.conversationId, { kind: 'change-booking', label: 'Move to 21:00', bookingId: uuidFor('dev_bkg_dinner_1'), start: '2027-05-15T21:00:00+02:00' });
+  const moveConf = moveDone[0]?.attachments?.[0];
+  check('action: dinner change requested through the database function', moveConf?.kind === 'confirmation' && moveConf.status === 'in_progress', moveDone);
+  const linked = toFixtureIds(await sb.concierge.listServiceRequests(r)).find((q) => q.bookingId === 'dev_bkg_dinner_1');
+  check('… and recorded as a request linked to the booking', Boolean(linked), linked);
+  const teamDone = await sb.concierge.performAction(convo.conversationId, { kind: 'escalate', label: 'Speak with the team', to: 'concierge-team', reason: 'guest-request' });
+  const teamCard = teamDone[0]?.attachments?.[0];
+  check('action: hand-off to the concierge team', teamCard?.kind === 'handoff' && teamCard.to === 'concierge-team' && teamCard.team === 'shoreside-concierge', teamDone);
+  check('open actions are refused by the service (navigation is the app’s)', await rejects(sb.concierge.performAction(convo.conversationId, { kind: 'open', label: 'x', route: '/voyage' }), 'validation'));
+  const spoof = await guestDb.from('service_requests').insert({ reservation_id: r, type: 'general', summary: 'x', booking_id: uuidFor('dev_bkg_dinner_1'), experience_id: '00000000-0000-4000-8000-000000000999' });
+  check('a request cannot link an unknown experience', spoof.error?.code === '42501' || spoof.error?.code === '23503', spoof.error);
+
   // ── Writes as the guest ──
   const booked = await sb.experience.requestBooking(r, uuidFor('dev_exp_wine_masterclass'), '2027-05-17T15:00:00+02:00', 2, 'Window, please');
   check('booking requested', booked.status === 'received' && booked.category === 'wine' && booked.start === '2027-05-17T15:00:00+02:00' && booked.venue === 'Aboard Evrima', booked);

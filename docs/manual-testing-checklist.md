@@ -43,7 +43,7 @@ On every screen, check for:
 | Home | [ ] "Good morning/afternoon/evening, Isabelle" · [ ] "2 days until Barcelona" · [ ] a quiet Bonvoy recognition line · [ ] two alerts, which can be dismissed · [ ] the "Open concierge" button is readable on the dark card |
 | Voyage | [ ] Five section tabs scroll horizontally · [ ] each section renders content |
 | Discover | [ ] Filters scroll horizontally and change the collections shown · [ ] carousels scroll horizontally |
-| Concierge | [ ] Suggested questions appear · [ ] tapping one returns a reply · [ ] the "Sophie" button adds a hand-off note and Sophie's message · [ ] the keyboard doesn't cover the input (iOS) |
+| Concierge | [ ] Suggested prompts appear · [ ] tapping one returns a reply · [ ] see section 14 · [ ] the keyboard doesn't cover the input (iOS) |
 | Profile | [ ] The Bonvoy card shows tier first; points appear in small type only |
 
 ## 4 · Deep links and unknown routes
@@ -159,3 +159,34 @@ Prerequisites:
 - [ ] **Session.** Leave the app for more than 15 minutes, then come back. You are still signed in (token refreshed), with no reload flash.
 - [ ] **Sign out.** Profile → Personal → Sign out returns to the sign-in screen. The keychain entry is removed. On web, a reload also signs out, because sessions are kept in memory only there.
 - [ ] **RLS.** In Studio's SQL editor, run `set role anon; select * from guests;`. It fails with permission denied.
+
+## 14 · Concierge
+
+- [ ] **Opening.** The April conversation with Elena sits under "Monday 26 April". Today's greeting names Alexander and Barcelona on Saturday 15 May. Six prompts appear as chips: *What is planned for tomorrow? · Move my dinner reservation. · What private experiences are available in Monte Carlo? · Arrange transportation. · What benefits do I have? · Help me celebrate my anniversary.*
+- [ ] **Suggested requests** follow the greeting:
+  - the bridge visit, which is awaiting your choice (16:30 or 17:30);
+  - the health questionnaire, where **Complete now** opens Voyage › Documents;
+  - a personalised pick with its reason.
+- [ ] **Tomorrow, before the voyage.** "What is planned for tomorrow?" returns: still at home in Miami on Wednesday 12 May, the questionnaire due on the 13th, AA 7412 leaving Miami at 18:40, and the day 1 schedule card.
+- [ ] **Tomorrow, aboard.** Open `/concierge?now=2027-05-18T09:00:00%2B02:00` and ask "What should I do tomorrow?". The reply covers Monte Carlo, day 5:
+  - suggestions first, each with its reason;
+  - then what's arranged, including "Dinner at Lumière, at your window table";
+  - sunset and dress code;
+  - cards to reserve the atelier at 14:00 or 15:30.
+
+  No suggestion clashes with a booking.
+- [ ] **Preferences change answers.** In Profile, switch off Personalised recommendations and ask again. The reasons disappear. Set the dining table to Terrace: the window-table note goes.
+- [ ] **Move dinner.** The reply names Mediterraneo, 20:30 and the window table, with **Move to 19:30 / Move to 21:00**.
+  - Tap 21:00. You see "Done…", a **Confirmed** card with a reference, and the buttons resolve (✓ on 21:00).
+  - In Voyage › Dining the dinner is at 21:00.
+  - Typing "21:00, please" instead does the same.
+- [ ] **Private dinner.** "Move my dinner on 20 May" offers **Ask Elena** rather than times.
+- [ ] **Monte Carlo.** You see what's private and unbooked (the atelier), with times, and what's already arranged (Oceanographic, Villa Ephrussi).
+- [ ] **Transportation.** You see your transfers, AA 7412 being tracked, and that the helicopter request has been received (not offered again). There are car cards for Saint-Tropez and Portofino carrying your note ("sedan, no music").
+- [ ] **Benefits.** Titanium Elite (Lifetime Platinum Elite), fourth voyage, seven privileges as a card, Elena again as Suite Ambassador. No points.
+- [ ] **Anniversary.** Thursday 20 May in Monte Carlo, "quietly, as you prefer", with what's in place that day. Cards offer the atelier, **Arrange flowers** and **Ask Elena**. With "Share occasions with crew" off, a note says the crew haven't been told.
+- [ ] **Request status.** On **Requests**, open requests show a Received → Being arranged → Confirmed timeline, the owner and the next update. **Ask about this** on the bridge visit offers the times; choose 17:30 and it's reserved, and the request is confirmed.
+- [ ] **Suite Ambassador.** Header **Elena · A person** opens the people panel (Elena with her hours and languages; the concierge team; the Medical Centre; emergency advice). **Ask Elena to join** shows a hand-off card; Elena joins within a few seconds and picks up the topic.
+- [ ] **Human escalation.** "I would like to speak to a real person" brings Marco (Shoreside Concierge) before the voyage, or Sofia (Guest Services) aboard. "I feel unwell" goes to the Medical Centre, with emergency advice for where you are. An unclear message offers a person; a second one hands you over.
+- [ ] **Failures.** With `?scenario=error`, a calm message with Try again. Losing the network mid-message shows "Your message didn't reach us…" and keeps your text in the box.
+- [ ] **320 px and large text.** No horizontal scrolling; cards and buttons wrap.

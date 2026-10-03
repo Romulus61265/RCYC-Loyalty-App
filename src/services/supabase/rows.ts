@@ -584,7 +584,7 @@ export function toMessage(r: MessageRow): ConciergeMessage {
   });
 }
 
-export const REQUEST_COLUMNS = 'id, reservation_id, type, summary, details, status, priority, assigned_team, assigned_to_name, created_at, updated_at, next_update_by';
+export const REQUEST_COLUMNS = 'id, reservation_id, type, summary, details, status, priority, assigned_team, assigned_to_name, created_at, updated_at, next_update_by, experience_id, booking_id';
 
 export interface RequestRow {
   id: string;
@@ -599,6 +599,8 @@ export interface RequestRow {
   created_at: string;
   updated_at: string;
   next_update_by: string | null;
+  experience_id: string | null;
+  booking_id: string | null;
 }
 
 export function toRequest(r: RequestRow): ServiceRequest {
@@ -615,6 +617,8 @@ export function toRequest(r: RequestRow): ServiceRequest {
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     nextUpdateBy: opt(r.next_update_by),
+    experienceId: opt(r.experience_id),
+    bookingId: opt(r.booking_id),
   });
 }
 

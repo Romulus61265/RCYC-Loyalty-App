@@ -7,16 +7,19 @@ const R = IDS.reservation;
 export const conciergeData: DevConciergeData = {
   ambassador: { name: 'Elena Moreau', title: 'Suite Ambassador' },
 
-  // Prefixed at runtime with a time-of-day salutation ("Good morning, Alexander.").
-  greeting: 'Everything is in hand for Barcelona on Saturday. How may I help?',
+  team: {
+    shoreside: { name: 'Marco Bellini', title: 'Shoreside Concierge' },
+    aboard: { name: 'Sofia Lindqvist', title: 'Guest Services' },
+    medical: { name: 'Dr. Anna Vos', title: 'Medical Centre' },
+  },
 
   suggestedQuestions: [
-    'What is planned for my first day?',
-    'Can you move my dinner reservation?',
+    'What is planned for tomorrow?',
+    'Move my dinner reservation.',
     'What private experiences are available in Monte Carlo?',
-    'Can you arrange transportation?',
-    'What benefits do I have because of my Bonvoy status?',
-    'Can I arrange something special for our anniversary?',
+    'Arrange transportation.',
+    'What benefits do I have?',
+    'Help me celebrate my anniversary.',
   ],
 
   requests: [
@@ -27,7 +30,7 @@ export const conciergeData: DevConciergeData = {
       status: 'in_progress', priority: 'priority',
       assignedTeam: 'suite-ambassador', assignedTo: 'Elena Moreau, Suite Ambassador',
       createdAt: '2027-04-26T15:20:00-04:00', updatedAt: '2027-05-07T11:05:00-04:00',
-      nextUpdateBy: '2027-05-13T17:00:00-04:00',
+      nextUpdateBy: '2027-05-13T17:00:00-04:00', bookingId: 'dev_bkg_anniversary',
     },
     {
       id: 'dev_srq_wine_2007', reservationId: R, type: 'general',
@@ -44,6 +47,7 @@ export const conciergeData: DevConciergeData = {
       status: 'awaiting_guest', priority: 'routine',
       assignedTeam: 'guest-services', assignedTo: 'Guest Services',
       createdAt: '2027-05-02T10:12:00-04:00', updatedAt: '2027-05-10T14:30:00-04:00',
+      experienceId: 'dev_exp_bridge',
     },
     {
       id: 'dev_srq_bedding', reservationId: R, type: 'suite',
@@ -59,7 +63,7 @@ export const conciergeData: DevConciergeData = {
       status: 'received', priority: 'routine',
       assignedTeam: 'destination-services',
       createdAt: '2027-05-10T19:45:00-04:00', updatedAt: '2027-05-10T19:45:00-04:00',
-      nextUpdateBy: '2027-05-12T12:00:00-04:00',
+      nextUpdateBy: '2027-05-12T12:00:00-04:00', experienceId: 'dev_exp_helicopter',
     },
   ],
 

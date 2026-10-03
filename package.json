@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "verify": "npm run typecheck && npm run lint && npm run check:fixtures && npm run check:home && npm run check:voyage && npm run check:discover && npm run check:profile && npm run check:supabase",
+    "verify": "npm run typecheck && npm run lint && npm run check:fixtures && npm run check:home && npm run check:voyage && npm run check:discover && npm run check:profile && npm run check:concierge && npm run check:supabase",
     "doctor": "npx expo-doctor",
     "check:fixtures": "tsx scripts/check-fixtures.ts",
     "check:home": "tsx scripts/check-home.ts",
@@ -20,7 +20,8 @@
     "check:profile": "tsx scripts/check-profile.ts",
     "check:supabase": "tsx scripts/check-supabase.ts",
     "seed:generate": "tsx scripts/generate-seed.ts",
-    "test:supabase": "bash scripts/supabase/run-integration.sh"
+    "test:supabase": "bash scripts/supabase/run-integration.sh",
+    "check:concierge": "tsx scripts/check-concierge.ts"
   },
   "dependencies": {
     "@expo-google-fonts/cormorant-garamond": "^0.4.1",

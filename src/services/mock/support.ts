@@ -65,6 +65,17 @@ export function mockNow(): Date {
   return Number.isNaN(pinned) ? new Date() : new Date(pinned);
 }
 
+const startedAt = Date.now();
+
+/**
+ * Timestamps for things that happen during the demo (messages, requests):
+ * the pinned demo moment plus the time since the app started, so they sort
+ * after the dataset's history and still move forward.
+ */
+export function mockEventTime(): Date {
+  return new Date(mockNow().getTime() + (Date.now() - startedAt));
+}
+
 let seq = 0;
 export function mockId(prefix: string): string {
   seq += 1;

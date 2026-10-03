@@ -20,7 +20,9 @@ import type {
   Experience,
   ExperienceBooking,
   ExperienceCategory,
+  ConciergeAction,
   ConciergeMessage,
+  EscalationTarget,
   GuestContext,
   PreferencesPatch,
   VersionedPreferences,
@@ -180,6 +182,13 @@ export interface ConciergeService {
   /** AI-first response. Implementations decide when to auto-escalate. */
   sendMessage(conversationId: ID, body: string, context: GuestContext): Promise<ConciergeMessage[]>;
   escalateToHuman(request: EscalationRequest): Promise<EscalationResult>;
+  /**
+   * Carries out an action the guest chose from an action card (move a table,
+   * request an experience, raise a request, hand over to a person). Returns
+   * the concierge's confirmation message(s). `open` actions are navigation
+   * and are handled by the app, not here.
+   */
+  performAction(conversationId: ID, action: ConciergeAction): Promise<ConciergeMessage[]>;
   createServiceRequest(reservationId: ID, input: { type: ServiceRequestType; summary: string; details?: string; priority?: ServiceRequest['priority'] }): Promise<ServiceRequest>;
   listServiceRequests(reservationId: ID): Promise<ServiceRequest[]>;
   getServiceRequest(requestId: ID): Promise<ServiceRequest>;
@@ -187,12 +196,21 @@ export interface ConciergeService {
   subscribe(conversationId: ID, listener: (message: ConciergeMessage) => void): Unsubscribe;
 }
 
-/** Pluggable reasoning backend behind ConciergeService (mock → enterprise AI). */
+/**
+ * Pluggable reasoning backend behind ConciergeService (mock → enterprise AI).
+ * The provider only decides; the orchestrating service acts (`escalateTo`,
+ * `perform`) and persists.
+ */
 export interface ConciergeAIProvider {
   respond(input: { conversationId: ID; body: string; context: GuestContext; history: ConciergeMessage[] }): Promise<{
     messages: ConciergeMessage[];
     confidence: number;
     shouldEscalate: boolean;
+    /** Who to hand over to when escalating, and why. */
+    escalateTo?: EscalationTarget;
+    escalationReason?: EscalationRequest['reason'];
+    /** The guest confirmed an action offered earlier (e.g. "21:00, please"). */
+    perform?: ConciergeAction;
   }>;
 }
 

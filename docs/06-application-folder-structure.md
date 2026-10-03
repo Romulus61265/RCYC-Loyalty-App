@@ -33,6 +33,11 @@ RCYC-Loyalty-App/
 │   ├── data/fixtures/            Fictional guest, voyage & experience data (mock only)
 │   ├── features/
 │   │   ├── auth/                 Sign-in: useSignIn (e-mail code state machine) + SignInScreen
+│   │   ├── concierge/            Concierge (?view=requests)
+│   │   │   ├── conciergeModel.ts Thread blocks, action cards, confirmations, hand-offs, request status, guest context (scripts/check-concierge.ts)
+│   │   │   ├── useConcierge.ts   Service access: send, perform actions, escalate, live updates
+│   │   │   ├── ConciergeScreen.tsx
+│   │   │   └── components/       Thread (messages + cards), Chrome (header, people panel, quick replies, composer, requests list)
 │   │   └── home/                 Home dashboard feature
 │   │       ├── homeModel.ts      Pure view model: journey-aware decisions (tested by scripts/check-home.ts)
 │   │       ├── useHomeDashboard.ts  The only service access for Home; per-section failure isolation
@@ -66,6 +71,7 @@ RCYC-Loyalty-App/
 │   ├── services/
 │   │   ├── contracts/            ★ Service interfaces — the presentation boundary
 │   │   ├── mock/                 Mock implementations (MVP)
+│   │   │   └── concierge/        Mock concierge brain: snapshot (grounding + time rules), language, answers, confirmations
 │   │   ├── remote/               BFF client + adapters (MarriottBonvoyService, SupabasePreferencesRepository, supabaseClient)
 │   │   ├── supabase/             Every contract on Supabase: rows.ts (row types + mappers), support.ts (errors, checks), one service per context
 │   │   ├── shared/               Pure rules used by every implementation: journeyPhase, calendar, recommendations, recognition, default preferences

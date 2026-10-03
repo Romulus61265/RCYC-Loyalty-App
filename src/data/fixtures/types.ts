@@ -75,8 +75,8 @@ export interface DevExperienceData {
 /** Opening state of the concierge, including a Suite Ambassador hand-off. */
 export interface DevConciergeData {
   ambassador: { name: string; title: string };
-  /** Opening line, without the salutation (added at runtime from the clock). */
-  greeting: string;
+  /** Who takes a conversation that isn't for the Suite Ambassador: shoreside before the voyage, guest services aboard, the medical centre. */
+  team: Record<'shoreside' | 'aboard' | 'medical', { name: string; title: string }>;
   suggestedQuestions: string[];
   requests: ServiceRequest[];
   /** Prior conversation, already in progress before the demo "now". */

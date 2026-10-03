@@ -88,21 +88,72 @@ Covers dining, spa, excursions, marina, entertainment, transfers and private exp
 
 ### ConciergeService
 ```ts
-openConversation(reservationId)
-sendMessage(conversationId, body, context: GuestContext)    // AI-first reply
-escalateToHuman(EscalationRequest): Promise<EscalationResult>
+openConversation(reservationId)                               // history + today's opening (prompts, suggested requests)
+sendMessage(conversationId, body, context: GuestContext)      // AI-first reply, grounded in the guest's data
+performAction(conversationId, action: ConciergeAction)        // the guest tapped an action card
+escalateToHuman(EscalationRequest & { to?: EscalationTarget }) // Suite Ambassador, concierge team or medical
 createServiceRequest(reservationId, input)
-listServiceRequests(reservationId) / getServiceRequest(id)  // request status
-subscribe(conversationId, listener)                         // human replies / status pushes
+listServiceRequests(reservationId) / getServiceRequest(id)    // request status
+subscribe(conversationId, listener)                           // a person joining / replying
 ```
-Reasoning sits behind `ConciergeAIProvider.respond()`. That method returns `{ messages, confidence, shouldEscalate }`, so the orchestration (persistence, escalation, audit) stays independent of the model.
 
-**Escalation rules (MVP).** The conversation is handed to a person when:
-* confidence is below 0.5 on the client mock, or below 0.55 on the server;
-* the topic is sensitive (medical, a complaint, refunds); or
-* the guest asks, using the named Ambassador button in the header.
+**Replies carry structure, not just prose.** `ConciergeMessage.attachments` can hold:
 
-Medical requests go to the `medical` team with `urgent` priority.
+* `schedule`: a day of the programme;
+* `actions`: an action card about an experience, booking or request, with buttons;
+* `confirmation`: the outcome of an action ("Confirmed", or "Requested" and being arranged), with a reference;
+* `handoff`: who has been asked to join, and how soon;
+* `privileges`: the guest's privileges for the voyage;
+* `service-request`: a request and its status.
+
+The UI renders these. It writes no answer text itself.
+
+**Actions** (`ConciergeAction`) are offers the guest consents to by tapping:
+
+* `change-booking`: move a booking to an available time;
+* `request-experience`: book a slot, optionally answering a request that is awaiting the guest;
+* `service-request`: anything a person arranges (a car, flowers);
+* `escalate`: hand over to a person;
+* `open`: in-app navigation, handled by the app (routes must start with `/`).
+
+A guest can also confirm in words ("21:00, please"). The provider returns `perform`, and the service carries it out.
+
+**Separation.** `ConciergeAIProvider.respond()` only decides. It returns `{ messages, confidence, shouldEscalate, escalateTo, escalationReason, perform }`. The orchestrating service acts: it books, records requests and hands over, through the same Voyage and Experience services the app uses. A table moved in Concierge is therefore moved on the Voyage and Home tabs too.
+
+**Grounding (mock).** `MockConciergeAI` answers from a snapshot that `MockConciergeService` loads through the other services:
+
+* itinerary, embarkation and flights;
+* bookings, day programme, catalogue and availability;
+* profile and preferences;
+* recognition;
+* requests;
+* the personalised ranking with reasons, which is empty when personalisation is off.
+
+The answer functions (`src/services/mock/concierge/answers.ts`) are pure, so `scripts/check-concierge.ts` pins them. "Today" and "tomorrow" are judged where the guest is: at home before and after the voyage, in port time aboard. For example, at 09:00 on 18 May, "What should I do tomorrow?" uses day 5 (Monte Carlo):
+
+* the bookings that day, with the window table noted;
+* free time, and unbooked experiences that fit around the bookings and the guest's preferences (private only ashore, preferred spa time, not too long), each with its personal reason;
+* sunset and dress code.
+
+Change a preference and the answer changes.
+
+**People.** The guest can reach a person from the header ("Speak with a person"), by asking, or through a reply's card:
+
+| Target | Who | When |
+|---|---|---|
+| `suite-ambassador` | The named Suite Ambassador (from the reservation) | The guest names them or the ambassador; occasion planning; private dinners; overdue requests ("Ask Elena to chase it") |
+| `concierge-team` | Shoreside concierge before and after the voyage, Guest Services aboard | "Speak to a real person"; complaints; a second unclear request in a row |
+| `medical` | The Medical Centre, urgent priority | Medical words. The emergency advice depends on where the guest is |
+
+The first unclear request is not escalated automatically: the concierge offers a person instead of guessing. Every hand-off is also a service request, so it shows under Requests. The person who joins picks up the current topic.
+
+**Supabase.** `performAction` uses RLS-checked writes:
+
+* requests are inserted as `received`;
+* booking changes go through `request_experience_booking_change`;
+* bookings are inserted as requests.
+
+It returns confirmations composed on the device, showing "Requested" or "Being arranged" until the crew confirm. `service_requests` now links `experience_id` and `booking_id` (migration `20261005000000_concierge_links.sql`, with RLS checks on both links).
 
 ### ExperienceService.listAvailability
 `listAvailability(voyageId): Promise<ExperienceAvailability[]>` returns, per experience:

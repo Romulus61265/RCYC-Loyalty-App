@@ -291,6 +291,7 @@ export function buildSeedRows(): TableRows[] {
     id: uuidFor(r.id), reservation_id: uuidFor(r.reservationId), type: r.type, summary: r.summary, details: r.details,
     status: r.status, priority: r.priority, assigned_team: r.assignedTeam, assigned_to_name: r.assignedTo,
     next_update_by: r.nextUpdateBy, created_at: r.createdAt, updated_at: r.updatedAt, time_zone: zoneOn(r.createdAt),
+    experience_id: r.experienceId ? uuidFor(r.experienceId) : null, booking_id: r.bookingId ? uuidFor(r.bookingId) : null,
   })));
 
   // Continuity

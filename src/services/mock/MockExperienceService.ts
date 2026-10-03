@@ -1,5 +1,6 @@
 import type { ExperienceBooking, ExperienceCategory, ID, ISODateTime } from '@/domain';
 import type { AvailabilityQuery, ExperienceService } from '@/services/contracts';
+import { addMinutes } from '@/utils/format';
 import { data, failIf, isEmptyScenario, latency, mockId, mockNow, notFound } from './support';
 
 const { bookings, catalogue, collections, daySchedules, destinations, availability } = data.experiences;
@@ -75,6 +76,7 @@ export class MockExperienceService implements ExperienceService {
       title: exp.title,
       venue: exp.destination ?? `Aboard ${data.voyage.yacht.name}`,
       start: slot,
+      end: exp.durationMinutes ? addMinutes(slot, exp.durationMinutes) : undefined,
       partySize,
       status: 'received',
       note,
@@ -85,8 +87,20 @@ export class MockExperienceService implements ExperienceService {
 
   async requestChange(bookingId: ID, change: { start?: ISODateTime; partySize?: number; note?: string }) {
     const booking = this.bookings.find((b) => b.id === bookingId) ?? notFound('Booking', bookingId);
-    Object.assign(booking, change, { status: 'in_progress' as const });
+    // A new start moves the end with it.
+    const end = change.start && booking.end ? addMinutes(change.start, (Date.parse(booking.end) - Date.parse(booking.start)) / 60_000) : booking.end;
+    Object.assign(booking, change, { end, status: 'in_progress' as const });
     return latency(booking, 500);
+  }
+
+  /**
+   * Mock-only: the venue accepts a request (in production the crew or the
+   * reservations system confirms). Used by MockConciergeService.
+   */
+  async confirm(bookingId: ID) {
+    const booking = this.bookings.find((b) => b.id === bookingId) ?? notFound('Booking', bookingId);
+    booking.status = 'confirmed';
+    return latency(booking, 150);
   }
 
   async cancelBooking(bookingId: ID) {

@@ -7,7 +7,7 @@
  * Exits non-zero on any failure, so it can gate CI.
  */
 import { devDataset as ds } from '@/data/fixtures';
-import { MockConciergeAI } from '@/services/mock/MockConciergeAI';
+import { MockConciergeService } from '@/services/mock/MockConciergeService';
 import type { ConciergeIntent, PortCall } from '@/domain';
 
 const failures: string[] = [];
@@ -173,15 +173,15 @@ check('guest-audience and crew-audience recommendations both present', personali
 
 // ── 7 · Concierge routing for suggested questions ─────────────────────────
 const expected: ConciergeIntent[] = ['schedule.query', 'dining.modify', 'experience.discover', 'transport.arrange', 'loyalty.benefits', 'occasion.plan'];
-const ai = new MockConciergeAI();
+const concierge_ = new MockConciergeService();
 const context = { guestRef: 'dev', preferredName: 'Alexander', phase: 'prepare' as const, tierLabel: 'Titanium Elite', upcomingBookingIds: [], occasionsThisVoyage: [], locale: 'en-US' };
 
 async function main() {
+  const { conversationId } = await concierge_.openConversation(voyage.reservation.id);
   for (const [i, question] of concierge.suggestedQuestions.entries()) {
-    const res = await ai.respond({ conversationId: 'dev_cnv', body: question, context, history: [] });
-    const intent = res.messages[0]?.intent;
-    check(`concierge: "${question}" → ${expected[i]}`, intent === expected[i], `got ${intent}`);
-    check(`concierge reply to "${question}" has no unresolved values`, !/undefined|NaN|\[object/.test(res.messages[0]?.body ?? ''), res.messages[0]?.body.slice(0, 120));
+    const [reply] = await concierge_.sendMessage(conversationId, question, context);
+    check(`concierge: "${question}" → ${expected[i]}`, reply?.intent === expected[i], `got ${reply?.intent}`);
+    check(`concierge reply to "${question}" has no unresolved values`, !/undefined|NaN|\[object/.test(reply?.body ?? ''), reply?.body.slice(0, 120));
   }
 
   const total = passed + failures.length;

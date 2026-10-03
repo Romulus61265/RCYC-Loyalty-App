@@ -74,6 +74,14 @@ export function relativeDay(iso: string, now: Date): string {
   return formatLongDate(iso);
 }
 
+/** The same local wall clock moved by some minutes, keeping the ISO string's own offset. */
+export function addMinutes(iso: string, minutes: number): string {
+  const offset = offsetMinutes(iso);
+  const local = new Date(Date.parse(iso) + (offset + minutes) * 60_000).toISOString().slice(0, 19);
+  const m = /([+-]\d{2}:\d{2}|Z)$/.exec(iso);
+  return `${local}${m ? m[1] : 'Z'}`;
+}
+
 /** "UTC+2", "UTC−4", "UTC+5:30" from an ISO timestamp's offset. */
 export function utcOffsetLabel(iso: string): string {
   const min = offsetMinutes(iso);

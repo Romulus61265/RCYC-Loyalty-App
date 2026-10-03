@@ -1,14 +1,15 @@
 # 4 · Database Schema (Supabase / PostgreSQL)
 
-The executable DDL is in three migrations, applied in order:
+The executable DDL is in four migrations, applied in order:
 
 | Migration | Adds |
 |---|---|
 | `20261002000000_init.sql` | Core schema, RLS helpers and policies, storage bucket, Realtime |
 | `20261003000000_preferences_v2.sql` | Editable preference groups, optimistic concurrency, preference audit |
 | `20261004000000_supabase_integration.sql` | Everything the app needs in `supabase` mode: auth linking, audit fields, new entities, booking functions, local-time views, privilege hardening |
+| `20261005000000_concierge_links.sql` | `service_requests.experience_id` / `booking_id`, so Concierge shows a request on the right card; guests may link only their own booking or an active experience on the voyage |
 
-All three are verified against PostgreSQL 16 by the SQL smoke tests and by the end-to-end suite (`npm run test:supabase`, below).
+All four are verified against PostgreSQL 16 by the SQL smoke tests and by the end-to-end suite (`npm run test:supabase`, below).
 
 ## Entity–relationship overview
 
@@ -190,7 +191,7 @@ Generated from the fictional dataset by `npm run seed:generate`, so do not edit 
 | Command | Needs | Covers |
 |---|---|---|
 | `npm run check:supabase` (in `verify`) | nothing | Seed freshness; key and URL validation; sign-in logic against a fake client; keychain chunking; mapping and error codes; static scans (no service-role key in app code, RLS on every table, `security_invoker` views, pinned `search_path`) |
-| `npm run test:supabase` | `PG_BIN` (PostgreSQL 15+) and `POSTGREST` (PostgREST 12) | Throwaway cluster: stubs, migrations, seed. Runs the 67 SQL assertions in `supabase/tests/10_*`, `20_*` and `30_*`, then 88 checks running the **app's Supabase services through supabase-js → PostgREST → RLS**, compared with the mock services, plus the writes and refusals for the guest, another guest and the anon key |
+| `npm run test:supabase` | `PG_BIN` (PostgreSQL 15+) and `POSTGREST` (PostgREST 12) | Throwaway cluster: stubs, migrations, seed. Runs the 67 SQL assertions in `supabase/tests/10_*`, `20_*` and `30_*`, then 95 checks running the **app's Supabase services through supabase-js → PostgREST → RLS**, compared with the mock services, plus the writes and refusals for the guest, another guest and the anon key |
 
 ```bash
 PG_BIN=/usr/lib/postgresql/16/bin POSTGREST=~/bin/postgrest npm run test:supabase

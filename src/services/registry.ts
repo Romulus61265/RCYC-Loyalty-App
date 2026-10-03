@@ -50,14 +50,20 @@ function preferencesRepository(): PreferencesRepository {
 }
 
 function createMockServices(): Services {
+  const profile = new RepositoryGuestProfileService(new MockGuestRecordSource(), preferencesRepository());
+  const loyalty = new MockLoyaltyService();
+  const voyage = new MockVoyageService();
+  const experience = new MockExperienceService();
+  const personalization = new MockPersonalizationService();
   return {
     auth: new MockAuthService(),
-    profile: new RepositoryGuestProfileService(new MockGuestRecordSource(), preferencesRepository()),
-    loyalty: new MockLoyaltyService(),
-    voyage: new MockVoyageService(),
-    experience: new MockExperienceService(),
-    concierge: new MockConciergeService(),
-    personalization: new MockPersonalizationService(),
+    profile,
+    loyalty,
+    voyage,
+    experience,
+    // Shares the instances above: what the concierge arranges shows everywhere.
+    concierge: new MockConciergeService({ voyage, experience, loyalty, profile, personalization }),
+    personalization,
     journeyEvents: new MockJourneyEventService(),
     schedule: new MockScheduleService(),
     audit: new ConsoleAuditService(),

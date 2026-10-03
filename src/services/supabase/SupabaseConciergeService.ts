@@ -9,22 +9,23 @@
  *  • Service requests are inserted directly; RLS accepts only new requests
  *    ('received', unassigned) on the caller's own reservation.
  */
-import type { ConciergeMessage, EscalationRequest, EscalationResult, GuestContext, ID, ServiceRequest, ServiceRequestType } from '@/domain';
+import type { ConciergeAction, ConciergeAttachment, ConciergeMessage, EscalationRequest, EscalationResult, EscalationTarget, GuestContext, ID, ServiceRequest, ServiceRequestType } from '@/domain';
 import type { ConciergeService, Unsubscribe } from '@/services/contracts';
 import { ServiceError } from '@/services/contracts';
-import { greeting } from '@/utils/format';
+import { formatLongDate, formatShortDate, formatTime, greeting } from '@/utils/format';
+import { SupabaseExperienceService } from './SupabaseExperienceService';
 import { MESSAGE_COLUMNS, REQUEST_COLUMNS, toMessage, toRequest, type MessageRow, type RequestRow } from './rows';
 import { many, maybe, one, text, toServiceError, uuid, type SupabaseDeps } from './support';
 
 const MESSAGE_MAX = 2000;
 
 export const SUGGESTED_QUESTIONS = [
-  'What is planned for my first day?',
-  'Can you move my dinner reservation?',
+  'What is planned for tomorrow?',
+  'Move my dinner reservation.',
   'What private experiences are available ashore?',
-  'Can you arrange transportation?',
-  'What benefits do I have because of my Bonvoy status?',
-  'Can I arrange something special for an occasion?',
+  'Arrange transportation.',
+  'What benefits do I have?',
+  'Help me celebrate an occasion.',
 ];
 
 interface FunctionsErrorLike {
@@ -42,7 +43,12 @@ function functionError(error: FunctionsErrorLike): ServiceError {
 }
 
 export class SupabaseConciergeService implements ConciergeService {
-  constructor(private readonly deps: SupabaseDeps) {}
+  private readonly experience: SupabaseExperienceService;
+  private seq = 0;
+
+  constructor(private readonly deps: SupabaseDeps) {
+    this.experience = new SupabaseExperienceService(deps);
+  }
 
   private get db() {
     return this.deps.db();
@@ -98,14 +104,14 @@ export class SupabaseConciergeService implements ConciergeService {
 
   async escalateToHuman(request: EscalationRequest): Promise<EscalationResult> {
     const convo = await this.conversation(request.conversationId);
-    const medical = request.reason === 'medical';
-    const team: ServiceRequest['assignedTeam'] = medical ? 'medical' : 'suite-ambassador';
+    const to: EscalationTarget = request.to ?? (request.reason === 'medical' ? 'medical' : 'suite-ambassador');
+    const team: ServiceRequest['assignedTeam'] = to === 'medical' ? 'medical' : to === 'suite-ambassador' ? 'suite-ambassador' : 'shoreside-concierge';
     const [created, reservation] = await Promise.all([
       this.insertRequest(convo.reservation_id, {
-        type: medical ? 'medical' : 'general',
-        summary: medical ? 'Medical assistance requested via concierge' : 'Guest asked to speak with their Suite Ambassador',
+        type: to === 'medical' ? 'medical' : 'general',
+        summary: to === 'medical' ? 'Medical assistance requested via concierge' : to === 'suite-ambassador' ? 'Guest asked to speak with their Suite Ambassador' : 'Guest asked to speak with the concierge team',
         details: request.note,
-        priority: medical ? 'urgent' : 'priority',
+        priority: to === 'medical' ? 'urgent' : 'priority',
         assignedTeam: team,
         conversationId: convo.id,
       }),
@@ -115,17 +121,49 @@ export class SupabaseConciergeService implements ConciergeService {
     ]);
     const contact = reservation?.suite_ambassador_contact;
     const ambassador = contact?.name ?? reservation?.suite_ambassador;
-    return {
-      handoffId: created.id,
-      team,
-      agentName: medical ? 'The Medical Centre' : ambassador ? `${ambassador.split(' ')[0]}, ${contact?.title ?? 'Suite Ambassador'}` : 'Your Suite Ambassador',
-      expectedResponseMinutes: medical ? 1 : 5,
+    const agentName =
+      to === 'medical' ? 'The Medical Centre' : to === 'concierge-team' ? 'The concierge team' : ambassador ? `${ambassador.split(' ')[0]}, ${contact?.title ?? 'Suite Ambassador'}` : 'Your Suite Ambassador';
+    return { handoffId: created.id, team, agentName, expectedResponseMinutes: to === 'medical' ? 1 : to === 'concierge-team' ? 3 : 5 };
+  }
+
+  /**
+   * Carries out an action from a card. Writes go through RLS (requests are
+   * inserted as 'received'; bookings change through the database functions),
+   * so the confirmation shown is what the guest is allowed to know: received
+   * and being arranged. The confirmation message is composed on the device.
+   */
+  async performAction(conversationId: ID, action: ConciergeAction): Promise<ConciergeMessage[]> {
+    const convo = await this.conversation(conversationId);
+    const say = (body: string, attachment: ConciergeAttachment): ConciergeMessage[] => {
+      this.seq += 1;
+      return [{ id: `local_${Date.now().toString(36)}_${this.seq}`, conversationId: convo.id, author: 'ai', createdAt: this.deps.clock.now().toISOString(), body, intent: 'service.request', attachments: [attachment] }];
     };
+    switch (action.kind) {
+      case 'open':
+        throw new ServiceError('validation', 'Navigation is handled by the app');
+      case 'change-booking': {
+        const booking = await this.experience.requestChange(action.bookingId, { start: action.start });
+        const req = await this.insertRequest(convo.reservation_id, { type: booking.category === 'dining' ? 'dining-change' : 'excursion', summary: `${booking.title}: ${formatTime(action.start)}, ${formatShortDate(action.start)}`, conversationId: convo.id, bookingId: booking.id });
+        return say(`I have asked for ${formatTime(action.start)} on ${formatLongDate(action.start)}. You will see it confirmed here.`, { kind: 'confirmation', status: booking.status, title: booking.title, detail: `${formatLongDate(booking.start)} · ${formatTime(booking.start)} · party of ${booking.partySize}`, bookingId: booking.id, requestId: req.id });
+      }
+      case 'request-experience': {
+        const booking = await this.experience.requestBooking(convo.reservation_id, action.experienceId, action.start, action.partySize);
+        return say(`Requested: ${booking.title}, ${formatLongDate(booking.start)} at ${formatTime(booking.start)}. You will see it confirmed here.`, { kind: 'confirmation', status: booking.status, title: booking.title, detail: `${formatLongDate(booking.start)} · ${formatTime(booking.start)} · party of ${booking.partySize}`, bookingId: booking.id });
+      }
+      case 'service-request': {
+        const req = await this.insertRequest(convo.reservation_id, { type: action.type, summary: action.summary, details: action.details, priority: action.priority, conversationId: convo.id });
+        return say('I have passed this on. You will see each update here.', { kind: 'confirmation', status: req.status, title: req.summary, detail: req.details ?? 'Request received', requestId: req.id });
+      }
+      case 'escalate': {
+        const result = await this.escalateToHuman({ conversationId, reason: action.reason, preferredChannel: 'chat', to: action.to });
+        return say(`Of course. ${result.agentName.split(',')[0]} will join us shortly.`, { kind: 'handoff', to: action.to, team: result.team, agentName: result.agentName, expectedResponseMinutes: result.expectedResponseMinutes, requestId: result.handoffId });
+      }
+    }
   }
 
   private async insertRequest(
     reservationId: string,
-    input: { type: ServiceRequestType; summary: string; details?: string; priority?: ServiceRequest['priority']; assignedTeam?: ServiceRequest['assignedTeam']; conversationId?: string },
+    input: { type: ServiceRequestType; summary: string; details?: string; priority?: ServiceRequest['priority']; assignedTeam?: ServiceRequest['assignedTeam']; conversationId?: string; bookingId?: string; experienceId?: string },
   ): Promise<ServiceRequest> {
     const inserted = await one<{ id: string }>(
       this.db
@@ -133,6 +171,8 @@ export class SupabaseConciergeService implements ConciergeService {
         .insert({
           reservation_id: reservationId,
           conversation_id: input.conversationId ?? null,
+          booking_id: input.bookingId ? uuid(input.bookingId, 'Booking') : null,
+          experience_id: input.experienceId ? uuid(input.experienceId, 'Experience') : null,
           type: input.type,
           summary: text(input.summary, 'Summary', 200),
           details: input.details ? text(input.details, 'Details', 2000) : null,
