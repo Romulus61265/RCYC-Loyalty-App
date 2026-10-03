@@ -243,6 +243,15 @@ Generated from the fictional dataset by `npm run seed:generate`, so do not edit 
   * An approval records authority to act; it applies nothing.
 * See [14](14-service-recovery.md).
 
+## Continuity (`20261010000000_continuity.sql`)
+
+* `flight_segments.estimated_arrival` holds the latest estimate (also in `flight_segments_local`).
+* `arrival_updates` holds what the guest reads when travel to the yacht changes: guest-safe JSON, one per plan key. The party and crew read it; the service role writes it.
+* `continuity_tasks` holds the changes a delay requires, one per team (transfer, venue, embarkation, crew). Crew assigned to the reservation read them.
+  * No supplier or PMS integration exists, so these are tasks for people.
+  * Bookings are not changed until a team confirms.
+* See [15](15-shoreside-continuity.md).
+
 ## Testing
 
 | Command | Needs | Covers |

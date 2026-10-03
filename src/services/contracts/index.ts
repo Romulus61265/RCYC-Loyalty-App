@@ -59,6 +59,8 @@ import type {
   RecoveryApproval,
   RecoveryNotice,
   RecoveryRecord,
+  ArrivalUpdate,
+  FlightStatusUpdate,
   ServiceRequest,
   ServiceRequestType,
   TravelDocument,
@@ -344,6 +346,35 @@ export interface ServiceRecoveryOperations {
   decideProposal(proposalId: ID, decision: { approve: boolean; note?: string }): Promise<GoodwillProposal>;
 }
 
+// ─── Shoreside-to-yacht continuity ─────────────────────────────────────────
+
+/**
+ * A source of flight status (delays, cancellations, new estimates). This is
+ * an integration boundary: the only implementation today is
+ * MockTravelDisruptionService. A production adapter (an airline or
+ * flight-data provider feed, or the travel agency's disruption feed) would
+ * run server-side and publish `flight.delayed` journey events; the app never
+ * talks to such a source directly.
+ */
+export interface TravelDisruptionService {
+  /** The latest observation for a flight, or null when the source has none. */
+  getFlightStatus(flightNumber: string, departureDate: string): Promise<FlightStatusUpdate | null>;
+  /** Observations as they arrive. */
+  subscribe(listener: (update: FlightStatusUpdate) => void): Unsubscribe;
+}
+
+/**
+ * What the guest is told when travel to the yacht changes: the flight delay
+ * and everything moved because of it (transfer, embarkation window, plans en
+ * route), with the concierge at hand. Each change says whether it is done or
+ * only requested; nothing is reported as done before its owner confirms it.
+ */
+export interface ContinuityService {
+  /** The latest update for the reservation, or null. */
+  getArrivalUpdate(reservationId: ID): Promise<ArrivalUpdate | null>;
+  subscribe(reservationId: ID, listener: () => void): Unsubscribe;
+}
+
 // ─── Journey events / service continuity ───────────────────────────────────
 
 // ─── Schedule (combined guest calendar) ───────────────────────────────────
@@ -401,6 +432,7 @@ export interface Services {
   occasions: OccasionService;
   notifications: NotificationService;
   recovery: ServiceRecoveryService;
+  continuity: ContinuityService;
   /** The device side of push (token and permission). */
   push: PushRegistrar;
   journeyEvents: JourneyEventService;

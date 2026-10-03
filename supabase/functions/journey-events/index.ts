@@ -11,12 +11,19 @@
 //    missed service, complaint) is also recorded as a service recovery: its
 //    plan for the crew, the guest's notice with alternatives, and any
 //    goodwill proposals from approved rules (never applied automatically).
+//  • A `flight.delayed` event runs the continuity orchestrator: the
+//    transfer, anything en route and the embarkation window move with the
+//    flight, each as a task for its team (no supplier integration exists),
+//    and the guest's arrival update is saved for the app.
 //  • Supabase Realtime pushes the alert to the guest app; crew consoles
 //    subscribe to journey_events directly.
 import { audit, handle, HttpError, json, serviceClient } from '../_shared/auth.ts';
 import { fromJourneyEvent } from '../_shared/recovery/engine.ts';
 import { processDisruption } from '../_shared/recovery/handler.ts';
 import { supabaseRecoveryPorts } from '../_shared/recovery/supabaseRecovery.ts';
+import { handleFlightUpdate } from '../_shared/continuity/orchestrator.ts';
+import { supabaseContinuityPorts } from '../_shared/continuity/supabaseContinuity.ts';
+import type { FlightStatusUpdate } from '../_shared/continuity/types.ts';
 
 const SECRET = Deno.env.get('JOURNEY_EVENTS_HMAC_SECRET')!;
 
@@ -68,7 +75,17 @@ Deno.serve(
       noticeId = recovery.noticeId || undefined;
     }
 
-    const alert = project(event, noticeId);
+    let arrival: { id: string; headline: string; intro: string } | undefined;
+    const flight = flightUpdateFrom(event);
+    if (flight) {
+      const results = await handleFlightUpdate(supabaseContinuityPorts(svc), flight, { now: new Date() });
+      const done = results.find((r) => r.reservationId === event.reservationId && r.update);
+      if (done?.update) arrival = { id: done.update.id, headline: done.update.headline, intro: done.update.intro };
+    }
+
+    const alert = arrival
+      ? { severity: 'notice' as const, title: arrival.headline, body: arrival.intro, action_label: 'See what changed', action_route: '/arrival' }
+      : project(event, noticeId);
     if (alert) await svc.from('journey_alerts').insert({ event_id: inserted.id, event_type: event.type, reservation_id: event.reservationId, ...alert });
     await svc.from('journey_events').update({ processed_at: new Date().toISOString() }).eq('id', inserted.id);
 
@@ -76,6 +93,27 @@ Deno.serve(
     return json({ status: 'accepted', alert: Boolean(alert), recovery: Boolean(noticeId) }, 202);
   }),
 );
+
+/** A flight-status event, as the continuity orchestrator reads it. */
+function flightUpdateFrom(e: JourneyEvent): FlightStatusUpdate | null {
+  if (e.type !== 'flight.delayed') return null;
+  const p = e.payload as Record<string, unknown>;
+  const flightNumber = typeof p.flightNumber === 'string' ? p.flightNumber : undefined;
+  const departureDate = typeof p.departureDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(p.departureDate) ? p.departureDate : undefined;
+  const estimated = typeof p.estimatedArrival === 'string' ? p.estimatedArrival : typeof p.newArrivalIso === 'string' ? p.newArrivalIso : undefined;
+  if (!flightNumber || !departureDate || !estimated) return null;
+  return {
+    observationId: e.dedupeKey,
+    flightNumber,
+    departureDate,
+    status: 'delayed',
+    scheduledArrival: typeof p.scheduledArrival === 'string' ? p.scheduledArrival : estimated,
+    estimatedArrival: estimated,
+    observedAt: e.occurredAt,
+    source: e.source,
+    simulated: p.simulated === true,
+  };
+}
 
 async function verifySignature(req: Request, raw: string) {
   const ts = req.headers.get('X-Signature-Timestamp');

@@ -40,6 +40,8 @@ import { MockVoyageService } from './mock/MockVoyageService';
 import { data, mockDemo, mockNow } from './mock/support';
 import { ComposedRecoveryService } from './recovery/ComposedRecoveryService';
 import { MemoryRecoveryStore } from './recovery/store';
+import { MockContinuityService } from './mock/MockContinuityService';
+import { MockTravelDisruptionService } from './mock/MockTravelDisruptionService';
 import { ApiClient } from './remote/apiClient';
 import { MarriottBonvoyService } from './remote/MarriottBonvoyService';
 import { createSupabaseServices } from './supabase';
@@ -94,6 +96,13 @@ function createMockServices(): Services {
           : undefined,
     },
   );
+  // The flight-status source is a mock: no flight-data integration exists.
+  const travel = new MockTravelDisruptionService();
+  const continuity = new MockContinuityService({ profile, loyalty, voyage, experience, travel, clock });
+  if (mockDemo() === 'flight-delay') {
+    // Arrives while the guest is looking, as a live update would.
+    setTimeout(() => travel.simulateDelay(data.voyage.flights.find((f) => f.direction === 'inbound')!.id, 120), 2500);
+  }
   return {
     auth: new MockAuthService(),
     profile,
@@ -106,6 +115,7 @@ function createMockServices(): Services {
     requests,
     occasions: new ComposedOccasionService({ profile, loyalty, voyage, experience, requests, clock: { now: mockNow } }),
     notifications: new ComposedNotificationService({ profile, voyage, experience, requests, journeyEvents, personalization, clock: { now: mockNow } }, new MemoryNotificationState({ [data.guest.profile.guest.id]: data.communication.readNotificationKeys })),
+    continuity,
     recovery: new ComposedRecoveryService({ profile, loyalty, voyage, experience, requests, clock }, recoveryStore),
     journeyEvents,
     push: devicePush(),

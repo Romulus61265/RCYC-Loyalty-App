@@ -216,7 +216,7 @@ const PHASE_LABEL: Record<JourneyPhase, string> = {
 function flightStatus(f: FlightSegment): { status: string; tone: Tone } {
   switch (f.status) {
     case 'delayed':
-      return { status: 'Delayed, and your driver knows', tone: 'pending' };
+      return { status: f.estimatedArrival ? `Now landing ${formatTime(f.estimatedArrival)}, and your driver knows` : 'Delayed, and your driver knows', tone: 'pending' };
     case 'cancelled':
       return { status: 'Cancelled. We are rearranging', tone: 'attention' };
     case 'landed':

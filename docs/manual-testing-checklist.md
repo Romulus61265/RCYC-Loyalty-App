@@ -208,3 +208,21 @@ Prerequisites:
 - [ ] **Approval.** **Request 10:00** shows "Before we send it", with exactly what will be sent. **Send the request** stays disabled until you tick "I understand €650 will be charged… once the team confirms it". Then **Your choice** shows Requested, and the other alternatives are gone.
 - [ ] **Ask Elena.** Add a note and send it: "Elena has this in hand", **In hand**, and the request appears in Your requests ("Excursion cancellation: …").
 - [ ] **320 px.** No horizontal scrolling.
+
+## Shoreside-to-yacht continuity (`?demo=flight-delay`)
+
+- [ ] **Before.** Open `/?demo=flight-delay`. It is embarkation morning (07:30). The transfer shows Today · 10:00, and AA 7412 shows "On schedule and tracked".
+- [ ] **The event.** After about 3 seconds, without reloading, **Your arrival** appears: "We've adjusted your arrival arrangements." Below it are six lines:
+  - Inbound flight delay detected (11:10);
+  - Private transfer updated;
+  - Embarkation team notified;
+  - New transfer time (12:00);
+  - Updated arrival estimate (15:30);
+  - Concierge available.
+
+  A note under them says the flight status is simulated.
+- [ ] **Home follows.** The transfer is at 12:00, the flight reads "Now landing 11:10, and your driver knows", and the window is 15:30 – 16:00.
+- [ ] **Details.** **See what changed** shows each step's words, each marked Done. Under "Also moving with your flight", the Sagrada Família is asked to move to 12:45 and marked **Requested**, not done.
+- [ ] **Embarkation.** **Your embarkation details** shows the new window, and a note from the embarkation team.
+- [ ] **Concierge.** **Talk to Elena** opens the concierge.
+- [ ] **Unchanged by default.** Without the parameter, no arrival card appears, and `/arrival` says travel is on schedule.

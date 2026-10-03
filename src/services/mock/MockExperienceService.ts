@@ -6,7 +6,8 @@ import { data, failIf, isEmptyScenario, latency, mockId, mockNow, notFound } fro
 const { bookings, catalogue, collections, daySchedules, destinations, availability } = data.experiences;
 
 export class MockExperienceService implements ExperienceService {
-  private bookings: ExperienceBooking[] = [...bookings];
+  // Copies, so changes stay with this instance (and never touch the fixtures).
+  private bookings: ExperienceBooking[] = bookings.map((b) => ({ ...b }));
 
   listBookings(reservationId: ID, filter?: { category?: ExperienceCategory }) {
     failIf('optional', 'bookings');
@@ -101,6 +102,17 @@ export class MockExperienceService implements ExperienceService {
     const booking = this.bookings.find((b) => b.id === bookingId) ?? notFound('Booking', bookingId);
     booking.status = 'confirmed';
     return latency(booking, 150);
+  }
+
+  /**
+   * Mock-only: an operator moves a booking it runs (the transfer company
+   * re-times a pick-up for a delayed flight). Confirmed by the operator.
+   */
+  async applyOperatorChange(bookingId: ID, change: { start: ISODateTime; end?: ISODateTime; note?: string }) {
+    const i = this.bookings.findIndex((b) => b.id === bookingId);
+    const booking = this.bookings[i] ?? notFound('Booking', bookingId);
+    this.bookings[i] = { ...booking, start: change.start, ...(change.end ? { end: change.end } : {}), ...(change.note ? { note: change.note } : {}), status: 'confirmed' };
+    return latency(this.bookings[i]!, 150);
   }
 
   async cancelBooking(bookingId: ID) {

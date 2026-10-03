@@ -4,6 +4,7 @@
  * Reading order answers, in turn:
  *   Where am I in my journey?           → hero (phase, countdown / today's port, journey line)
  *   Do they know me?                    → Bonvoy recognition
+ *   Has my travel changed?              → the arrival update (a delayed flight, and what moved with it)
  *   Does anything need my attention?    → a disruption and its alternatives, journey alerts (or a reassuring all-clear)
  *   What happens next?                  → next activity, then arrival (transfer + embarkation)
  *   What has been arranged for me?      → dining, ashore, spa
@@ -39,6 +40,8 @@ import { useNextCelebration } from '@/features/celebrations/useCelebrations';
 import { useUnreadCount } from '@/features/notifications/useNotifications';
 import { recoveryHref } from '@/features/recovery/recoveryModel';
 import { useOpenRecovery } from '@/features/recovery/useRecovery';
+import { ArrivalCard } from '@/features/continuity/components/ArrivalCard';
+import { useArrivalCard } from '@/features/continuity/useArrival';
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -46,6 +49,7 @@ export function HomeScreen() {
   const celebration = useNextCelebration();
   const unread = useUnreadCount();
   const recovery = useOpenRecovery();
+  const arrival = useArrivalCard();
 
   if (loading && !model) return <HomeSkeleton topInset={insets.top} />;
   if (error || !model) {
@@ -63,6 +67,7 @@ export function HomeScreen() {
     <Screen edgeToEdge>
       <HomeHero hero={model.hero} topInset={insets.top} accessory={<NotificationBell unread={unread} onOpen={() => router.push('/notifications')} />} />
       <RecognitionStrip model={model.recognition} onPrivileges={() => router.push('/profile')} />
+      {arrival ? <ArrivalCard card={arrival} onOpen={() => router.push('/arrival')} onConcierge={toConcierge} /> : null}
       <AttentionSection
         alerts={model.alerts}
         error={model.errors.alerts}

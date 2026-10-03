@@ -24,12 +24,20 @@ export function mockScenario(): MockScenario {
 }
 
 /**
- * A demonstration layered on the data (`?demo=disruption`: the classic sail in
- * Saint-Tropez cancelled for a forecast mistral, with its recovery).
+ * A demonstration layered on the data:
+ *  • `?demo=disruption`: the classic sail in Saint-Tropez cancelled for a
+ *    forecast mistral, with its recovery;
+ *  • `?demo=flight-delay`: embarkation morning; a few seconds after opening,
+ *    the inbound flight to Barcelona is reported two hours late (simulated)
+ *    and the arrival arrangements are adjusted.
  */
-export function mockDemo(): 'disruption' | null {
-  return urlParam('demo') === 'disruption' ? 'disruption' : null;
+export function mockDemo(): 'disruption' | 'flight-delay' | null {
+  const d = urlParam('demo');
+  return d === 'disruption' || d === 'flight-delay' ? d : null;
 }
+
+/** Embarkation morning, with AA 7412 in the air: where the flight-delay demo starts. */
+export const FLIGHT_DELAY_DEMO_NOW = '2027-05-15T07:30:00+02:00';
 
 /** True when the scenario asks for lists with nothing in them. */
 export const isEmptyScenario = () => mockScenario() === 'empty';
@@ -69,7 +77,7 @@ export const data = devDataset;
  * EXPO_PUBLIC_DEMO_NOW when set, otherwise the dataset's reference moment.
  */
 export function mockNow(): Date {
-  const pinned = Date.parse(urlParam('now') || env.demoNow || data.meta.referenceNow);
+  const pinned = Date.parse(urlParam('now') || (mockDemo() === 'flight-delay' ? FLIGHT_DELAY_DEMO_NOW : '') || env.demoNow || data.meta.referenceNow);
   return Number.isNaN(pinned) ? new Date() : new Date(pinned);
 }
 

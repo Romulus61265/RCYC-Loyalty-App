@@ -366,7 +366,7 @@ export function toDocument(r: DocumentRow): TravelDocument {
   return compact({ id: r.id, guestId: r.guest_id, type: r.type, label: r.label, status: r.status, detail: opt(r.detail), dueBy: opt(r.due_by) });
 }
 
-export const FLIGHT_COLUMNS = 'id, reservation_id, direction, carrier, flight_number, origin, destination, departure, arrival, cabin, status, tracked_for_transfer';
+export const FLIGHT_COLUMNS = 'id, reservation_id, direction, carrier, flight_number, origin, destination, departure, arrival, cabin, status, tracked_for_transfer, estimated_arrival';
 
 export interface FlightRow {
   id: string;
@@ -381,6 +381,7 @@ export interface FlightRow {
   cabin: FlightSegment['cabin'];
   status: FlightSegment['status'];
   tracked_for_transfer: boolean;
+  estimated_arrival: string | null;
 }
 
 export function toFlight(r: FlightRow): FlightSegment {
@@ -397,6 +398,7 @@ export function toFlight(r: FlightRow): FlightSegment {
     cabin: r.cabin,
     status: r.status,
     trackedForTransfer: r.tracked_for_transfer,
+    ...(r.estimated_arrival ? { estimatedArrival: r.estimated_arrival } : {}),
   };
 }
 

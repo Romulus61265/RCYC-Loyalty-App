@@ -6,7 +6,7 @@
  * bookings) leaves the rest of the dashboard intact and its own section
  * shows a calm fallback.
  */
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { reportError, toAppError } from '@/core/errors';
 import { useAsync } from '@/hooks/useAsync';
 import { useJourney } from '@/hooks/useJourney';
@@ -48,6 +48,8 @@ export function useHomeDashboard(): HomeDashboard {
   }, [guestId, reservationId, voyageId, phase]);
 
   useRefreshOnFocus(reload);
+  // Travel changed (a delayed flight moved the transfer and the window): show it at once.
+  useEffect(() => services.continuity.subscribe(reservationId, reload), [services, reservationId, reload]);
 
   const dismissAlert = useCallback(
     (alertId: string) => {

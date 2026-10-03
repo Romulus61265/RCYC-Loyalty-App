@@ -60,6 +60,7 @@ In **Concierge**, try:
 | 12 | [Special occasions and service requests](docs/12-occasions-and-service-requests.md) |
 | 13 | [Contextual notifications and push](docs/13-notifications.md) |
 | 14 | [Service recovery and goodwill rules](docs/14-service-recovery.md) |
+| 15 | [Shoreside-to-yacht continuity](docs/15-shoreside-continuity.md) |
 
 ### Replacing mocks with enterprise APIs
 

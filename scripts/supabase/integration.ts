@@ -43,6 +43,8 @@ import { MemoryNotificationState } from '@/services/notifications/state';
 import { SupabaseRecoveryOperations } from '@/services/supabase/SupabaseRecovery';
 import { processDisruption, scanReservation } from '../../supabase/functions/_shared/recovery/handler.ts';
 import { supabaseRecoveryPorts } from '../../supabase/functions/_shared/recovery/supabaseRecovery.ts';
+import { handleFlightUpdate } from '../../supabase/functions/_shared/continuity/orchestrator.ts';
+import { supabaseContinuityPorts } from '../../supabase/functions/_shared/continuity/supabaseContinuity.ts';
 
 const PGRST_URL = process.env.PGRST_URL;
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -657,6 +659,33 @@ async function main() {
     check('scan: a missed update is recorded', scan1.some((x) => x.status === 'recorded') && scan1.length > 0, scan1);
     check('scan: and only once', scan2.length === scan1.length && scan2.every((x) => x.status === 'duplicate'), scan2);
     check('scan: the request raised from the notice is not a new disruption', !((await service.from('service_recovery_events').select('disruption_key')).data as { disruption_key: string }[]).some((e) => e.disruption_key.includes(helped.requestId ?? '-')));
+  }
+
+  // ── Shoreside-to-yacht continuity: a delayed flight, through the server ports ──
+  {
+    const service = createClient(gw.url, jwt({ role: 'service_role' }), { auth: { persistSession: false } });
+    const crewDb = clientFor(gw.url, CREW_USER_ID);
+    check('continuity: nothing before', (await sb.continuity.getArrivalUpdate(r)) === null);
+    const flight = { observationId: 'feed-obs-1', flightNumber: 'AA 7412', departureDate: '2027-05-14', status: 'delayed' as const, scheduledArrival: '2027-05-15T09:10:00+02:00', estimatedArrival: '2027-05-15T11:10:00+02:00', observedAt: '2027-05-15T05:30:00Z', source: 'test-feed', simulated: false };
+    const [res] = await handleFlightUpdate(supabaseContinuityPorts(service), flight, { now });
+    check('continuity: handled for the reservation; every change only requested (no supplier integration)', res?.status === 'adjusted' && res.reservationId === r && (res.outcomes ?? []).every((o) => o === 'requested') && res.outcomes?.length === 3, res);
+    const u = await sb.continuity.getArrivalUpdate(r);
+    check('continuity: the guest reads it under RLS, and is not told it is done', u?.headline === "We're adjusting your arrival arrangements." && u.steps.length === 6 && u.steps.find((x) => x.kind === 'transfer-updated')?.state === 'pending', u);
+    check('continuity: the same times as the mock', u?.steps.map((x) => x.value ?? '').join() === '11:10,,,12:00,15:30,' && /between 15:30 and 16:00/.test(u.steps.find((x) => x.kind === 'embarkation-notified')?.detail ?? ''), u?.steps);
+    check('continuity: not simulated when the source is not', u?.simulated === false);
+    const inbound = (await sb.voyage.getOverview(r)).flights.find((f) => f.direction === 'inbound');
+    check('continuity: the flight shows the new estimate', inbound?.status === 'delayed' && inbound.estimatedArrival === '2027-05-15T11:10:00+02:00', inbound);
+    const transferRow = (await service.from('experience_bookings_local').select('start_local').eq('id', uuidFor('dev_bkg_transfer_bcn')).maybeSingle()).data as { start_local: string } | null;
+    check('continuity: the booking itself is untouched until the transfer team confirms', transferRow?.start_local === '2027-05-15T10:00:00+02:00', transferRow);
+    const tasks = ((await crewDb.from('continuity_tasks').select('team, action, status').eq('reservation_id', r)).data ?? []) as { team: string; action: { kind: string; start?: string }; status: string }[];
+    check('continuity: a task for each team, for the crew', tasks.map((t) => t.team).sort().join() === 'embarkation,transfer,venue' && tasks.every((t) => t.status === 'open') && tasks.find((t) => t.team === 'transfer')?.action.start === '2027-05-15T12:00:00+02:00', tasks);
+    check('continuity: guests cannot see the tasks', ((await guestDb.from('continuity_tasks').select('id')).data ?? []).length === 0);
+    check('continuity: another guest sees no update', (await other.continuity.getArrivalUpdate(r).catch(() => null)) === null);
+    const evs = ((await service.from('journey_events').select('type, payload').eq('reservation_id', r).in('type', ['flight.delayed', 'transfer.rescheduled', 'experience.change_requested', 'embarkation.changed'])).data ?? []) as { type: string; payload: { correlationId?: string } }[];
+    check('continuity: the events, correlated to the observation', evs.length === 4 && evs.every((e) => e.payload.correlationId === 'feed-obs-1'), evs);
+    const [again] = await handleFlightUpdate(supabaseContinuityPorts(service), { ...flight, observationId: 'feed-obs-2' }, { now });
+    check('continuity: the same estimate again changes nothing', again?.status === 'duplicate' && ((await crewDb.from('continuity_tasks').select('id').eq('reservation_id', r)).data ?? []).length === 3);
+    check('continuity: guests cannot write updates', !!(await guestDb.from('arrival_updates').insert({ reservation_id: r, plan_key: 'x', update: {} })).error);
   }
 
   // ── Notification preferences (saved last: earlier checks count preference versions) ──

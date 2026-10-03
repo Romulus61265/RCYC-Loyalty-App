@@ -142,6 +142,8 @@ export interface FlightSegment {
   arrival: ISODateTime;
   cabin: 'economy' | 'premium-economy' | 'business' | 'first';
   status: 'scheduled' | 'delayed' | 'departed' | 'landed' | 'cancelled';
+  /** The latest estimate when it differs from the schedule (from flight status). */
+  estimatedArrival?: ISODateTime;
   /** Whether the yacht's transfer team is tracking this flight. */
   trackedForTransfer: boolean;
 }
