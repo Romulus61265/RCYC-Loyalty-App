@@ -688,6 +688,35 @@ async function main() {
     check('continuity: guests cannot write updates', !!(await guestDb.from('arrival_updates').insert({ reservation_id: r, plan_key: 'x', update: {} })).error);
   }
 
+  // ── After the voyage: the recap, reflections under RLS ──
+  {
+    const service = createClient(gw.url, jwt({ role: 'service_role' }), { auth: { persistSession: false } });
+    const home = new Date('2027-05-26T10:00:00-04:00');
+    const after = createSupabaseServices(() => guestDb, { now: () => home });
+    check('post-voyage: nothing before the voyage is over', (await sb.postVoyage.getRecap(g, r)) === null);
+    const recap = await after.postVoyage.getRecap(g, r);
+    check('post-voyage: Welcome home.', recap?.welcome.title === 'Welcome home.' && recap.summary.line === 'Seven nights, six ports and four countries aboard Evrima, in Grand Suite 612.', recap?.summary);
+    check('post-voyage: the days and destinations from the database', recap?.days.length === 8 && recap.destinations.map((x) => x.portName).join() === 'Barcelona,Palma de Mallorca,Saint-Tropez,Monte Carlo,Portofino,Rome (Civitavecchia)');
+    check('post-voyage: the anniversary remembered, and Elena’s note', recap?.days.find((x) => x.dayNumber === 6)?.memories[0]?.title === '20th wedding anniversary' && recap.thankYou.signature === 'Elena Moreau, Suite Ambassador');
+    check('post-voyage: inspirations from voyage_inspirations', recap?.recommendations.length === 3 && recap.recommendations.every((x) => d.postVoyage.voyageInspirations.some((i) => i.name === x.name)), recap?.recommendations.map((x) => x.name));
+    check('post-voyage: Bonvoy is a placeholder', recap?.bonvoy.connected === false && recap.bonvoy.tierLabel === 'Titanium Elite');
+    const fav = recap!.days.find((x) => x.dayNumber === 6)!.memories[0]!.id;
+    const f1 = await after.postVoyage.saveFeedback(g, r, { favourites: [fav], words: ['Celebratory'] }, { expectedVersion: 0 });
+    check('reflections: saved under RLS, versioned', f1.version === 1 && f1.favourites[0] === fav && f1.status === 'draft');
+    check('reflections: a stale edit is refused', await rejects(after.postVoyage.saveFeedback(g, r, { words: ['Restful'] }, { expectedVersion: 0 }), 'conflict'));
+    await after.postVoyage.saveFeedback(g, r, { better: 'We waited a long time for the tender in Portofino.', followUp: true, thanks: [{ crewId: 'ambassador', note: 'Thank you, for everything.' }] });
+    const otherAfter = createSupabaseServices(() => otherDb, { now: () => home });
+    check('reflections: another guest reads nothing', ((await otherDb.from('voyage_feedback').select('guest_id')).data ?? []).length === 0 && (await otherAfter.postVoyage.getRecap(g, r).catch(() => null)) === null);
+    const crewDb = clientFor(gw.url, CREW_USER_ID);
+    check('reflections: the crew of the reservation read them', ((await crewDb.from('voyage_feedback').select('reflections').eq('reservation_id', r)).data ?? []).length === 1);
+    const sent = await after.postVoyage.sendFeedback(g, r);
+    check('reflections: sent once, with the follow-up request raised', sent.status === 'sent' && !!sent.sentAt && !!sent.followUpRequestId);
+    const req = (await service.from('service_requests').select('category, priority, details, summary').eq('id', sent.followUpRequestId ?? '').maybeSingle()).data as Record<string, string> | null;
+    check('reflections: the request carries their words', req?.category === 'concierge' && req.priority === 'priority' && JSON.stringify(req).includes('tender in Portofino'), req);
+    check('reflections: sent is read-only (RLS)', (await rejects(after.postVoyage.saveFeedback(g, r, { words: ['Restful'] }), 'conflict')) && ((await guestDb.from('voyage_feedback').update({ status: 'draft' }).eq('guest_id', g).select('guest_id')).data ?? []).length === 0);
+    check('inspirations: read-only for guests', !!(await guestDb.from('voyage_inspirations').insert({ name: 'x', region: 'x', yacht_name: 'x', start_date: '2029-01-01', end_date: '2029-01-08', nights: 7, standfirst: 'x', highlight: 'x' })).error);
+  }
+
   // ── Notification preferences (saved last: earlier checks count preference versions) ──
   {
     const service = createClient(gw.url, jwt({ role: 'service_role' }), { auth: { persistSession: false } });

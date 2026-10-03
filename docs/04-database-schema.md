@@ -252,6 +252,14 @@ Generated from the fictional dataset by `npm run seed:generate`, so do not edit 
   * Bookings are not changed until a team confirms.
 * See [15](15-shoreside-continuity.md).
 
+## After the voyage (`20261011000000_post_voyage.sql`)
+
+* `voyage_feedback` (guest × reservation) holds the guest's reflections: favourite moments, words, thanks, what could be better, notes for next time. There are no scores.
+  * The guest reads and writes their own while it is a draft; once sent, it is read-only.
+  * Crew assigned to the reservation read it.
+* `voyage_inspirations` holds future voyages to inspire the next one. Signed-in guests read them; they are fictional in development.
+* See [17](17-post-voyage.md).
+
 ## Testing
 
 | Command | Needs | Covers |

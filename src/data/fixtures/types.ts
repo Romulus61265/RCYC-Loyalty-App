@@ -30,6 +30,7 @@ import type {
   VoyageReservation,
   Yacht,
   ConciergeMessage,
+  VoyageInspiration,
 } from '@/domain';
 
 /** Provenance stamped on every dataset, so fixture data can never be mistaken for real data. */
@@ -105,6 +106,7 @@ export interface DevDataset {
   communication: DevCommunicationData;
   personalization: DevPersonalizationData;
   recovery: DevRecoveryData;
+  postVoyage: { voyageInspirations: VoyageInspiration[] };
 }
 
 export interface DevRecoveryData {

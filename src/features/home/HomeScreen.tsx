@@ -4,6 +4,7 @@
  * Reading order answers, in turn:
  *   Where am I in my journey?           → hero (phase, countdown / today's port, journey line)
  *   Do they know me?                    → Bonvoy recognition
+ *   Is it over? (after the voyage)      → Welcome home: the voyage remembered, reflections
  *   Has my travel changed?              → the arrival update (a delayed flight, and what moved with it)
  *   Does anything need my attention?    → a disruption and its alternatives, journey alerts (or a reassuring all-clear)
  *   What happens next?                  → next activity, then arrival (transfer + embarkation)
@@ -23,6 +24,7 @@ import { HomeHero } from './components/HomeHero';
 import { HomeSkeleton } from './components/HomeSkeleton';
 import {
   CelebrationCard,
+  WelcomeHomeCard,
   NotificationBell,
   RequestsLine,
   ArrangedSection,
@@ -42,6 +44,7 @@ import { recoveryHref } from '@/features/recovery/recoveryModel';
 import { useOpenRecovery } from '@/features/recovery/useRecovery';
 import { ArrivalCard } from '@/features/continuity/components/ArrivalCard';
 import { useArrivalCard } from '@/features/continuity/useArrival';
+import { useWelcomeHomeCard } from '@/features/welcomeHome/usePostVoyage';
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -50,6 +53,7 @@ export function HomeScreen() {
   const unread = useUnreadCount();
   const recovery = useOpenRecovery();
   const arrival = useArrivalCard();
+  const welcomeHome = useWelcomeHomeCard();
 
   if (loading && !model) return <HomeSkeleton topInset={insets.top} />;
   if (error || !model) {
@@ -67,6 +71,7 @@ export function HomeScreen() {
     <Screen edgeToEdge>
       <HomeHero hero={model.hero} topInset={insets.top} accessory={<NotificationBell unread={unread} onOpen={() => router.push('/notifications')} />} />
       <RecognitionStrip model={model.recognition} onPrivileges={() => router.push('/profile')} />
+      {welcomeHome ? <WelcomeHomeCard card={welcomeHome} onOpen={() => router.push('/welcome-home')} /> : null}
       {arrival ? <ArrivalCard card={arrival} onOpen={() => router.push('/arrival')} onConcierge={toConcierge} /> : null}
       <AttentionSection
         alerts={model.alerts}

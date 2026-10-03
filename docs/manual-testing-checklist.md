@@ -226,3 +226,26 @@ Prerequisites:
 - [ ] **Embarkation.** **Your embarkation details** shows the new window, and a note from the embarkation team.
 - [ ] **Concierge.** **Talk to Elena** opens the concierge.
 - [ ] **Unchanged by default.** Without the parameter, no arrival card appears, and `/arrival` says travel is on schedule.
+
+## After the voyage (`?demo=welcome-home`)
+
+- [ ] **Home.** Open `/?demo=welcome-home`. The hero reads **Welcome home.**, and **After your voyage** reads "Seven nights, six ports and four countries aboard Evrima, in Grand Suite 612." and "A few words, when you are ready."
+- [ ] **The voyage remembered.** **Your voyage, remembered** opens the recap. Check each section:
+  - the welcome;
+  - day-by-day memories, with Day 6 led by the 20th wedding anniversary "In Monte Carlo, with Camille";
+  - destinations, with Monte Carlo on 19 – 20 May;
+  - suggested favourites;
+  - the Bonvoy placeholder ("Not yet connected to Marriott Bonvoy");
+  - Elena's note to Alexander and Camille;
+  - three next voyages with reasons, and the inspiration with its closing line;
+  - "illustrative in this preview".
+- [ ] **Not a survey.** Nowhere asks for a rating, a score or a likelihood to recommend.
+- [ ] **Reflections.** **Share your reflections**:
+  - choose two moments and two words;
+  - thank Elena, with a note;
+  - write what could be better, and ask to be contacted;
+  - add a note for next time;
+  - review, and send to Elena.
+
+  You should see "Thank you." and a link to the request; the recap now shows your favourite moments and "Sent".
+- [ ] **Save and finish later.** On a fresh load, choose one moment, then **Save and finish later**. The recap shows "1 of 5 begun, saved as you go."

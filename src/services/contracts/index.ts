@@ -60,6 +60,9 @@ import type {
   RecoveryNotice,
   RecoveryRecord,
   ArrivalUpdate,
+  FeedbackPatch,
+  VoyageFeedback,
+  VoyageRecap,
   HandlerRun,
   InternalEvent,
   InternalEventStatus,
@@ -351,6 +354,24 @@ export interface ServiceRecoveryOperations {
   decideProposal(proposalId: ID, decision: { approve: boolean; note?: string }): Promise<GoodwillProposal>;
 }
 
+// ─── After the voyage ──────────────────────────────────────────────────────
+
+/**
+ * Welcome home: the voyage remembered (days, destinations, favourite
+ * moments), a note from the Suite Ambassador, a Bonvoy placeholder, the
+ * next voyages that suit, and the guest's reflections. Reflections are
+ * optional throughout, saved as the guest goes, and sent once, to people.
+ * There is no score.
+ */
+export interface PostVoyageService {
+  /** Null until the voyage is over. */
+  getRecap(guestId: ID, reservationId: ID): Promise<VoyageRecap | null>;
+  /** Saves a draft (any part, any time). Refused once sent; pass the version read to refuse a stale edit. */
+  saveFeedback(guestId: ID, reservationId: ID, patch: FeedbackPatch, opts?: { expectedVersion?: number }): Promise<VoyageFeedback>;
+  /** Sends the reflections to the Suite Ambassador; raises a request when the guest asked to be contacted. */
+  sendFeedback(guestId: ID, reservationId: ID): Promise<VoyageFeedback>;
+}
+
 // ─── Internal events ───────────────────────────────────────────────────────
 
 /** What a handler is given besides the event. */
@@ -498,6 +519,7 @@ export interface Services {
   notifications: NotificationService;
   recovery: ServiceRecoveryService;
   continuity: ContinuityService;
+  postVoyage: PostVoyageService;
   /** The device side of push (token and permission). */
   push: PushRegistrar;
   journeyEvents: JourneyEventService;

@@ -26,6 +26,8 @@ flowchart TB
   Home -.bell.-> Notifications["/notifications"]
   Home -.attention.-> Recovery["/recovery/[id]"]
   Home -.arrival.-> Arrival["/arrival"]
+  Home -.after the voyage.-> WelcomeHome["/welcome-home"]
+  WelcomeHome --> Reflections["/welcome-home/reflections"]
   Notifications --> NotificationSettings["/notifications/settings"]
   Notifications -.deep link.-> Voyage
   Concierge -.requests tab.-> Requests
@@ -65,6 +67,8 @@ These are pushed above the tabs, each with a quiet "Back" (falling back to a sen
 | `/requests/[id]` | One request: status timeline, resolution, details, withdraw or close |
 | `/notifications` | Notifications: inbox by day, filter by type, coming up, mark read |
 | `/notifications/settings` | Notification types, times, reminder timing, push on this device |
+| `/welcome-home` | After the voyage: "Welcome home.", memories by day, destinations, favourites, Bonvoy placeholder, a note from Elena, reflections, next voyages and inspiration |
+| `/welcome-home/reflections` | Five optional questions, one at a time, saved as you go; review; send to the Suite Ambassador |
 | `/arrival` | The arrival update: what was detected, each change (done or requested), the new times, plans en route, the concierge |
 | `/recovery/[id]` | A disruption: the message, the reason (when known), comparable alternatives with approval, Ask Elena. Opened from Home's attention area and from the journey alert |
 | `/celebration/[key]` | A celebration during the voyage: the message, the ideas, approval (`key` is URL-encoded, e.g. `anniversary%3A…`) |

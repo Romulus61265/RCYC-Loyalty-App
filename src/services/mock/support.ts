@@ -9,9 +9,23 @@ export type MockScenario = typeof env.mockScenario;
  * QA can exercise states without rebuilding. Ignored in production builds
  * and on native, where `window.location` is absent.
  */
+/**
+ * The query as first seen on this `location`: in the browser that is the
+ * address the app opened with, because in-app navigation drops the query
+ * string and a demo must not change mid-session. (Checks that assign a new
+ * `location` object get a fresh read.)
+ */
+let seen: { location: unknown; search: string } | undefined;
+function currentSearch(): string {
+  const location = (globalThis as { location?: { search?: string } }).location;
+  if (!location) return '';
+  if (seen?.location !== location) seen = { location, search: location.search ?? '' };
+  return seen.search;
+}
+
 function urlParam(name: string): string | null {
   if (env.appEnv === 'production') return null;
-  const search = (globalThis as { location?: { search?: string } }).location?.search;
+  const search = currentSearch();
   return search ? new URLSearchParams(search).get(name) : null;
 }
 
@@ -29,12 +43,16 @@ export function mockScenario(): MockScenario {
  *    forecast mistral, with its recovery;
  *  • `?demo=flight-delay`: embarkation morning; a few seconds after opening,
  *    the inbound flight to Barcelona is reported two hours late (simulated)
- *    and the arrival arrangements are adjusted.
+ *    and the arrival arrangements are adjusted;
+ *  • `?demo=welcome-home`: four days after the voyage, at home in Miami.
  */
-export function mockDemo(): 'disruption' | 'flight-delay' | null {
+export function mockDemo(): 'disruption' | 'flight-delay' | 'welcome-home' | null {
   const d = urlParam('demo');
-  return d === 'disruption' || d === 'flight-delay' ? d : null;
+  return d === 'disruption' || d === 'flight-delay' || d === 'welcome-home' ? d : null;
 }
+
+/** Four days after the guests flew home to Miami: where the welcome-home demo starts. */
+export const WELCOME_HOME_DEMO_NOW = '2027-05-26T10:00:00-04:00';
 
 /** Embarkation morning, with AA 7412 in the air: where the flight-delay demo starts. */
 export const FLIGHT_DELAY_DEMO_NOW = '2027-05-15T07:30:00+02:00';
@@ -77,7 +95,7 @@ export const data = devDataset;
  * EXPO_PUBLIC_DEMO_NOW when set, otherwise the dataset's reference moment.
  */
 export function mockNow(): Date {
-  const pinned = Date.parse(urlParam('now') || (mockDemo() === 'flight-delay' ? FLIGHT_DELAY_DEMO_NOW : '') || env.demoNow || data.meta.referenceNow);
+  const pinned = Date.parse(urlParam('now') || (mockDemo() === 'flight-delay' ? FLIGHT_DELAY_DEMO_NOW : mockDemo() === 'welcome-home' ? WELCOME_HOME_DEMO_NOW : '') || env.demoNow || data.meta.referenceNow);
   return Number.isNaN(pinned) ? new Date() : new Date(pinned);
 }
 

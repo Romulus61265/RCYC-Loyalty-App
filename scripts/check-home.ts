@@ -105,7 +105,7 @@ async function main() {
 
   // 4 · After the voyage
   const after = await at('2027-05-24T09:00:00-04:00');
-  check('after: headline', after.hero.headline === 'Until we meet again', after.hero.headline);
+  check('after: headline', after.hero.headline === 'Welcome home.', after.hero.headline);
   check('after: final step current', after.hero.steps.at(-1)?.state === 'current');
   check('after: nothing next, no arrival', after.next === null && after.transfer === null && after.embarkation === null);
   check('after: arranged slots empty with hints', after.arranged.every((a) => a.item === null && a.emptyHint.length > 0));

@@ -88,14 +88,14 @@ export function SegmentedTabs<T extends string>({ options, value, onChange }: { 
 }
 
 /** Selectable pill for filters. Announces its selected state. */
-export function Chip({ label, selected, onPress, hint }: { label: string; selected: boolean; onPress: () => void; hint?: string }) {
+export function Chip({ label, selected, onPress, hint, accessibilityLabel }: { label: string; selected: boolean; onPress: () => void; hint?: string; accessibilityLabel?: string }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected }}
       aria-selected={selected}
-      accessibilityLabel={hint ? `${label}, ${hint}` : label}
+      accessibilityLabel={accessibilityLabel ?? (hint ? `${label}, ${hint}` : label)}
       style={[styles.chip, selected && styles.chipSelected]}
     >
       <Caption color={selected ? colors.textInverse : colors.textPrimary}>{label}</Caption>

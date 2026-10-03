@@ -13,6 +13,7 @@ import { conciergeData } from './concierge';
 import { guestData } from './guest';
 import { personalizationData } from './personalization';
 import { recoveryData } from './recovery';
+import { postVoyageData } from './postVoyage';
 import { voyageData } from './voyage';
 
 export const devDataset: DevDataset = {
@@ -33,6 +34,7 @@ export const devDataset: DevDataset = {
   communication: communicationData,
   personalization: personalizationData,
   recovery: recoveryData,
+  postVoyage: postVoyageData,
 };
 
 export type { DevDataset } from './types';

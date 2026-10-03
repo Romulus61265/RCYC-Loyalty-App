@@ -43,6 +43,8 @@ import { MemoryRecoveryStore } from './recovery/store';
 import { MockContinuityService } from './mock/MockContinuityService';
 import { MockTravelDisruptionService } from './mock/MockTravelDisruptionService';
 import { MockTransferService } from './mock/MockTransferService';
+import { ComposedPostVoyageService } from './postVoyage/ComposedPostVoyageService';
+import { MemoryPostVoyageStore } from './postVoyage/store';
 import { InMemoryEventService } from './events/InMemoryEventService';
 import { flightDelayedEvent, registerFlightDelayHandlers } from './events/flightDelay';
 import { ApiClient } from './remote/apiClient';
@@ -141,6 +143,7 @@ function createMockServices(): Services {
     occasions: new ComposedOccasionService({ profile, loyalty, voyage, experience, requests, clock: { now: mockNow } }),
     notifications: new ComposedNotificationService({ profile, voyage, experience, requests, journeyEvents, personalization, clock: { now: mockNow } }, new MemoryNotificationState({ [data.guest.profile.guest.id]: data.communication.readNotificationKeys })),
     continuity,
+    postVoyage: new ComposedPostVoyageService({ profile, loyalty, voyage, experience, requests, clock }, new MemoryPostVoyageStore(data.postVoyage.voyageInspirations)),
     recovery: new ComposedRecoveryService({ profile, loyalty, voyage, experience, requests, clock }, recoveryStore),
     journeyEvents,
     push: devicePush(),

@@ -398,6 +398,24 @@ export function CelebrationCard({ card, onOpen }: { card: { eyebrow: string; tit
   );
 }
 
+/** After the voyage: the way into the voyage remembered, and the reflections. */
+export function WelcomeHomeCard({ card, onOpen }: { card: { title: string; line: string; cta: string; reflections: string }; onOpen: () => void }) {
+  return (
+    <Section eyebrow="After your voyage">
+      <Card onPress={onOpen} accessibilityLabel={`${card.title} ${card.line} ${card.cta}`} style={{ padding: spacing.lg, borderColor: colors.accent, borderWidth: StyleSheet.hairlineWidth }}>
+        <Text variant="title">{card.title}</Text>
+        <Text color={colors.textSecondary} style={{ marginTop: spacing.xs }}>
+          {card.line}
+        </Text>
+        <Caption style={{ marginTop: spacing.sm }}>{card.reflections}</Caption>
+        <View style={{ marginTop: spacing.md }}>
+          <TextLink label={card.cta} onPress={onOpen} />
+        </View>
+      </Card>
+    </Section>
+  );
+}
+
 /** The bell in the hero: notifications, with the unread count. */
 export function NotificationBell({ unread, onOpen }: { unread: number; onOpen: () => void }) {
   return (

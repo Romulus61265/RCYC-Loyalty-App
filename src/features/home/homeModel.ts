@@ -248,7 +248,7 @@ export function buildHomeViewModel(core: HomeCoreData, optional: HomeOptionalDat
         ? `Tomorrow, ${firstPort?.portName ?? 'your voyage'}`
         : `Today, ${firstPort?.portName ?? 'your voyage'}`
     : step === 'home'
-      ? 'Until we meet again'
+      ? 'Welcome home.'
       : todayPort
         ? `Day ${todayPort.day} · ${todayPort.portName}`
         : voyage.name;

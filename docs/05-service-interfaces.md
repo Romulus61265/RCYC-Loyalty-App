@@ -17,6 +17,7 @@ The source is `src/services/contracts/index.ts`. Screens obtain services only th
 | ConciergeService | `MockConciergeService` + `MockConciergeAI` | `SupabaseConciergeService` (`concierge-respond` Edge Function, Realtime) | mock |
 | PersonalizationService | `MockPersonalizationService` + rules engine (`rules-v1`) | `SupabasePersonalizationService` (`personalization-next-best` Edge Function, materialised recommendations) | mock |
 | ServiceRecoveryService | `ComposedRecoveryService` + `MemoryRecoveryStore` (records with the shared handler; `?demo=disruption`) | `ComposedRecoveryService` + `SupabaseRecoveryNoticeStore` (crew: `SupabaseRecoveryOperations`) | mock |
+| PostVoyageService | `ComposedPostVoyageService` + `MemoryPostVoyageStore` (`?demo=welcome-home`) | `ComposedPostVoyageService` + `SupabasePostVoyageStore` (`voyage_feedback`, `voyage_inspirations`) | mock |
 | ContinuityService | `MockContinuityService` + `MockTravelDisruptionService` (the only flight-status source) | `SupabaseContinuityService` (`arrival_updates`) | mock |
 | JourneyEventService | `MockJourneyEventService` | `SupabaseJourneyEventService` (alerts, notifications, Realtime) | mock |
 | ClockService | pinned demo moment (`?now=`, `EXPO_PUBLIC_DEMO_NOW`) | device clock | device clock |
@@ -208,6 +209,13 @@ It shares one store with the concierge's requests. Implementations: `MockService
 Notifications are derived by the shared engine from the guest's data and merged with what the server sent. They come in seven types: information, reminder, service update, reservation, itinerary change, urgent, recommendation. Preferences are stored in `communication.notifications`.
 
 `ComposedNotificationService` implements it in both modes. It keeps read state and devices in a `NotificationStateStore` (memory or Supabase). The device side of push is `Services.push` (`PushRegistrar`). See [13](13-notifications.md).
+
+### PostVoyageService
+`getRecap` (null until the voyage is over), `saveFeedback` (a versioned draft, any part, any time) and `sendFeedback` (once; it raises a request when the guest asked to be contacted).
+
+The recap holds the welcome, memories by day, destinations, favourites, a Bonvoy placeholder, the Suite Ambassador's note, recommendations and inspiration. The reflections hold five optional questions, and no ratings.
+
+`ComposedPostVoyageService` implements it in both modes, with a `PostVoyageStore`. See [17](17-post-voyage.md).
 
 ### EventService, EventHandler and TransferService
 `EventService` is the internal event bus: twelve event types in one snake_case envelope. Its methods are `publish`, `register`, `get`, `list`, `runs` and `subscribe`.

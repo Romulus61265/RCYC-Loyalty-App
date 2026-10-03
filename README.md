@@ -62,6 +62,7 @@ In **Concierge**, try:
 | 14 | [Service recovery and goodwill rules](docs/14-service-recovery.md) |
 | 15 | [Shoreside-to-yacht continuity](docs/15-shoreside-continuity.md) |
 | 16 | [Internal event model](docs/16-internal-events.md) |
+| 17 | [After the voyage: Welcome home](docs/17-post-voyage.md) |
 
 ### Replacing mocks with enterprise APIs
 

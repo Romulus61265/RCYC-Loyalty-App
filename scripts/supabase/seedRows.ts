@@ -352,6 +352,12 @@ export function buildSeedRows(): TableRows[] {
     authorized_by: r.authorizedBy ?? null, authorized_at: r.authorizedAt ?? null, effective_from: r.effectiveFrom ?? null, effective_to: r.effectiveTo ?? null,
   })));
 
+  // After the voyage: fictional voyages to inspire the next one.
+  add('public.voyage_inspirations', d.postVoyage.voyageInspirations.map((v) => ({
+    id: uuidFor(v.id), name: v.name, region: v.region, yacht_name: v.yachtName, start_date: v.startDate, end_date: v.endDate,
+    nights: v.nights, ports: texts(v.ports), tags: texts(v.tags), standfirst: v.standfirst, highlight: v.highlight, hooks: json(v.hooks), hero: json(v.hero),
+  })));
+
   return tables;
 }
 

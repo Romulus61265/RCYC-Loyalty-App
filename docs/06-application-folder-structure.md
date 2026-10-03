@@ -35,6 +35,7 @@ RCYC-Loyalty-App/
 │   │   ├── auth/                 Sign-in: useSignIn (e-mail code state machine) + SignInScreen
 │   │   ├── notifications/        Inbox (/notifications) and settings (/notifications/settings): notificationsModel, useNotifications
 │   │   ├── celebrations/         A celebration during the voyage (/celebration/[key]): message, ideas, approval panel
+│   │   ├── welcomeHome/          After the voyage (/welcome-home, /welcome-home/reflections): welcomeHomeModel, usePostVoyage
 │   │   ├── continuity/           Arrival updates (/arrival) and the Home card: arrivalModel, useArrival
 │   │   ├── recovery/             A disruption, told calmly (/recovery/[id]): reason, comparable alternatives, approval, Ask Elena; Home card
 │   │   ├── requests/             Service requests (/requests, /requests/new, /requests/[id]): requestsModel, useRequests, screens
@@ -86,6 +87,7 @@ RCYC-Loyalty-App/
 │   │   ├── notifications/        buildNotifyInput, ComposedNotificationService, NotificationStateStore (memory)
 │   │   ├── push/                 PushRegistrar (device side of push; Expo adapter designed in docs/13), routeFromPush
 │   │   ├── occasions/            Celebration detectors, playbooks and planner; ComposedOccasionService (approval)
+│   │   ├── postVoyage/           recap rules (memories, destinations, recommendations), ComposedPostVoyageService, PostVoyageStore
 │   │   ├── events/               InMemoryEventService, the delayed-flight wiring, and one handler per service (handlers/)
 │   │   ├── continuity/           buildArrivalContext (the continuity rules' context from the contracts)
 │   │   ├── recovery/             buildRecoveryContext, ComposedRecoveryService (approval), RecoveryNoticeStore + MemoryRecoveryStore (mock server, crew operations)
