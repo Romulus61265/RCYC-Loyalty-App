@@ -77,6 +77,7 @@ RCYC-Loyalty-App/
 │   │   ├── shared/               Pure rules used by every implementation: journeyPhase, calendar, recommendations, recognition, default preferences
 │   │   ├── repositories/         PreferencesRepository (+ Local), KeyValueStore (+ AsyncStorage, memory, resilient)
 │   │   ├── profile/              RepositoryGuestProfileService: guest record source + preferences repository
+│   │   ├── personalization/      buildInput: domain objects → rules-engine inputs
 │   │   ├── registry.ts           Composition root: validate env → mode → implementations
 │   │   ├── instrument.ts         Logs every service call's failures & slow responses
 │   │   └── ServiceProvider.tsx   React context + useServices()
@@ -90,7 +91,8 @@ RCYC-Loyalty-App/
     │   ├── _shared/concierge/    Concierge AI pipeline (runtime-agnostic; docs/11)
     │   ├── concierge-respond/    Endpoint: JWT → clients + provider → pipeline
     │   ├── journey-events/       HMAC webhook ingest → alert projection
-    │   └── personalization-next-best/  Next-best-experience scoring
+    │   ├── _shared/personalization/  Rules engine rules-v1 (shared with the app's mock mode)
+    │   └── personalization-next-best/  Endpoint: authorise → load inputs → engine → guest-safe output
     └── tests/                    Local stubs + SQL smoke tests (RLS, preferences, integration)
 scripts/
 ├── check-*.ts                    View-model, fixture, concierge-server and Supabase checks (npm run verify)

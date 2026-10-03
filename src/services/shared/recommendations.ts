@@ -1,5 +1,5 @@
 /** Merge rules for recommendations, shared by PersonalizationService implementations. */
-import type { Recommendation } from '@/domain';
+import type { ExperienceCategory, PersonalizedRecommendation, Recommendation, SignalKind, SourceSignalKind } from '@/domain';
 
 /**
  * Curated recommendations win over scored ones for the same experience (and
@@ -19,4 +19,35 @@ export function mergeRecommendations(scored: Recommendation[], curated: Recommen
 /** Home shows only its own curated picks. */
 export function curatedFor(curated: Recommendation[], surface: Recommendation['surface']): Recommendation[] {
   return curated.filter((r) => r.audience === 'guest' && r.surface === surface).sort((a, b) => b.score - a.score);
+}
+
+/** Engine signal kinds → the drivers recorded on a Recommendation. Internal kinds are dropped. */
+const DRIVER: Record<SourceSignalKind, SignalKind | null> = {
+  'bonvoy-status': 'bonvoy-status',
+  'previous-voyages': 'voyage-history',
+  'current-itinerary': 'future-itinerary',
+  'dining-preferences': 'dining-history',
+  'spa-preferences': 'spa-history',
+  'excursion-history': 'excursion-history',
+  'destination-interests': 'suite-preference',
+  'travel-companion': 'travel-companions',
+  'special-occasion': 'special-occasion',
+  'current-reservations': 'future-itinerary',
+  'value-segment': null,
+};
+
+/** An engine recommendation as a surface Recommendation (for Discover and Voyage). */
+export function fromPersonalized(r: PersonalizedRecommendation, surface: Recommendation['surface']): Recommendation {
+  return {
+    id: `dev_rec_auto_${r.experienceId.replace(/^dev_exp_/, '')}`,
+    surface,
+    kind: 'experience',
+    experienceId: r.experienceId,
+    category: r.category as ExperienceCategory,
+    title: r.recommendation,
+    rationale: r.reason,
+    score: r.relevanceScore,
+    drivers: [...new Set(r.sourceSignals.filter((s) => s.visibility === 'guest').map((s) => DRIVER[s.kind]).filter((k): k is SignalKind => k !== null))],
+    audience: 'guest',
+  };
 }

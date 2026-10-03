@@ -151,7 +151,7 @@ async function main() {
     const r = await ask(w, 'What private experiences are available in Monte Carlo?');
     allReplies.push(...r.replies);
     check('Monte Carlo: unbooked private experience offered with times', actionsOf(r.att).some((a) => a.kind === 'request-experience' && a.experienceId === 'dev_exp_monaco_atelier'), r.att);
-    check('… names what is already arranged there', /Already arranged: .*Villa Ephrussi.*Oceanographic/.test(r.text), r.text);
+    check('… names what is already arranged there', /Already arranged: .*(Villa Ephrussi.*Oceanographic|Oceanographic.*Villa Ephrussi)/.test(r.text), r.text);
     check('… for the party, by name', /for you and Camille/.test(r.text));
     check('… transfers are not "experiences"', !/Helicopter/.test(r.text));
 

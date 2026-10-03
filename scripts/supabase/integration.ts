@@ -33,6 +33,7 @@ import { claimsChange } from '../../supabase/functions/_shared/concierge/guard.t
 import { DEFAULT_CONFIG, handleConcierge } from '../../supabase/functions/_shared/concierge/pipeline.ts';
 import { MockLLMProvider } from '../../supabase/functions/_shared/concierge/providers/mock.ts';
 import { callerFor, supabasePorts } from '../../supabase/functions/_shared/concierge/supabasePorts.ts';
+import { handleNextBest } from '../../supabase/functions/_shared/personalization/handler.ts';
 
 const PGRST_URL = process.env.PGRST_URL;
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -107,7 +108,23 @@ async function conciergeRespond(url: string, raw: string, auth: string | undefin
   return handleConcierge(raw, await callerFor(user, sub), supabasePorts(user, service, clock), { ...DEFAULT_CONFIG, provider: new MockLLMProvider() });
 }
 
-// A local gateway: /rest/v1 → PostgREST; /functions/v1/concierge-respond → the pipeline.
+/** personalization-next-best as the Edge Function runs it: the shared handler and engine. */
+async function nextBest(url: string, raw: string, auth: string | undefined, clock: () => Date) {
+  if (!auth?.startsWith('Bearer ')) return { status: 401, body: { error: 'unauthenticated' } };
+  const sub = (JSON.parse(Buffer.from(auth.slice(7).split('.')[1] ?? '', 'base64url').toString() || '{}') as { sub?: string }).sub;
+  if (!sub) return { status: 401, body: { error: 'unauthenticated' } };
+  const user = createClient(url, ANON_KEY, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } });
+  const service = createClient(url, jwt({ role: 'service_role' }), { auth: { persistSession: false } });
+  const caller = await callerFor(user, sub);
+  return handleNextBest(raw, caller, {
+    user,
+    service,
+    now: clock,
+    audit: async (e) => void (await service.from('audit_log').insert({ actor_id: e.actorId, actor_roles: e.actorRoles, action: e.action, resource: e.resource, resource_id: e.resourceId, outcome: e.outcome, metadata: e.metadata })),
+  });
+}
+
+// A local gateway: /rest/v1 → PostgREST; /functions/v1/* → the shared handlers.
 async function gateway(clock: () => Date): Promise<{ url: string; close: () => void; calls: { body: unknown; auth?: string }[] }> {
   const calls: { body: unknown; auth?: string }[] = [];
   let self = '';
@@ -120,6 +137,15 @@ async function gateway(clock: () => Date): Promise<{ url: string; close: () => v
       calls.push({ body: JSON.parse(raw || '{}'), auth: req.headers.authorization });
       const result = await conciergeRespond(self, raw, req.headers.authorization, clock).catch((e: unknown) => {
         console.error('   concierge-respond:', e);
+        return { status: 500, body: { error: 'internal' } };
+      });
+      res.writeHead(result.status, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result.body));
+      return;
+    }
+    if (req.url?.startsWith('/functions/v1/personalization-next-best')) {
+      const result = await nextBest(self, body.toString(), req.headers.authorization, clock).catch((e: unknown) => {
+        console.error('   personalization-next-best:', e);
         return { status: 500, body: { error: 'internal' } };
       });
       res.writeHead(result.status, { 'Content-Type': 'application/json' });
@@ -335,6 +361,28 @@ async function main() {
   }
   const rpc = await anon.rpc('my_relationship');
   check('anon cannot call functions', rpc.error?.code === '42501', rpc.error);
+
+  // ── Personalization engine, server-side (Edge Function handler, service-role inputs) ──
+  {
+    const service = createClient(gw.url, jwt({ role: 'service_role' }), { auth: { persistSession: false } });
+    const served = await sb.personalization.getPersonalizedRecommendations(g, r, { limit: 10 });
+    const local = await mock.personalization.getPersonalizedRecommendations(G, R, { limit: 10 });
+    check('personalization: the server returns recommendations', served.length > 0, served.length);
+    same('personalization: same engine, same data, same recommendations', toFixtureIds(served).map((x) => [x.experienceId, x.reason, x.voyageDate, x.destination, x.action.kind, x.relevanceScore]), local.map((x) => [x.experienceId, x.reason, x.voyageDate, x.destination, x.action.kind, x.relevanceScore]));
+    check('personalization: no internal signals reach the guest', served.every((x) => x.sourceSignals.every((s) => s.visibility === 'guest' && s.kind !== 'value-segment')));
+    const raw = await guestDb.functions.invoke<{ recommendations: { sourceSignals: { kind: string }[] }[] }>('personalization-next-best', { body: { guestId: g, reservationId: r, limit: 20 } });
+    check('personalization: … not even on the wire', !JSON.stringify(raw.data).includes('value-segment') && !JSON.stringify(raw.data).includes('distinguished'), raw.error);
+    const explained = await sb.personalization.getPersonalizedRecommendations(g, r, { limit: 50, includeBooked: true });
+    check('personalization: booked experiences only when asked, marked booked', explained.some((x) => x.booked) && !served.some((x) => x.booked));
+    const status = async (body: Record<string, unknown>, db: SupabaseClient = guestDb) => ((await db.functions.invoke('personalization-next-best', { body })).error as { context?: { status?: number } } | null)?.context?.status ?? 200;
+    check('personalization: another guest is refused', [403, 404].includes(await status({ guestId: g, reservationId: r }, otherDb)));
+    check('personalization: unknown fields refused', (await status({ guestId: g, reservationId: r, debug: true })) === 422);
+    check('personalization: limit is bounded', (await status({ guestId: g, reservationId: r, limit: 500 })) === 422);
+    check('personalization: anon is refused', (await status({ guestId: g, reservationId: r }, clientFor(gw.url))) === 401);
+    const logged = (await service.from('audit_log').select('metadata').eq('action', 'personalization.next_best').eq('outcome', 'success')).data ?? [];
+    const text = JSON.stringify(logged);
+    check('personalization: audited with rules and signal kinds, no reasons', logged.length >= 2 && text.includes('rules-v1') && !text.includes('Recommended because') && !text.includes('distinguished'), logged.length);
+  }
 
   // ── Concierge pipeline end to end (mock model, real RLS and services) ──
   {

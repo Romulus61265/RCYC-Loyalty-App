@@ -15,7 +15,7 @@ The source is `src/services/contracts/index.ts`. Screens obtain services only th
 | ExperienceService | `MockExperienceService` | `SupabaseExperienceService` | mock |
 | ScheduleService | `MockScheduleService` | `SupabaseScheduleService` | mock |
 | ConciergeService | `MockConciergeService` + `MockConciergeAI` | `SupabaseConciergeService` (`concierge-respond` Edge Function, Realtime) | mock |
-| PersonalizationService | `MockPersonalizationService` + rules engine | `SupabasePersonalizationService` (materialised recommendations) | mock |
+| PersonalizationService | `MockPersonalizationService` + rules engine (`rules-v1`) | `SupabasePersonalizationService` (`personalization-next-best` Edge Function, materialised recommendations) | mock |
 | JourneyEventService | `MockJourneyEventService` | `SupabaseJourneyEventService` (alerts, notifications, Realtime) | mock |
 | ClockService | pinned demo moment (`?now=`, `EXPO_PUBLIC_DEMO_NOW`) | device clock | device clock |
 
@@ -163,23 +163,28 @@ It returns confirmations composed on the device, showing "Requested" or "Being a
 * an optional guest-facing note, such as "Four places left".
 
 ### PersonalizationService
-`getRecommendations(guestId, surface, opts)` and `recordFeedback(guestId, recommendationId, signal)`. Crew-audience opportunities are never returned to the guest app.
+```ts
+getPersonalizedRecommendations(guestId, reservationId, { limit?, includeBooked? }): PersonalizedRecommendation[]
+getRecommendations(guestId, surface, opts): Recommendation[]      // per surface, curated + engine
+recordFeedback(guestId, recommendationId, signal)
+```
+`PersonalizedRecommendation` is the output of the deterministic, rules-based engine ([10 · Personalization](10-personalization-architecture.md#the-mvp-engine-rules-v1)):
 
-**MVP behaviour.** `MockPersonalizationService` serves Home its curated picks. For Discover and Voyage it merges those picks with `MockRecommendationEngine`.
-
-The engine is a transparent, rules-based scorer, **not** a learning system. Weights:
-
-| Signal | Weight |
+| Field | Meaning |
 |---|---|
-| A loved past moment with overlapping tags (uses the signal's `memory` phrase and the voyage it happened on) | 0.35 + overlap |
-| The occasion this voyage | 0.3–0.5 |
-| The travelling companion's interests | 0.3 |
-| A stated interest | 0.2 |
-| Private style, window table | 0.12–0.15 |
-| First visit to the port | 0.05 |
-| Group formats ashore, after a poorly rated group tour | −0.3 |
+| `recommendation` | What is suggested, e.g. "Dinner on a Private Terrace" |
+| `category` | The experience category |
+| `reason` | One guest-facing sentence. It never mentions scores, Bonvoy tiers or segments |
+| `relevanceScore` | 0–1. **Internal:** ranking and thresholds only, never rendered |
+| `voyageDate`, `dayNumber` | When it fits the voyage |
+| `destination` | The port, or "Aboard Evrima in Monte Carlo" / "Aboard Evrima, at sea" |
+| `action` | A `ConciergeAction` (request a slot, ask the concierge or Suite Ambassador, open the calendar) |
+| `sourceSignals` | Which inputs drove it (`kind`, `detail`, `visibility`). Internal signals are stripped before the app |
+| `rules`, `booked` | The rules that fired; whether it is already booked |
 
-The strongest driver becomes the explanation, for example: "Recommended because you enjoyed a private vineyard lunch on Hvar on your Adriatic voyage in 2024." Curated recommendations always win. Production replaces the engine behind the same contract.
+* **Mock.** `MockPersonalizationService` runs the engine on the device over the shared mock services, with the fixture history and value segment.
+* **Supabase.** `SupabasePersonalizationService` calls the `personalization-next-best` Edge Function. It loads the inputs guests cannot read with the service role, runs the same engine, and returns guest-safe output.
+* **Surfaces.** For Discover and Voyage, `getRecommendations` explains every experience with the engine (booked ones too) and merges in the curated picks. Home keeps its curated picks. Crew-audience opportunities are never returned to the guest app.
 
 ### GuestProfileService and preference persistence
 ```ts

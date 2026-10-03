@@ -54,7 +54,8 @@ function createMockServices(): Services {
   const loyalty = new MockLoyaltyService();
   const voyage = new MockVoyageService();
   const experience = new MockExperienceService();
-  const personalization = new MockPersonalizationService();
+  // Shares the instances above: bookings and preference edits count at once.
+  const personalization = new MockPersonalizationService({ profile, loyalty, voyage, experience });
   return {
     auth: new MockAuthService(),
     profile,

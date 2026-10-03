@@ -59,3 +59,17 @@ export interface Recommendation {
   /** Crew-only opportunities are never returned to the guest app. */
   audience: 'guest' | 'crew';
 }
+
+/**
+ * Output of the rules-based personalization engine (one shared engine for the
+ * app's mock mode and the personalization-next-best Edge Function).
+ * `relevanceScore` and `sourceSignals` rank and explain; they are never shown.
+ */
+export type {
+  PersonalizationInput,
+  PersonalizedRecommendation,
+  PersonalizeOptions,
+  RecommendationAction,
+  SourceSignal,
+  SourceSignalKind,
+} from '../../supabase/functions/_shared/personalization/types';

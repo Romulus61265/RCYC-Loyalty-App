@@ -5,7 +5,7 @@
  * messaging jobs). The guest may only acknowledge an alert or mark a
  * notification read; column grants allow nothing else.
  */
-import type { GuestNotification, ID, JourneyAlert, JourneyEvent, JourneyEventType, Recommendation, RecommendationSurface } from '@/domain';
+import type { GuestNotification, ID, JourneyAlert, JourneyEvent, JourneyEventType, PersonalizedRecommendation, Recommendation, RecommendationSurface } from '@/domain';
 import type { JourneyEventService, PersonalizationService, Unsubscribe } from '@/services/contracts';
 import { ServiceError } from '@/services/contracts';
 import { curatedFor, mergeRecommendations } from '@/services/shared/recommendations';
@@ -105,6 +105,26 @@ export class SupabasePersonalizationService implements PersonalizationService {
     const scored = rows.filter((r) => r.model_version !== CURATED).map(toRecommendation);
     const list = surface === 'discover' || surface === 'voyage' ? mergeRecommendations(scored, curated) : curatedFor(curated, surface);
     return list.slice(0, opts?.limit ?? 3);
+  }
+
+  /**
+   * The engine runs in the personalization-next-best Edge Function, which can
+   * read history and the internal value segment (the guest cannot). It
+   * returns guest-safe recommendations: internal signals removed.
+   */
+  async getPersonalizedRecommendations(guestId: ID, reservationId: ID, opts?: { limit?: number; includeBooked?: boolean }): Promise<PersonalizedRecommendation[]> {
+    const body = { guestId: uuid(guestId, 'Guest'), reservationId: uuid(reservationId, 'Reservation'), limit: Math.max(1, Math.min(50, opts?.limit ?? 10)), includeBooked: opts?.includeBooked ?? false };
+    const { data, error } = await this.deps.db().functions.invoke<{ recommendations: PersonalizedRecommendation[] }>('personalization-next-best', { body });
+    if (error) {
+      const status = (error as { context?: { status?: number } }).context?.status;
+      if (status === 401) throw new ServiceError('unauthenticated', 'Session expired');
+      if (status === 403) throw new ServiceError('forbidden', 'Not your recommendations');
+      if (status === 404) throw new ServiceError('not_found', 'Reservation not found');
+      if (status === 422) throw new ServiceError('validation', 'Request not accepted');
+      throw new ServiceError('unavailable', 'Recommendations unavailable', true);
+    }
+    // Defence in depth: nothing internal is kept even if the server sent it.
+    return (data?.recommendations ?? []).map((r) => ({ ...r, sourceSignals: (r.sourceSignals ?? []).filter((s) => s.visibility === 'guest') }));
   }
 
   async recordFeedback(guestId: ID, recommendationId: ID, signal: 'viewed' | 'dismissed' | 'saved' | 'booked'): Promise<void> {

@@ -1,24 +1,32 @@
-import type { GuestNotification, ID, JourneyAlert, JourneyEvent, Recommendation, RecommendationSurface } from '@/domain';
+import type { GuestNotification, ID, JourneyAlert, JourneyEvent, PersonalizedRecommendation, Recommendation, RecommendationSurface } from '@/domain';
 import type {
   AuditEntry,
   AuditService,
   AuthService,
   AuthSession,
+  ExperienceService,
+  GuestProfileService,
   JourneyEventService,
+  LoyaltyService,
   PersonalizationService,
   Unsubscribe,
+  VoyageService,
 } from '@/services/contracts';
 import { ServiceError } from '@/services/contracts';
 import { logger } from '@/core/logging';
 import type { GuestRecordSource } from '@/services/profile/RepositoryGuestProfileService';
-import { curatedFor } from '@/services/shared/recommendations';
-import { mergedRecommendations } from './MockRecommendationEngine';
+import { curatedFor, fromPersonalized, mergeRecommendations } from '@/services/shared/recommendations';
+import { buildPersonalizationInput } from '@/services/personalization/buildInput';
+import { personalize, toGuestSafe } from '../../../supabase/functions/_shared/personalization/engine';
+import { MockExperienceService } from './MockExperienceService';
+import { MockLoyaltyService } from './MockLoyaltyService';
+import { MockVoyageService } from './MockVoyageService';
 import { data, failIf, isEmptyScenario, latency, mockId, mockNow } from './support';
 
 const LEAD_GUEST_ID = data.guest.profile.guest.id;
 const guestProfile = data.guest.profile;
 const { alerts, notifications } = data.communication;
-const { recommendations } = data.personalization;
+const { recommendations, signals } = data.personalization;
 
 /** Pre-authenticated demo session. Real auth: Supabase Auth + Bonvoy OIDC. */
 export class MockAuthService implements AuthService {
@@ -73,19 +81,89 @@ export class MockGuestRecordSource implements GuestRecordSource {
   }
 }
 
+/**
+ * The engine over the untouched fixture dataset, synchronously (for the seed,
+ * which materialises it as the server-side job would).
+ */
+export function scoreFixtures(): PersonalizedRecommendation[] {
+  const v = data.voyage;
+  const input = buildPersonalizationInput({
+    profile: guestProfile,
+    membership: data.guest.membership,
+    relationship: data.guest.relationship,
+    pastVoyages: v.pastVoyages,
+    voyage: v.voyage,
+    yachtName: v.yacht.name,
+    catalogue: data.experiences.catalogue,
+    availability: data.experiences.availability,
+    bookings: data.experiences.bookings,
+    signals,
+  });
+  return toGuestSafe(personalize(input, { limit: 1000, includeBooked: true, maxPerCategory: 1000, now: new Date(data.meta.referenceNow).toISOString() }));
+}
+
+/** What the mock engine reads; the app passes its shared service instances. */
+export interface MockPersonalizationDeps {
+  profile: Pick<GuestProfileService, 'getProfile'>;
+  loyalty: Pick<LoyaltyService, 'getMembership' | 'getRelationship'>;
+  voyage: Pick<VoyageService, 'getOverview' | 'getPastVoyages'>;
+  experience: Pick<ExperienceService, 'listCatalogue' | 'listAvailability' | 'listBookings'>;
+}
+
+/**
+ * Runs the rules-based engine (supabase/functions/_shared/personalization)
+ * on the device over the mock services. Here every input is available,
+ * including history and the internal value segment, as it is server-side in
+ * production; internal signals are still stripped from what is returned.
+ */
 export class MockPersonalizationService implements PersonalizationService {
-  getRecommendations(_guestId: ID, surface: RecommendationSurface, opts?: { limit?: number }) {
+  private readonly deps: MockPersonalizationDeps;
+
+  constructor(deps?: Partial<MockPersonalizationDeps>) {
+    this.deps = {
+      profile: deps?.profile ?? { getProfile: () => latency(guestProfile) },
+      loyalty: deps?.loyalty ?? new MockLoyaltyService(),
+      voyage: deps?.voyage ?? new MockVoyageService(),
+      experience: deps?.experience ?? new MockExperienceService(),
+    };
+  }
+
+  private async engine(guestId: ID, reservationId: ID, opts: { limit?: number; includeBooked?: boolean; maxPerCategory?: number }) {
+    const { profile, loyalty, voyage, experience } = this.deps;
+    const overview = await voyage.getOverview(reservationId);
+    const [p, membership, relationship, pastVoyages, catalogue, availability, bookings] = await Promise.all([
+      profile.getProfile(guestId),
+      loyalty.getMembership(guestId).catch(() => null),
+      loyalty.getRelationship(guestId).catch(() => undefined),
+      voyage.getPastVoyages(guestId).catch(() => []),
+      experience.listCatalogue(overview.voyage.id),
+      experience.listAvailability(overview.voyage.id).catch(() => []),
+      experience.listBookings(reservationId),
+    ]);
+    const input = buildPersonalizationInput({ profile: p, membership, relationship, pastVoyages, voyage: overview.voyage, yachtName: overview.yacht.name, catalogue, availability, bookings, signals });
+    return toGuestSafe(personalize(input, { ...opts, now: mockNow().toISOString() }));
+  }
+
+  async getPersonalizedRecommendations(guestId: ID, reservationId: ID, opts?: { limit?: number; includeBooked?: boolean }) {
+    failIf('optional', 'recommendations');
+    if (isEmptyScenario()) return latency<PersonalizedRecommendation[]>([]);
+    return this.engine(guestId, reservationId, { limit: opts?.limit ?? 10, includeBooked: opts?.includeBooked });
+  }
+
+  async getRecommendations(guestId: ID, surface: RecommendationSurface, opts?: { reservationId?: ID; limit?: number }) {
     failIf('optional', 'recommendations');
     if (isEmptyScenario()) return latency<Recommendation[]>([]);
     const curated = recommendations.filter((r) => r.audience === 'guest');
-    // Home keeps its three curated picks; Discover and Voyage use the rules
-    // engine merged with the curated set, so every experience can be explained.
-    const list =
-      surface === 'discover' || surface === 'voyage'
-        ? mergedRecommendations(curated)
-        : curatedFor(curated, surface);
-    return latency(list.slice(0, opts?.limit ?? 3));
+    // Home keeps its curated picks; Discover and Voyage explain every
+    // experience with the engine (booked ones too), merged with the curated set.
+    if (surface !== 'discover' && surface !== 'voyage') return latency(curatedFor(curated, surface).slice(0, opts?.limit ?? 3));
+    const all = await this.engine(guestId, opts?.reservationId ?? data.voyage.reservation.id, { limit: 1000, includeBooked: true, maxPerCategory: 1000 });
+    // Catalogue order first, so equal scores rank as they do everywhere else.
+    const order = new Map(data.experiences.catalogue.map((e, i) => [e.id, i]));
+    const byCatalogue = [...all].sort((a, b) => (order.get(a.experienceId) ?? Infinity) - (order.get(b.experienceId) ?? Infinity));
+    return mergeRecommendations(byCatalogue.map((r) => fromPersonalized(r, 'discover')), curated).slice(0, opts?.limit ?? 3);
   }
+
   async recordFeedback() {
     await latency(undefined, 50);
   }

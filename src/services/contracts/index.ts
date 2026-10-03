@@ -40,6 +40,7 @@ import type {
   JourneyPhase,
   LoyaltyMembership,
   LoyaltyRecognition,
+  PersonalizedRecommendation,
   Recommendation,
   RecommendationSurface,
   ServiceRequest,
@@ -217,6 +218,13 @@ export interface ConciergeAIProvider {
 // ─── Personalization ───────────────────────────────────────────────────────
 
 export interface PersonalizationService {
+  /**
+   * Next-best experiences from the rules-based engine, highest relevance
+   * first, each with its reason, date, destination, action and source
+   * signals. `relevanceScore` ranks; it is never shown to the guest.
+   * Internal signals (the value segment) never reach the app.
+   */
+  getPersonalizedRecommendations(guestId: ID, reservationId: ID, opts?: { limit?: number; includeBooked?: boolean }): Promise<PersonalizedRecommendation[]>;
   getRecommendations(guestId: ID, surface: RecommendationSurface, opts?: { reservationId?: ID; limit?: number }): Promise<Recommendation[]>;
   /** Implicit/explicit feedback loop — e.g. dismissed, booked, loved. */
   recordFeedback(guestId: ID, recommendationId: ID, signal: 'viewed' | 'dismissed' | 'saved' | 'booked'): Promise<void>;

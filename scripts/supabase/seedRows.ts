@@ -9,7 +9,9 @@
  */
 import { createHash } from 'node:crypto';
 import { devDataset as d } from '@/data/fixtures';
-import { scoreExperiences } from '@/services/mock/MockRecommendationEngine';
+import { scoreFixtures } from '@/services/mock/MockMiscServices';
+import { fromPersonalized } from '@/services/shared/recommendations';
+import { ENGINE_VERSION } from '../../supabase/functions/_shared/personalization/engine';
 
 // ─── Deterministic IDs ─────────────────────────────────────────────────────
 
@@ -325,7 +327,7 @@ export function buildSeedRows(): TableRows[] {
   });
   add('public.recommendations', [
     ...d.personalization.recommendations.map((r) => recRow(r, 'curated')),
-    ...scoreExperiences().map((r) => recRow(r, 'rules-v0.1')),
+    ...scoreFixtures().map((r) => recRow(fromPersonalized(r, 'discover'), ENGINE_VERSION)),
   ]);
   add('public.personalization_signals', d.personalization.signals.map((s) => ({
     guest_id: uuidFor(s.guestId), kind: s.kind, weight: s.weight, observed_at: s.observedAt, source: s.source,
