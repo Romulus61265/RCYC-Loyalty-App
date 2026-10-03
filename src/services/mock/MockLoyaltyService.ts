@@ -1,5 +1,6 @@
 import type { ID } from '@/domain';
 import type { LoyaltyService } from '@/services/contracts';
+import { buildRecognition, privilegesFor } from '@/services/shared/recognition';
 import { data, failIf, latency } from './support';
 
 const { membership: loyaltyMembership, relationship: guestRelationship, privileges } = data.guest;
@@ -19,7 +20,7 @@ export class MockLoyaltyService implements LoyaltyService {
   }
 
   getPrivileges(_guestId: ID, voyageId?: ID) {
-    return latency(privileges.filter((p) => !voyageId || !p.appliesToVoyageId || p.appliesToVoyageId === voyageId));
+    return latency(privilegesFor(privileges, voyageId));
   }
 
   async getRecognition(guestId: ID, voyageId?: ID) {
@@ -29,20 +30,10 @@ export class MockLoyaltyService implements LoyaltyService {
       this.getRelationship(guestId),
       this.getPrivileges(guestId, voyageId),
     ]);
-    const ordinal = relationship.voyagesCompleted + 1;
-    return {
-      membership: membership!,
-      relationship,
-      privileges: privs,
-      recognitionLine: `Welcome back for your ${ordinalWord(ordinal)} voyage with us.`,
-    };
+    return buildRecognition(membership!, relationship, privs);
   }
 
   linkMembership(_guestId: ID, _authorizationCode: string) {
     return latency(loyaltyMembership, 600);
   }
-}
-
-function ordinalWord(n: number): string {
-  return ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth'][n - 1] ?? `${n}th`;
 }

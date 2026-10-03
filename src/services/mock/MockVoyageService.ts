@@ -1,10 +1,9 @@
 import type { ID, JourneyPhase } from '@/domain';
 import type { VoyageService } from '@/services/contracts';
+import { journeyPhase } from '@/services/shared/journeyPhase';
 import { data, failIf, latency, mockNow, notFound } from './support';
 
 const { embarkation, pastVoyages, reservation, suite, documents: travelDocuments, flights, voyage, yacht } = data.voyage;
-
-const DAY = 86_400_000;
 
 export class MockVoyageService implements VoyageService {
   listReservations(_guestId: ID) {
@@ -47,17 +46,6 @@ export class MockVoyageService implements VoyageService {
   }
 
   async getJourneyPhase(_reservationId: ID, now: Date = mockNow()): Promise<JourneyPhase> {
-    const start = Date.parse(embarkation.arrivalWindowStart);
-    // Journey ends once the guest has left the yacht on the final morning.
-    const lastPort = voyage.itinerary[voyage.itinerary.length - 1];
-    const end = Date.parse(lastPort?.arrival ?? `${voyage.endDate}T12:00:00Z`) + 6 * 3_600_000;
-    const t = now.getTime();
-    if (t < start - DAY) return 'prepare';
-    if (t < start) return 'travel-to-embarkation';
-    if (t < start + 6 * 3_600_000) return 'embark';
-    if (t < end) return 'sail';
-    if (t < end + 2 * DAY) return 'return-home';
-    if (t < end + 60 * DAY) return 'remember';
-    return 'rebook';
+    return journeyPhase(embarkation, voyage, now);
   }
 }

@@ -8,6 +8,7 @@
  * `PersonalizationService.getRecommendations` contract.
  */
 import type { Recommendation, SignalKind } from '@/domain';
+import { mergeRecommendations } from '@/services/shared/recommendations';
 import { formatLongDate } from '@/utils/format';
 import { data } from './support';
 
@@ -126,9 +127,5 @@ export function scoreExperiences(): Recommendation[] {
 
 /** Curated recommendations win; the engine fills in the rest. Highest score first. */
 export function mergedRecommendations(curated: Recommendation[]): Recommendation[] {
-  const byExperience = new Map<string, Recommendation>();
-  for (const r of scoreExperiences()) if (r.experienceId) byExperience.set(r.experienceId, r);
-  for (const r of curated) if (r.experienceId && r.audience === 'guest') byExperience.set(r.experienceId, { ...r, score: Math.max(r.score, byExperience.get(r.experienceId)?.score ?? 0) });
-  return [...byExperience.values()].sort((a, b) => b.score - a.score);
+  return mergeRecommendations(scoreExperiences(), curated);
 }
-

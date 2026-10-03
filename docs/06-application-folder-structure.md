@@ -32,6 +32,7 @@ RCYC-Loyalty-App/
 │   │   └── logging/              Logger interface, createLogger, Console/Memory/Remote sinks
 │   ├── data/fixtures/            Fictional guest, voyage & experience data (mock only)
 │   ├── features/
+│   │   ├── auth/                 Sign-in: useSignIn (e-mail code state machine) + SignInScreen
 │   │   └── home/                 Home dashboard feature
 │   │       ├── homeModel.ts      Pure view model: journey-aware decisions (tested by scripts/check-home.ts)
 │   │       ├── useHomeDashboard.ts  The only service access for Home; per-section failure isolation
@@ -59,12 +60,15 @@ RCYC-Loyalty-App/
 │   │   └── useJourney.tsx        Session + reservation + journey phase context
 │   ├── security/
 │   │   ├── secureStorage.ts      Keychain/Keystore token storage
+│   │   ├── chunkedStorage.ts     Splits large sessions across keychain entries
 │   │   ├── authorization.ts      Presentation-only permission checks
 │   │   └── pii.ts                Masking / redaction for logs & telemetry
 │   ├── services/
 │   │   ├── contracts/            ★ Service interfaces — the presentation boundary
 │   │   ├── mock/                 Mock implementations (MVP)
-│   │   ├── remote/               BFF client + adapters (MarriottBonvoyService, SupabasePreferencesRepository)
+│   │   ├── remote/               BFF client + adapters (MarriottBonvoyService, SupabasePreferencesRepository, supabaseClient)
+│   │   ├── supabase/             Every contract on Supabase: rows.ts (row types + mappers), support.ts (errors, checks), one service per context
+│   │   ├── shared/               Pure rules used by every implementation: journeyPhase, calendar, recommendations, recognition, default preferences
 │   │   ├── repositories/         PreferencesRepository (+ Local), KeyValueStore (+ AsyncStorage, memory, resilient)
 │   │   ├── profile/              RepositoryGuestProfileService: guest record source + preferences repository
 │   │   ├── registry.ts           Composition root: validate env → mode → implementations
@@ -80,7 +84,11 @@ RCYC-Loyalty-App/
     │   ├── concierge-respond/    AI orchestration + escalation
     │   ├── journey-events/       HMAC webhook ingest → alert projection
     │   └── personalization-next-best/  Next-best-experience scoring
-    └── tests/                    Local stubs + RLS smoke test
+    └── tests/                    Local stubs + SQL smoke tests (RLS, preferences, integration)
+scripts/
+├── check-*.ts                    View-model, fixture and Supabase checks (npm run verify)
+├── generate-seed.ts              Writes supabase/seed.sql (npm run seed:generate)
+└── supabase/                     Seed row builders, end-to-end runner (npm run test:supabase)
 ```
 
 ## Dependency rules
@@ -97,11 +105,16 @@ flowchart TD
   mock[services/mock] --> contracts
   mock --> fixtures[data/fixtures]
   remote[services/remote] --> contracts
+  supa[services/supabase] --> contracts
+  supa --> shared[services/shared]
+  mock --> shared
   registry --> mock
   registry --> remote
+  registry --> supa
 ```
 
-* `src/app`, `src/features`, `src/components` and `src/hooks` **must not** import from `services/mock`, `services/remote` or `data/fixtures`.
+* `src/app`, `src/features`, `src/components` and `src/hooks` **must not** import from `services/mock`, `services/remote`, `services/supabase`, `@supabase/*` or `data/fixtures`.
+* `services/remote`, `services/supabase` and `services/shared` **must not** import fixtures or mocks.
 * A feature follows the same split as Home: a hook for data access, a pure view model for decisions, and presentational components.
 * `src/domain` has no dependencies.
 * Only `registry.ts` knows which implementations exist.

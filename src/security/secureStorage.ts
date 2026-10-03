@@ -7,6 +7,7 @@
  */
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import { chunkedStorage } from './chunkedStorage';
 
 const memory = new Map<string, string>();
 const isWeb = Platform.OS === 'web';
@@ -36,5 +37,8 @@ export const secureStorage = {
   },
 };
 
-/** Adapter matching the storage interface expected by supabase-js auth. */
-export const supabaseAuthStorage = secureStorage;
+/**
+ * Keychain entries are limited to about 2 KB and a Supabase session can be
+ * larger, so supabase-js gets a chunking wrapper (still keychain only).
+ */
+export const supabaseAuthStorage = chunkedStorage(secureStorage);

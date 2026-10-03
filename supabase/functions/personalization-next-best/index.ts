@@ -6,6 +6,8 @@
 import { audit, handle, HttpError, json, requireCaller, serviceClient } from '../_shared/auth.ts';
 
 const MODEL_VERSION = 'rules-v0.1';
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SURFACES = ['home', 'discover', 'concierge', 'voyage'];
 
 // Signal weights — tuned by hospitality leadership, not by engagement maximisation.
 const W = {
@@ -29,18 +31,26 @@ Deno.serve(
   handle(async (req) => {
     const caller = await requireCaller(req);
     const { guestId, reservationId, surface = 'home' } = (await req.json()) as { guestId: string; reservationId: string; surface?: string };
-    if (!guestId || !reservationId) throw new HttpError(422, 'validation');
+    if (!UUID.test(guestId ?? '') || !UUID.test(reservationId ?? '') || !SURFACES.includes(surface)) throw new HttpError(422, 'validation');
     const isCrew = caller.roles.some((r) => r !== 'guest' && r !== 'travel_companion');
 
-    // Reads go through the caller's RLS scope — a guest can only score themselves.
+    // Authorise through the caller's RLS scope before any service-role read:
+    // the reservation must be visible to the caller, the guest must be on it,
+    // and a guest may only score themselves (crew may score their guests).
     const { data: reservation } = await caller.db.from('reservations').select('voyage_id').eq('id', reservationId).single();
     if (!reservation) throw new HttpError(404, 'not_found');
+    const { data: member } = await caller.db.from('reservation_guests').select('guest_id').eq('reservation_id', reservationId).eq('guest_id', guestId).maybeSingle();
+    if (!member) throw new HttpError(404, 'not_found');
+    if (!isCrew) {
+      const { data: self } = await caller.db.rpc('current_guest_id');
+      if (self !== guestId) throw new HttpError(403, 'forbidden');
+    }
 
     const svc = serviceClient();
     const [{ data: candidates }, { data: signals }, { data: occasions }, { data: prefs }] = await Promise.all([
       svc.from('experiences').select('id, category, title, tags, port_call_id').or(`voyage_id.eq.${reservation.voyage_id},voyage_id.is.null`).eq('active', true),
       svc.from('personalization_signals').select('kind, value, weight').eq('guest_id', guestId),
-      svc.from('special_occasions').select('type, occasion_date').eq('guest_id', guestId),
+      svc.from('guest_occasions').select('type, occasion_date').eq('guest_id', guestId),
       svc.from('guest_preferences').select('activity_interests, dining').eq('guest_id', guestId).maybeSingle(),
     ]);
 

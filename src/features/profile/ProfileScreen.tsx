@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ErrorState, LoadingState, PageHeader, Screen, SegmentedTabs } from '@/components';
+import { useJourney } from '@/hooks/useJourney';
 import { colors } from '@/theme';
 import {
   BonvoySection,
@@ -29,6 +30,7 @@ export function ProfileScreen() {
   const section = parseProfileSection(params.section);
   const [editing, setEditing] = useState<GroupKey | null>(null);
   const { model, preferences, loading, error, reload, save, requestData } = useProfileArea();
+  const { signOut } = useJourney();
 
   if (loading && !model) return <LoadingState label="Opening your profile…" />;
   if (error || !model || !preferences) {
@@ -50,7 +52,7 @@ export function ProfileScreen() {
     <Screen>
       <PageHeader eyebrow="Profile" title={model.name} subtitle={model.subtitle} />
       <SegmentedTabs options={TABS} value={section} onChange={open} />
-      {section === 'personal' && <PersonalSection model={model.personal} onConcierge={toConcierge} />}
+      {section === 'personal' && <PersonalSection model={model.personal} onConcierge={toConcierge} onSignOut={signOut} />}
       {section === 'bonvoy' && <BonvoySection model={model.bonvoy} />}
       {section === 'preferences' && <PreferencesSection groups={model.preferences} saved={model.saved} {...editingProps} />}
       {section === 'companions' && <CompanionsSection items={model.companions} />}

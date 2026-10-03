@@ -49,7 +49,7 @@ In **Concierge**, try:
 | 1 | [Product architecture](docs/01-product-architecture.md) |
 | 2 | [Enterprise integration architecture](docs/02-enterprise-integration-architecture.md) |
 | 3 | [Domain model](docs/03-domain-model.md) |
-| 4 | [Database schema](docs/04-database-schema.md) · [SQL](supabase/migrations/20261002000000_init.sql) |
+| 4 | [Database schema](docs/04-database-schema.md) · [SQL](supabase/migrations/) |
 | 5 | [Service interfaces](docs/05-service-interfaces.md) · [contracts](src/services/contracts/index.ts) |
 | 6 | [Application folder structure](docs/06-application-folder-structure.md) |
 | 7 | [Design system](docs/07-design-system.md) · [tokens](src/theme/tokens.ts) |
@@ -59,7 +59,13 @@ In **Concierge**, try:
 
 ### Replacing mocks with enterprise APIs
 
-Screens depend only on `src/services/contracts`, which they reach through `useServices()`. Implementations are chosen in one place, `src/services/registry.ts`, from `EXPO_PUBLIC_SERVICE_MODE` (`mock | supabase | enterprise`). `MarriottBonvoyService` is included as the first remote adapter, implementing `LoyaltyService` against the backend-for-frontend.
+Screens depend only on `src/services/contracts`, which they reach through `useServices()`. Implementations are chosen in one place, `src/services/registry.ts`, from `EXPO_PUBLIC_SERVICE_MODE`:
+
+* `mock` (default): fictional fixtures.
+* `supabase`: every service on Supabase (`src/services/supabase/`).
+* `enterprise`: mocks plus enterprise adapters, such as `MarriottBonvoyService` against the backend-for-frontend.
+
+See [docs/05](docs/05-service-interfaces.md#implementations-and-modes).
 
 ## Stack
 
@@ -69,16 +75,24 @@ Screens depend only on `src/services/contracts`, which they reach through `useSe
 ## Supabase
 
 ```bash
-supabase start && supabase db reset          # applies migrations
+supabase start && supabase db reset          # applies migrations + supabase/seed.sql (fictional)
 supabase functions serve                     # concierge-respond, journey-events, personalization-next-best
 supabase secrets set CONCIERGE_AI_PROVIDER=mock PSEUDONYM_SALT=... JOURNEY_EVENTS_HMAC_SECRET=...
 ```
 
-To run the RLS smoke test against plain Postgres, see [docs/04](docs/04-database-schema.md#row-level-security-model).
+Run the app against it:
+
+1. In local Studio (Authentication → Users), **invite** `alexander.laurent@example.com`. Accounts are never created from the app. Once confirmed, the account is linked to the fictional guest.
+2. In `.env`, set `EXPO_PUBLIC_SERVICE_MODE=supabase`, `EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321` and the **anon** key from `supabase status`. Restart with `npx expo start --clear`.
+3. Sign in with the six-digit code. Locally it arrives in the CLI's mail viewer (`http://127.0.0.1:54324`).
+
+The app refuses to start if the key you configure is a service-role or secret key.
+
+Tests: `npm run check:supabase` runs in `verify` and needs nothing. `npm run test:supabase` runs every migration, SQL test and the app's Supabase services against PostgreSQL + PostgREST; see [docs/04](docs/04-database-schema.md#testing). After changing fixtures, run `npm run seed:generate`.
 
 ## Security notes
 
-* Only `EXPO_PUBLIC_*` values are bundled into the app. These are the Supabase URL and anon key, both protected by RLS.
+* Only `EXPO_PUBLIC_*` values are bundled into the app. These are the Supabase URL and anon key, both protected by RLS. A service-role key there stops the app at start-up.
 * Service-role, Bonvoy, AI and webhook secrets live only in Edge Function secrets.
 * Tokens are stored in the Keychain or Keystore.
 * All data is fictional.

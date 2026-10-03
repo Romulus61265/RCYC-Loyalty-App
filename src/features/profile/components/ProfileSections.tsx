@@ -11,19 +11,30 @@ import { PreferenceEditor } from './PreferenceEditor';
 
 // ─── Personal ──────────────────────────────────────────────────────────────
 
-export function PersonalSection({ model, onConcierge }: { model: ProfileModel['personal']; onConcierge: () => void }) {
+export function PersonalSection({ model, onConcierge, onSignOut }: { model: ProfileModel['personal']; onConcierge: () => void; onSignOut: () => Promise<void> }) {
+  const [signingOut, setSigningOut] = useState(false);
+  const signOut = () => {
+    setSigningOut(true);
+    onSignOut().catch(() => setSigningOut(false));
+  };
   return (
-    <Section eyebrow="Personal information">
-      <Card>
-        {model.rows.map((r) => (
-          <DetailRow key={r.label} label={r.label} value={r.value} detail={r.detail} />
-        ))}
-      </Card>
-      <Caption style={{ marginTop: spacing.md }}>{model.note}</Caption>
-      <Pressable onPress={onConcierge} accessibilityRole="button" style={{ marginTop: spacing.sm }}>
-        <Eyebrow color={colors.accent}>Ask the concierge</Eyebrow>
-      </Pressable>
-    </Section>
+    <>
+      <Section eyebrow="Personal information">
+        <Card>
+          {model.rows.map((r) => (
+            <DetailRow key={r.label} label={r.label} value={r.value} detail={r.detail} />
+          ))}
+        </Card>
+        <Caption style={{ marginTop: spacing.md }}>{model.note}</Caption>
+        <Pressable onPress={onConcierge} accessibilityRole="button" style={{ marginTop: spacing.sm }}>
+          <Eyebrow color={colors.accent}>Ask the concierge</Eyebrow>
+        </Pressable>
+      </Section>
+      <Section eyebrow="This device">
+        <Button label={signingOut ? 'Signing out…' : 'Sign out'} variant="quiet" onPress={signOut} disabled={signingOut} />
+        <Caption style={{ marginTop: spacing.sm }}>Signing out ends your session on this device. Your preferences are kept.</Caption>
+      </Section>
+    </>
   );
 }
 

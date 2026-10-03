@@ -12,12 +12,20 @@ additional_redirect_urls = ["rcycguest://auth/callback"]
 jwt_expiry = 900                 # 15-minute access tokens
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
+enable_signup = false            # no self-registration through any provider
+enable_anonymous_sign_ins = false
+
+[auth.rate_limit]
+email_sent = 2                   # e-mails per hour, per project (raise for production SMTP)
+token_verifications = 30         # OTP checks per 5 minutes, per IP
 
 [auth.email]
 enable_signup = false            # guests are provisioned from reservations, not self-signup
 enable_confirmations = true
 otp_length = 6
 otp_expiry = 600
+max_frequency = "60s"            # one code per address per minute
+double_confirm_changes = true    # changing e-mail needs both addresses confirmed
 
 [auth.mfa.totp]
 enroll_enabled = true

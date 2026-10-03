@@ -10,6 +10,8 @@ Tick each item and note the device or OS.
 - [ ] `npm run typecheck` prints no errors.
 - [ ] `npm run lint` prints no errors or warnings.
 - [ ] `npm run doctor`: all checks pass. Two checks need internet access to expo.dev and reactnative.directory, so they fail behind a restricted proxy.
+- [ ] `npm run verify` includes `check:supabase`: seed freshness, key validation, sign-in logic and security scans.
+- [ ] With PostgreSQL and PostgREST available: `PG_BIN=… POSTGREST=… npm run test:supabase` reports every SQL assertion and service check passed.
 
 ## 1 · Launch
 
@@ -52,7 +54,7 @@ On every screen, check for:
 
 ## 5 · Error handling
 
-- [ ] **Configuration error.** Set `EXPO_PUBLIC_SERVICE_MODE=supabase` in `.env`, leaving the URLs blank, and restart with `npx expo start --clear`.
+- [ ] **Configuration error.** Set `EXPO_PUBLIC_SERVICE_MODE=supabase` in `.env`, leaving the URL and key blank, and restart with `npx expo start --clear`.
   - Expect the "With our apologies · The app isn't quite ready" screen.
   - Expect warnings in the console that name each missing variable.
   - Revert the setting afterwards.
@@ -134,4 +136,26 @@ On web, append these to the URL. On native, set `EXPO_PUBLIC_MOCK_SCENARIO` or `
 - [ ] **Privacy**: switch off Personalised recommendations. Discover then shows no reasons and an empty "Recommended for You"; Home shows no picks. Switch it back on to restore them.
 - [ ] **Your data**: "Request a copy" and "Ask us to delete" confirm "Sent to our privacy team".
 - [ ] To reset the demo data on web, clear site data (key `rcyc.preferences.v1.*`). On a device, delete and reinstall the app.
-- [ ] Supabase (when configured): set `EXPO_PUBLIC_SERVICE_MODE=supabase` and the URL and key, sign in, and save. A row appears in `guest_preferences` with `version` incremented, and the line says "Saved to your account".
+- [ ] Supabase (when configured): save a preference. In `guest_preferences`, `version` increments, and the line says "Saved to your account". See section 13.
+
+## 13 · Supabase mode
+
+Prerequisites:
+
+* Run `supabase start && supabase db reset`, which applies the migrations and the fictional seed.
+* Invite `alexander.laurent@example.com` in Studio.
+* Set `EXPO_PUBLIC_SERVICE_MODE=supabase`, the local URL and the **anon** key, then restart with `--clear`.
+
+- [ ] **Secret key refused.** Put the `service_role` key in `EXPO_PUBLIC_SUPABASE_ANON_KEY`. The app shows "The app isn't quite ready", and the console names `SECRET_IN_BUNDLE`. This happens in every mode. Put the anon key back.
+- [ ] **Sign-in screen.** The app opens on "Welcome aboard", with no tabs behind it.
+- [ ] **No account enumeration.** Request a code for `nobody@example.com`. You see the same "If … is on a reservation, a code is on its way" step, and no e-mail arrives in the local mail viewer.
+- [ ] **Sign in.** Request a code for `alexander.laurent@example.com`, then enter the code from the local mail viewer (`http://127.0.0.1:54324`). Home loads for Alexander, and the countdown uses today's date (the real clock).
+- [ ] **Wrong code.** It shows "That code didn't work…". A code older than ten minutes asks for a new one.
+- [ ] **Unlinked account.** Invite `crew@example.com`, which has no guest record, and sign in. You see "We couldn't find a voyage for this address", and you stay signed out.
+- [ ] **Data matches mock mode.** Spot-check Voyage → Itinerary (port times in local time), Calendar, Discover (recommendations and reasons), Profile → Bonvoy and Occasions, and Concierge history.
+- [ ] **Booking request.** Request an experience. In `experience_bookings` the row has `status = 'received'`, `created_by` = your user, and the category from the catalogue. In `audit_log` there is `experience_bookings.insert` with column names only.
+- [ ] **Concierge.** Send a message. A reply arrives from `concierge-respond` (run `supabase functions serve`). A crew reply inserted in Studio (`author = 'human'`) appears live.
+- [ ] **Alerts.** Dismiss an alert. `journey_alerts.acknowledged_at` is set, and it does not return on refresh.
+- [ ] **Session.** Leave the app for more than 15 minutes, then come back. You are still signed in (token refreshed), with no reload flash.
+- [ ] **Sign out.** Profile → Personal → Sign out returns to the sign-in screen. The keychain entry is removed. On web, a reload also signs out, because sessions are kept in memory only there.
+- [ ] **RLS.** In Studio's SQL editor, run `set role anon; select * from guests;`. It fails with permission denied.

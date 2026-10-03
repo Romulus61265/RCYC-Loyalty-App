@@ -53,7 +53,7 @@ Deno.serve(
     if (!inserted) return json({ status: 'duplicate' }); // already processed
 
     const alert = project(event);
-    if (alert) await svc.from('journey_alerts').insert({ event_id: inserted.id, reservation_id: event.reservationId, ...alert });
+    if (alert) await svc.from('journey_alerts').insert({ event_id: inserted.id, event_type: event.type, reservation_id: event.reservationId, ...alert });
     await svc.from('journey_events').update({ processed_at: new Date().toISOString() }).eq('id', inserted.id);
 
     await audit({ action: 'journey_event.ingest', resource: 'journey_event', resourceId: inserted.id, outcome: 'success', metadata: { type: event.type, source: event.source } });

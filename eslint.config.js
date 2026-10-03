@@ -7,6 +7,7 @@ const presentationBoundary = {
   patterns: [
     { group: ['@/services/mock/*', '@/services/mock', '../services/mock/*'], message: 'Screens and components must not import mock services. Use useServices().' },
     { group: ['@/services/remote/*', '@/services/remote'], message: 'Screens and components must not import remote adapters. Use useServices().' },
+    { group: ['@/services/supabase/*', '@/services/supabase', '@supabase/*'], message: 'Screens and components must not touch Supabase. Use useServices().' },
     { group: ['@/data/*', '@/data'], message: 'Fixtures are only for mock services.' },
     { group: ['@/services/registry'], message: 'Only the ServiceProvider composes services.' },
   ],
@@ -37,7 +38,7 @@ module.exports = defineConfig([
   },
   {
     // Fixtures are dev-only data: production adapters must never read them.
-    files: ['src/services/remote/**/*.ts', 'src/services/contracts/**/*.ts', 'src/core/**/*.ts', 'src/config/**/*.ts'],
+    files: ['src/services/remote/**/*.ts', 'src/services/supabase/**/*.ts', 'src/services/shared/**/*.ts', 'src/services/contracts/**/*.ts', 'src/core/**/*.ts', 'src/config/**/*.ts'],
     rules: { 'no-restricted-imports': ['error', { patterns: [{ group: ['@/data/*', '@/data', '@/services/mock/*'], message: 'Production code must not depend on development fixtures or mocks.' }] }] },
   },
   {

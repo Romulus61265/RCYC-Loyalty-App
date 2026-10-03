@@ -11,6 +11,7 @@ import type {
 import { ServiceError } from '@/services/contracts';
 import { logger } from '@/core/logging';
 import type { GuestRecordSource } from '@/services/profile/RepositoryGuestProfileService';
+import { curatedFor } from '@/services/shared/recommendations';
 import { mergedRecommendations } from './MockRecommendationEngine';
 import { data, failIf, isEmptyScenario, latency, mockId, mockNow } from './support';
 
@@ -82,7 +83,7 @@ export class MockPersonalizationService implements PersonalizationService {
     const list =
       surface === 'discover' || surface === 'voyage'
         ? mergedRecommendations(curated)
-        : curated.filter((r) => r.surface === surface).sort((a, b) => b.score - a.score);
+        : curatedFor(curated, surface);
     return latency(list.slice(0, opts?.limit ?? 3));
   }
   async recordFeedback() {

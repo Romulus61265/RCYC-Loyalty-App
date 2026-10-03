@@ -3,7 +3,7 @@
  * hairline inputs, and errors in words beneath the field.
  */
 import { useState } from 'react';
-import { Pressable, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, TextInput, View, type TextInputProps } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radii, spacing } from '@/theme';
 import { Chip } from './Controls';
@@ -97,7 +97,10 @@ export function ToggleRow({ label, hint, value, onChange }: { label: string; hin
   );
 }
 
-export function TextField({ label, value, onChange, placeholder, max, multiline, error }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; max: number; multiline?: boolean; error?: string }) {
+/** Keyboard and autofill hints, e.g. for e-mail addresses and one-time codes. */
+export type TextFieldInputProps = Pick<TextInputProps, 'keyboardType' | 'autoComplete' | 'textContentType' | 'autoCapitalize' | 'autoCorrect' | 'onSubmitEditing' | 'returnKeyType'>;
+
+export function TextField({ label, value, onChange, placeholder, max, multiline, error, input, showCount = true }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; max: number; multiline?: boolean; error?: string; input?: TextFieldInputProps; showCount?: boolean }) {
   return (
     <FieldShell label={label} error={error}>
       <TextInput
@@ -106,12 +109,16 @@ export function TextField({ label, value, onChange, placeholder, max, multiline,
         placeholder={placeholder}
         placeholderTextColor={colors.textMuted}
         multiline={multiline}
+        maxLength={showCount ? undefined : max}
         style={[styles.input, multiline && { minHeight: 84, textAlignVertical: 'top' }]}
         accessibilityLabel={label}
+        {...input}
       />
-      <Caption align="right" color={value.length > max ? colors.attention : colors.textMuted} style={{ marginTop: 2 }}>
-        {value.length} / {max}
-      </Caption>
+      {showCount ? (
+        <Caption align="right" color={value.length > max ? colors.attention : colors.textMuted} style={{ marginTop: 2 }}>
+          {value.length} / {max}
+        </Caption>
+      ) : null}
     </FieldShell>
   );
 }

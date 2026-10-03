@@ -37,8 +37,8 @@ export interface GuestRelationship {
   nightsSailed: number;
   firstVoyageDate: ISODate;
   yachtsSailed: string[];
-  /** Internal segment. Never displayed to the guest. */
-  valueSegment: 'emerging' | 'established' | 'distinguished' | 'founding';
+  /** Internal segment. Never displayed to the guest; absent from guest-facing reads. */
+  valueSegment?: 'emerging' | 'established' | 'distinguished' | 'founding';
   /** Ambassador assigned for continuity across voyages, when applicable. */
   ambassadorName?: string;
 }

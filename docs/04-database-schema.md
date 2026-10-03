@@ -1,6 +1,14 @@
 # 4 · Database Schema (Supabase / PostgreSQL)
 
-The executable DDL is in `supabase/migrations/20261002000000_init.sql`. It has been verified against PostgreSQL 16, together with the RLS smoke test in `supabase/tests/`.
+The executable DDL is in three migrations, applied in order:
+
+| Migration | Adds |
+|---|---|
+| `20261002000000_init.sql` | Core schema, RLS helpers and policies, storage bucket, Realtime |
+| `20261003000000_preferences_v2.sql` | Editable preference groups, optimistic concurrency, preference audit |
+| `20261004000000_supabase_integration.sql` | Everything the app needs in `supabase` mode: auth linking, audit fields, new entities, booking functions, local-time views, privilege hardening |
+
+All three are verified against PostgreSQL 16 by the SQL smoke tests and by the end-to-end suite (`npm run test:supabase`, below).
 
 ## Entity–relationship overview
 
@@ -10,7 +18,10 @@ erDiagram
   guests ||--|| guest_relationships : has
   guests ||--|| guest_preferences : has
   guests ||--o{ travel_companions : travels_with
-  guests ||--o{ special_occasions : celebrates
+  guests ||--o{ guest_occasions : celebrates
+  guests ||--o{ guest_privileges : holds
+  privileges ||--o{ guest_privileges : granted_as
+  guests ||--o{ notifications : receives
   guests ||--|| guest_pii : "private schema"
   yachts ||--o{ suites : contains
   yachts ||--o{ voyages : sails
@@ -22,7 +33,15 @@ erDiagram
   reservations ||--o{ travel_documents : requires
   experiences ||--o{ experience_bookings : booked_as
   reservations ||--o{ experience_bookings : holds
-  voyages ||--o{ day_schedule_items : programme
+  voyages ||--o{ activities : programme
+  voyages ||--o{ voyage_days : days
+  reservations ||--o{ flight_segments : flies
+  experiences ||--o{ experience_slots : bookable_at
+  experience_bookings ||--o| dining_bookings : dining
+  experience_bookings ||--o| spa_bookings : spa
+  experience_bookings ||--o| excursion_bookings : ashore
+  voyages ||--o{ destinations : visits
+  voyages ||--o{ discover_collections : curates
   reservations ||--o{ concierge_conversations : converses
   concierge_conversations ||--o{ concierge_messages : contains
   reservations ||--o{ service_requests : raises
@@ -39,12 +58,14 @@ erDiagram
 | Group | Tables | Notes |
 |---|---|---|
 | Identity & access | `guests`, `private.guest_pii`, `user_roles` | Raw PII lives in a schema that PostgREST cannot reach. Roles can be scoped to a yacht. |
-| Loyalty | `loyalty_memberships`, `guest_relationships`, `privileges` | A projection of Bonvoy. `guest_relationships` is crew-only; guests call `my_relationship()`. |
+| Loyalty | `loyalty_memberships`, `guest_relationships`, `privileges`, `guest_privileges` | A projection of Bonvoy. `guest_relationships` is crew-only; guests call `my_relationship()`. |
 | Fleet & voyage | `yachts`, `suites`, `voyages`, `port_calls`, `reservations`, `reservation_guests`, `embarkations`, `travel_documents` | Document files go in the private `travel-documents` bucket, under `<guest_id>/…`. |
-| Preferences | `guest_preferences` (JSONB per domain), `travel_companions`, `special_occasions` | Dietary data is health-adjacent: treated as special-category data. |
-| Experiences | `experiences`, `experience_bookings`, `day_schedule_items` | Guests may only *insert* bookings with `status = 'received'`; the crew updates them. |
+| Preferences | `guest_preferences` (JSONB per domain), `travel_companions`, `guest_occasions` | Dietary data is health-adjacent: treated as special-category data. |
+| Experiences | `experiences`, `experience_slots`, `destinations`, `discover_collections`, view `excursions` | The catalogue is read-only to guests. |
+| Bookings | `experience_bookings` + `dining_bookings`, `spa_bookings`, `excursion_bookings` (1:1 details) | Guests may only *insert* requests (`status = 'received'`); changes and cancellations go through two functions. |
+| Programme | `voyage_days`, `activities` (was `day_schedule_items`), `flight_segments`, view `voyage_guests` | Ship-wide activities have no reservation; booking lines and suggestions belong to the party. |
 | Concierge | `concierge_conversations`, `concierge_messages`, `service_requests`, `service_request_events` | Only the Edge Function (service role) writes AI-authored messages. |
-| Continuity | `journey_events`, `journey_alerts` | Raw events are crew-only; guests see the alert projection. `dedupe_key` is unique. |
+| Continuity | `journey_events`, `journey_alerts`, `notifications` | Raw events are crew-only; guests see the alert projection and may only acknowledge. Notifications are sent server-side; guests may only set `read_at`. |
 | Personalization | `personalization_signals`, `recommendations`, `recommendation_feedback` | `audience = 'crew'` rows are invisible to guests. `model_version` is stored for explainability. |
 | Audit | `audit_log` | Append-only: a trigger rejects UPDATE and DELETE. Only admins can read it. |
 
@@ -72,15 +93,7 @@ Smoke-tested assertions (`supabase/tests/10_rls_smoke.sql`):
 | The `authenticated` role has no access to schema `private` | ✅ |
 | `audit_log` UPDATE is rejected | ✅ |
 
-To run it locally against plain Postgres:
-
-```bash
-createdb rcyc && psql -d rcyc -f supabase/tests/00_local_stubs.sql \
-  && psql -d rcyc -f supabase/migrations/20261002000000_init.sql \
-  && psql -d rcyc -At -f supabase/tests/10_rls_smoke.sql
-```
-
-Or run `supabase db reset` with the Supabase CLI, which does not need the stubs.
+To run every SQL test and the service suite against plain Postgres and PostgREST (no Docker), see [Testing](#testing). With the Supabase CLI, `supabase db reset` applies the migrations and `supabase/seed.sql` without the stubs.
 
 ## Preferences v2 (`20261003000000_preferences_v2.sql`)
 
@@ -93,3 +106,92 @@ Or run `supabase db reset` with the Supabase CLI, which does not need the stubs.
 ## Realtime
 
 `concierge_messages`, `service_requests` and `journey_alerts` are published to `supabase_realtime`. RLS applies to Realtime as well, so guests only receive their own rows.
+
+## Supabase integration (`20261004000000_supabase_integration.sql`)
+
+### Authentication
+
+* Self-signup stays disabled (`config.toml`). A guest is **invited** (Studio, or the admin API from the reservations sync) using the e-mail held in `private.guest_pii`.
+* When that account's e-mail is confirmed, the trigger `private.link_auth_user()` on `auth.users` links it to the **one** guest with that e-mail who is not yet linked, and grants `guest` (lead guest) or `travel_companion`.
+* It links nothing when the e-mail is unconfirmed, unknown, shared by two guests, or already linked; each refusal is written to `audit_log`.
+* The app signs in with a six-digit e-mail code (`shouldCreateUser: false`), so it can never create an account.
+
+### Audit fields
+
+Every domain table has `created_at`, `updated_at`, `created_by` and `updated_by`, stamped by `private.set_audit_fields()`:
+
+* For an end-user request, the server sets all four from `now()` and `auth.uid()`, whatever the client sends.
+* For a migration, seed or service-role sync, source timestamps are kept.
+* On update, `created_*` cannot change.
+
+`created_by` and `updated_by` are deliberately not foreign keys, so the trail survives account deletion. Append-only logs (`audit_log`, `concierge_messages`, `service_request_events`, `journey_events`, `personalization_signals`, `recommendation_feedback`) keep their own timestamps.
+
+Row changes on guest-writable tables are written to `audit_log` by `private.audit_row_change()`. This covers bookings, service requests, conversations, companions, occasions, alerts and notifications. Each entry records the actor, roles, action and **the names of the changed columns, never their values**.
+
+### Entities added
+
+| Table | Purpose | Guest access |
+|---|---|---|
+| `guest_privileges` | Privileges a guest holds, optionally for one voyage | read own |
+| `voyage_days` | Headline, dress code, sunset per day | read |
+| `activities` (renamed) | Day programme; `category`, `time_zone` added | read ship-wide and own party's |
+| `flight_segments` | Flights to and from the voyage, with origin and destination zones | read own party |
+| `experience_slots` | Bookable times and places remaining | read (active experiences) |
+| `destinations`, `discover_collections` | Discover editorial | read |
+| `dining_bookings`, `spa_bookings`, `excursion_bookings` | Per-kind booking detail (table, pressure, meeting point) | read own party; crew manage |
+| `notifications` | Outbound communication history and schedule | read own; update `read_at` only |
+| `guest_occasions` (renamed) | Occasions; private ones hidden from crew | own |
+| view `voyage_guests` | The guests on each voyage, with the lead flagged | follows `reservation_guests` |
+| view `excursions` | Shore experiences | follows `experiences` |
+
+Columns were also added: `guests.home_airport`, `guest_relationships.yachts_sailed`, `hero` imagery JSON, and experience `format`, `includes`, `destination`, availability and `sort_order`. The other new columns are `reservations.suite_ambassador_contact`, `embarkations.luggage`, `service_requests.assigned_to_name`, and `journey_alerts.event_type` and `expires_at`.
+
+### Functions the app calls
+
+| Function | Does |
+|---|---|
+| `my_relationship()` | The guest's tenure (with yachts sailed), never the internal value segment |
+| `my_personal_details()` | Nationality only; date of birth, passport and raw contact details stay private |
+| `request_experience_booking_change(id, starts_at?, party_size?, note?)` | Party members only; sets `in_progress` for the crew to confirm |
+| `cancel_experience_booking(id)` | Party members only; refuses completed, declined or already cancelled bookings |
+| `current_guest_id()` | The signed-in guest's ID |
+
+Booking requests are a plain insert. The policy accepts only:
+
+* `received` status;
+* the caller's own reservation;
+* an active experience on that voyage;
+* no provenance fields.
+
+The trigger then sets the category, the title and the time zone from the catalogue.
+
+### Times
+
+Times are stored as `timestamptz` plus the IANA zone where they happen. `iso_local(ts, zone)` formats an ISO string with that zone's offset (`2027-05-15T20:30:00+02:00`). The `*_local` views (`port_calls_local`, `embarkations_local`, `experience_bookings_local`, `activities_local`, `experience_slots_local`, `flight_segments_local`, `voyage_days_local`, `notifications_local`, `service_requests_local`, `journey_alerts_local`) return those strings. That is what the app shows: port time, not device time. Every view is `security_invoker`, so the RLS of the underlying table applies.
+
+### Privileges
+
+* `anon` has no table, view, sequence or function in `public`; the anon key is only for the sign-in endpoints.
+* Client roles cannot create objects in `public`.
+* Guests cannot write reference data, loyalty projections, the programme, roles or the audit log, even where a policy would allow it.
+* The migration fails if any `public` table lacks RLS or any view is not `security_invoker`.
+
+### Seed (`supabase/seed.sql`)
+
+Generated from the fictional dataset by `npm run seed:generate`, so do not edit it by hand.
+
+* IDs are deterministic UUID v5s of the fixture IDs.
+* Every row has `source_system = 'mock'`, and e-mail addresses use `example.com`.
+* It creates no auth users or roles, and refuses to run against a database holding non-fictional guests.
+* `npm run check:supabase` fails if the seed is out of date.
+
+## Testing
+
+| Command | Needs | Covers |
+|---|---|---|
+| `npm run check:supabase` (in `verify`) | nothing | Seed freshness; key and URL validation; sign-in logic against a fake client; keychain chunking; mapping and error codes; static scans (no service-role key in app code, RLS on every table, `security_invoker` views, pinned `search_path`) |
+| `npm run test:supabase` | `PG_BIN` (PostgreSQL 15+) and `POSTGREST` (PostgREST 12) | Throwaway cluster: stubs, migrations, seed. Runs the 67 SQL assertions in `supabase/tests/10_*`, `20_*` and `30_*`, then 88 checks running the **app's Supabase services through supabase-js → PostgREST → RLS**, compared with the mock services, plus the writes and refusals for the guest, another guest and the anon key |
+
+```bash
+PG_BIN=/usr/lib/postgresql/16/bin POSTGREST=~/bin/postgrest npm run test:supabase
+```

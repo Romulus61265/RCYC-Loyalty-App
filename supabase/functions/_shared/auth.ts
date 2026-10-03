@@ -35,9 +35,11 @@ export async function requireCaller(req: Request, allowed?: AppRole[]): Promise<
   const { data, error } = await db.auth.getUser();
   if (error || !data.user) throw new HttpError(401, 'unauthenticated');
 
-  const { data: roleRows } = await db.from('user_roles').select('role');
+  // Roles are granted server-side (the guest role when an invited account is
+  // linked to its guest record). An account without a role is not a guest.
+  const { data: roleRows } = await db.from('user_roles').select('role').eq('user_id', data.user.id);
   const roles = (roleRows ?? []).map((r: { role: AppRole }) => r.role);
-  if (roles.length === 0) roles.push('guest');
+  if (roles.length === 0) throw new HttpError(403, 'forbidden');
   if (allowed && !roles.some((r) => allowed.includes(r))) throw new HttpError(403, 'forbidden');
 
   return { userId: data.user.id, roles, db };

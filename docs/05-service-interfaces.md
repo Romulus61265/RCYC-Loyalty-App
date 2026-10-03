@@ -2,6 +2,50 @@
 
 The source is `src/services/contracts/index.ts`. Screens obtain services only through `useServices()`, and never import an implementation.
 
+## Implementations and modes
+
+`src/services/registry.ts` picks the implementations from `EXPO_PUBLIC_SERVICE_MODE`. Nothing else in the app knows which are in use.
+
+| Contract | `mock` (default) | `supabase` | `enterprise` |
+|---|---|---|---|
+| AuthService | `MockAuthService` (pre-signed-in; any six-digit code) | `SupabaseAuthService`: e-mail one-time code, keychain session | mock |
+| GuestProfileService | `RepositoryGuestProfileService` with `MockGuestRecordSource` + `LocalPreferencesRepository` | the same service with `SupabaseGuestRecordSource` + `SupabasePreferencesRepository` | mock |
+| LoyaltyService | `MockLoyaltyService` | `SupabaseLoyaltyService` (Bonvoy projection) | `MarriottBonvoyService` (BFF) |
+| VoyageService | `MockVoyageService` | `SupabaseVoyageService` | mock |
+| ExperienceService | `MockExperienceService` | `SupabaseExperienceService` | mock |
+| ScheduleService | `MockScheduleService` | `SupabaseScheduleService` | mock |
+| ConciergeService | `MockConciergeService` + `MockConciergeAI` | `SupabaseConciergeService` (`concierge-respond` Edge Function, Realtime) | mock |
+| PersonalizationService | `MockPersonalizationService` + rules engine | `SupabasePersonalizationService` (materialised recommendations) | mock |
+| JourneyEventService | `MockJourneyEventService` | `SupabaseJourneyEventService` (alerts, notifications, Realtime) | mock |
+| ClockService | pinned demo moment (`?now=`, `EXPO_PUBLIC_DEMO_NOW`) | device clock | device clock |
+
+Rules shared by every implementation live in `src/services/shared/`, so behaviour doesn't depend on the backend:
+
+* `journeyPhase`;
+* the calendar merge (`buildCalendar`);
+* recommendation merging (curated wins);
+* the recognition line and privilege filtering;
+* neutral default preferences.
+
+The mock-only test controls (`?scenario=`, `?now=`) have no effect in `supabase` mode.
+
+**Supabase specifics**
+
+* Every read runs as the signed-in guest, so RLS decides what comes back. The guest ID in a call is a filter, not a permission.
+* IDs are checked as UUIDs before use. This also stops them altering PostgREST filter strings.
+* Database errors map to `ServiceError` codes. `42501` → `forbidden`; `PGRST116`/`P0002` → `not_found`; `23505`/`40001` → `conflict`; check violations → `validation`; network and 5xx → `unavailable` (retryable).
+* Times are read from the `*_local` views, so they carry the port's offset as in the mocks.
+* `sendMessage` posts only `{ conversationId, body }` to `concierge-respond`. The server builds its own minimised context; the client's `GuestContext` is never sent.
+* Bookings are requests. Changes and cancellations go through database functions that allow nothing else.
+* Known, intentional differences from the mock:
+  * the guest record omits the date of birth;
+  * the relationship omits the internal value segment;
+  * the concierge greeting is generic;
+  * `checkAvailability` returns real slots;
+  * `linkMembership` and Bonvoy sign-in report `unavailable` until their server-side flows are configured.
+
+`npm run test:supabase` runs these services against PostgreSQL + PostgREST and compares each read with the mock (see [docs/04](04-database-schema.md#testing)).
+
 ```mermaid
 flowchart LR
   Screen -->|"useServices()"| Services
@@ -99,10 +143,10 @@ updatePreferences(guestId, patch, { expectedVersion })   // ServiceError('confli
 
 The registry picks the repository, and the UI never sees which:
 
-| Mode | Repository | Storage |
-|---|---|---|
-| `supabase` with URL and anon key | `SupabasePreferencesRepository` | `public.guest_preferences`, RLS "own" policy, `version` column (migration `20261003000000`) |
-| otherwise (incl. mock) | `LocalPreferencesRepository` | AsyncStorage (device) or localStorage (web), behind `resilientStore` with a session-memory fallback |
+| Mode | Record source | Repository | Storage |
+|---|---|---|---|
+| `supabase` | `SupabaseGuestRecordSource` | `SupabasePreferencesRepository` | `public.guest_preferences`, RLS "own" policy, `version` column (migration `20261003000000`) |
+| `mock`, `enterprise` | `MockGuestRecordSource` | `LocalPreferencesRepository` | AsyncStorage (device) or localStorage (web), behind `resilientStore` with a session-memory fallback |
 
 Rules shared by both:
 
@@ -136,8 +180,8 @@ These cover the session, the profile and preferences, advisory client audit, and
 
 ## Replacing a mock: a checklist
 
-1. Implement the contract in `src/services/remote/<Name>.ts` using `ApiClient`.
+1. Implement the contract: `src/services/remote/<Name>.ts` using `ApiClient` (enterprise BFF), or `src/services/supabase/` (Supabase).
 2. Add the matching BFF route or Edge Function, which handles the vendor call, mapping, PII minimisation and audit.
-3. Register the adapter in `createServices()` for the `supabase` or `enterprise` mode.
-4. Run the shared contract tests against both implementations (planned: `src/services/__contract-tests__`).
+3. Register the adapter in `compose()` in `registry.ts` for its mode.
+4. Compare it with the mock on the shared dataset, as `scripts/supabase/integration.ts` does for Supabase.
 5. No screen changes are needed.

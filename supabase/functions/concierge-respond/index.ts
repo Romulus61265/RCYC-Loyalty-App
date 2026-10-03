@@ -98,7 +98,7 @@ async function buildContext(db: ReturnType<typeof serviceClient>, reservationId:
     db.from('guests').select('preferred_name, first_name').eq('id', guestId).single(),
     db.from('loyalty_memberships').select('tier_label').eq('guest_id', guestId).maybeSingle(),
     db.from('reservations').select('voyages(name, start_date, end_date)').eq('id', reservationId).single(),
-    db.from('special_occasions').select('type, recognition').eq('guest_id', guestId),
+    db.from('guest_occasions').select('type, recognition').eq('guest_id', guestId),
     db.from('guest_preferences').select('dietary').eq('guest_id', guestId).maybeSingle(),
   ]);
   const voyage = (r as { voyages?: { name: string } } | null)?.voyages;
