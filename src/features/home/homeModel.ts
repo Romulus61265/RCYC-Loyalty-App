@@ -414,7 +414,9 @@ export function buildHomeViewModel(core: HomeCoreData, optional: HomeOptionalDat
   // ── What might I enjoy? ──
   const catalogue = optional.catalogue.ok ? optional.catalogue.value : [];
   const bookedExperienceIds = new Set(bookings.map((b) => b.experienceId));
-  const recommendations: RecommendationModel[] = (optional.recommendations.ok ? optional.recommendations.value : [])
+  // Respect the guest's privacy choice: no personalised suggestions when switched off.
+  const personalised = profile.preferences.privacy?.personalisedRecommendations !== false;
+  const recommendations: RecommendationModel[] = (optional.recommendations.ok && personalised ? optional.recommendations.value : [])
     .filter((r) => r.audience === 'guest')
     .filter((r) => !r.experienceId || !bookedExperienceIds.has(r.experienceId))
     .flatMap((r) => {

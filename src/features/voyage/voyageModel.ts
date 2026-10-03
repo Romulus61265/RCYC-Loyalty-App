@@ -258,7 +258,8 @@ export function buildVoyageViewModel(core: VoyageCoreData, optional: VoyageOptio
   const { voyage, yacht, suite, embarkation, reservation, documents, flights } = overview;
   const bookings = optional.bookings.ok ? optional.bookings.value.filter((b) => b.status !== 'cancelled') : [];
   const catalogue = optional.catalogue.ok ? optional.catalogue.value : [];
-  const recommendations = optional.recommendations.ok ? optional.recommendations.value.filter((r) => r.audience === 'guest') : [];
+  const personalised = profile.preferences.privacy?.personalisedRecommendations !== false;
+  const recommendations = optional.recommendations.ok && personalised ? optional.recommendations.value.filter((r) => r.audience === 'guest') : [];
   const expById = new Map(catalogue.map((e) => [e.id, e]));
   const bookedIds = new Set(bookings.map((b) => b.experienceId));
   const portOf = (b: ExperienceBooking) => expById.get(b.experienceId)?.portCallId ?? voyage.itinerary.find((p) => p.date === b.start.slice(0, 10))?.id;

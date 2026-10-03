@@ -23,7 +23,9 @@ RCYC-Loyalty-App/
 │   │   ├── Layout.tsx            Screen, PageHeader, Section, Card, DetailRow, Divider, states
 │   │   ├── Media.tsx             MediaFrame, Hero, MediaTile
 │   │   ├── Controls.tsx          Button, TextLink, SegmentedTabs, AlertNote
-│   │   └── ErrorFallback.tsx     Route ErrorBoundary UI (export as `ErrorBoundary`)
+│   │   ├── ErrorFallback.tsx     Route ErrorBoundary UI (export as `ErrorBoundary`)
+│   │   ├── Feedback.tsx          StatusLine, EmptyNote, InlineError, FactRow, SkeletonBlock
+│   │   └── Form.tsx              ChoiceGroup, MultiChoiceGroup, ToggleRow, TextField, Stepper
 │   ├── config/env.ts             Typed, statically-read EXPO_PUBLIC_* config + validateEnv()
 │   ├── core/
 │   │   ├── errors/               AppError taxonomy, toAppError, guestMessage, global handlers
@@ -45,6 +47,11 @@ RCYC-Loyalty-App/
 │   │   │   ├── useDiscover.ts    Service access with per-source isolation
 │   │   │   ├── DiscoverScreen.tsx
 │   │   │   └── components/       ExperienceCard, RecommendedRail, RefineBar, FilterPanel, ExperienceResults, DestinationList
+│   │   ├── profile/              Profile (8 sections, ?section= deep links), editable preferences
+│   │   │   ├── preferenceSchema.ts  Field schema per group: read / write / summary / validate (scripts/check-profile.ts)
+│   │   │   ├── profileModel.ts   View model for every section
+│   │   │   ├── useProfileArea.ts Load, save with expectedVersion, data requests
+│   │   │   └── components/       ProfileSections, PreferenceEditor (generic, schema-driven)
 │   │   └── shared/status.ts      Settled<T>, settle(), Tone, bookingStatus()
 │   ├── domain/                   Pure TypeScript domain model — no React, no I/O
 │   ├── hooks/
@@ -57,7 +64,9 @@ RCYC-Loyalty-App/
 │   ├── services/
 │   │   ├── contracts/            ★ Service interfaces — the presentation boundary
 │   │   ├── mock/                 Mock implementations (MVP)
-│   │   ├── remote/               BFF client + enterprise adapters (MarriottBonvoyService)
+│   │   ├── remote/               BFF client + adapters (MarriottBonvoyService, SupabasePreferencesRepository)
+│   │   ├── repositories/         PreferencesRepository (+ Local), KeyValueStore (+ AsyncStorage, memory, resilient)
+│   │   ├── profile/              RepositoryGuestProfileService: guest record source + preferences repository
 │   │   ├── registry.ts           Composition root: validate env → mode → implementations
 │   │   ├── instrument.ts         Logs every service call's failures & slow responses
 │   │   └── ServiceProvider.tsx   React context + useServices()

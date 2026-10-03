@@ -242,7 +242,9 @@ export function buildDiscoverModel(core: DiscoverCoreData, optional: DiscoverOpt
   const itinerary = voyage.itinerary;
   const availability = optional.availability.ok ? new Map(optional.availability.value.map((a) => [a.experienceId, a])) : new Map<string, ExperienceAvailability>();
   const bookings = optional.bookings.ok ? optional.bookings.value.filter((b) => b.status !== 'cancelled') : [];
-  const recs = optional.recommendations.ok ? new Map(optional.recommendations.value.filter((r) => r.audience === 'guest' && r.experienceId).map((r) => [r.experienceId!, r])) : new Map<string, Recommendation>();
+  // Respect the guest's privacy choice: no personalised reasons when switched off.
+  const personalised = profile.preferences.privacy?.personalisedRecommendations !== false;
+  const recs = optional.recommendations.ok && personalised ? new Map(optional.recommendations.value.filter((r) => r.audience === 'guest' && r.experienceId).map((r) => [r.experienceId!, r])) : new Map<string, Recommendation>();
   const portById = new Map(itinerary.map((p) => [p.id, p]));
 
   const cards: ExperienceCardModel[] = catalogue.map((e) => {

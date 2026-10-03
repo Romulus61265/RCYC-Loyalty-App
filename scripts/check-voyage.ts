@@ -8,7 +8,7 @@ import { AppError } from '@/core/errors/AppError';
 import { devDataset, IDS } from '@/data/fixtures';
 import { buildVoyageViewModel, parseSection, VOYAGE_SECTIONS, type VoyageOptionalData } from '@/features/voyage/voyageModel';
 import { MockExperienceService } from '@/services/mock/MockExperienceService';
-import { MockGuestProfileService, MockPersonalizationService } from '@/services/mock/MockMiscServices';
+import { MockGuestRecordSource, MockPersonalizationService } from '@/services/mock/MockMiscServices';
 import { buildCalendar, MockScheduleService } from '@/services/mock/MockScheduleService';
 import { MockVoyageService } from '@/services/mock/MockVoyageService';
 
@@ -24,7 +24,7 @@ async function main() {
   const experience = new MockExperienceService();
   const [overview, profile, bookings, catalogue, recommendations, calendar] = await Promise.all([
     voyage.getOverview(IDS.reservation),
-    new MockGuestProfileService().getProfile(IDS.guest),
+    new MockGuestRecordSource().getProfile(IDS.guest),
     experience.listBookings(IDS.reservation),
     experience.listCatalogue(IDS.voyage),
     new MockPersonalizationService().getRecommendations(IDS.guest, 'voyage', { limit: 20 }),

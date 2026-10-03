@@ -8,6 +8,7 @@ import { toAppError } from '@/core/errors';
 import { settle } from '@/features/shared/status';
 import { useAsync } from '@/hooks/useAsync';
 import { useJourney } from '@/hooks/useJourney';
+import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus';
 import { useServices } from '@/services/ServiceProvider';
 import { buildVoyageViewModel } from './voyageModel';
 
@@ -15,7 +16,7 @@ export function useVoyageArea() {
   const services = useServices();
   const { guestId, reservationId, voyageId } = useJourney();
 
-  return useAsync(async () => {
+  const state = useAsync(async () => {
     const now = services.clock.now();
     const s = <T,>(call: () => Promise<T>) => settle(call, toAppError);
     const [core, bookings, catalogue, recommendations, calendar] = await Promise.all([
@@ -28,4 +29,6 @@ export function useVoyageArea() {
     const [overview, profile] = core;
     return buildVoyageViewModel({ overview, profile }, { bookings, catalogue, recommendations, calendar }, now);
   }, [guestId, reservationId, voyageId]);
+  useRefreshOnFocus(state.reload);
+  return state;
 }

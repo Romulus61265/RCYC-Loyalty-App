@@ -17,10 +17,16 @@ import { MockLoyaltyService } from './mock/MockLoyaltyService';
 import {
   ConsoleAuditService,
   MockAuthService,
-  MockGuestProfileService,
+  MockGuestRecordSource,
   MockJourneyEventService,
   MockPersonalizationService,
 } from './mock/MockMiscServices';
+import { RepositoryGuestProfileService } from './profile/RepositoryGuestProfileService';
+import { asyncStorageStore } from './repositories/asyncStorageStore';
+import { MemoryKeyValueStore, resilientStore } from './repositories/KeyValueStore';
+import { LocalPreferencesRepository, type PreferencesRepository } from './repositories/PreferencesRepository';
+import { getSupabaseClient } from './remote/supabaseClient';
+import { SupabasePreferencesRepository } from './remote/SupabasePreferencesRepository';
 import { MockScheduleService } from './mock/MockScheduleService';
 import { MockVoyageService } from './mock/MockVoyageService';
 import { mockNow } from './mock/support';
@@ -29,10 +35,23 @@ import { MarriottBonvoyService } from './remote/MarriottBonvoyService';
 
 export const ACCESS_TOKEN_KEY = 'rcyc.session.access';
 
-function createMockServices(): Services {
+/**
+ * Where edited preferences persist. Supabase when configured (RLS-protected
+ * `guest_preferences`); otherwise device storage. The UI never knows which.
+ */
+function preferencesRepository(mode: ServiceMode): PreferencesRepository {
+  if (mode === 'supabase' && env.supabaseUrl && env.supabaseAnonKey) return new SupabasePreferencesRepository(getSupabaseClient);
+  const store = resilientStore(asyncStorageStore, new MemoryKeyValueStore(), (e) =>
+    logger.child('storage').warn('Device storage unavailable; preferences kept for this session only', { reason: e instanceof Error ? e.message : 'unknown' }),
+  );
+  // Real clock for "saved at", even when the demo clock is pinned.
+  return new LocalPreferencesRepository(store);
+}
+
+function createMockServices(mode: ServiceMode = 'mock'): Services {
   return {
     auth: new MockAuthService(),
-    profile: new MockGuestProfileService(),
+    profile: new RepositoryGuestProfileService(new MockGuestRecordSource(), preferencesRepository(mode)),
     loyalty: new MockLoyaltyService(),
     voyage: new MockVoyageService(),
     experience: new MockExperienceService(),
@@ -59,7 +78,7 @@ export function createServices(mode: ServiceMode = env.serviceMode): Services {
 }
 
 function compose(mode: ServiceMode): Services {
-  const mocks = createMockServices();
+  const mocks = createMockServices(mode);
   if (mode === 'mock') return mocks;
 
   const api = new ApiClient(() => secureStorage.getItem(ACCESS_TOKEN_KEY));

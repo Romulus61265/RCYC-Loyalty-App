@@ -86,6 +86,32 @@ The engine is a transparent, rules-based scorer, **not** a learning system. Weig
 
 The strongest driver becomes the explanation, for example: "Recommended because you enjoyed a private vineyard lunch on Hvar on your Adriatic voyage in 2024." Curated recommendations always win. Production replaces the engine behind the same contract.
 
+### GuestProfileService and preference persistence
+```ts
+getProfile(guestId)                       // guest record + latest saved preferences
+getPreferences(guestId): VersionedPreferences   // { preferences, version, updatedAt, source }
+updatePreferences(guestId, patch, { expectedVersion })   // ServiceError('conflict') if stale
+```
+`RepositoryGuestProfileService` composes two sources:
+
+* a `GuestRecordSource` for identity, companions, occasions and default preferences (CRM; mock for now);
+* a `PreferencesRepository` for what the guest edits.
+
+The registry picks the repository, and the UI never sees which:
+
+| Mode | Repository | Storage |
+|---|---|---|
+| `supabase` with URL and anon key | `SupabasePreferencesRepository` | `public.guest_preferences`, RLS "own" policy, `version` column (migration `20261003000000`) |
+| otherwise (incl. mock) | `LocalPreferencesRepository` | AsyncStorage (device) or localStorage (web), behind `resilientStore` with a session-memory fallback |
+
+Rules shared by both:
+
+* A patch replaces whole groups.
+* A saved group loads exactly as saved, so cleared fields stay cleared.
+* Groups missing from older records come from the defaults.
+* Every save is validated at the service boundary (temperature, note length, allergy names, quiet hours).
+* In Supabase, a trigger audits which groups changed, never their values.
+
 ### ScheduleService
 `getCalendar(reservationId): Promise<CalendarDay[]>` returns the party's chronological calendar. It merges:
 

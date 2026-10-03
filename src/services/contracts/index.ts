@@ -22,10 +22,11 @@ import type {
   ExperienceCategory,
   ConciergeMessage,
   GuestContext,
+  PreferencesPatch,
+  VersionedPreferences,
   ExperienceAvailability,
   CalendarDay,
   GuestNotification,
-  GuestPreferences,
   GuestPrivilege,
   GuestProfile,
   GuestRelationship,
@@ -97,8 +98,14 @@ export interface AuthService {
 // ─── Guest profile ─────────────────────────────────────────────────────────
 
 export interface GuestProfileService {
+  /** Guest record, companions and occasions, with the latest saved preferences. */
   getProfile(guestId: ID): Promise<GuestProfile>;
-  updatePreferences(guestId: ID, patch: Partial<Omit<GuestPreferences, 'guestId'>>): Promise<GuestPreferences>;
+  getPreferences(guestId: ID): Promise<VersionedPreferences>;
+  /**
+   * Replaces the given preference groups. Pass `expectedVersion` (from the
+   * last read) to reject a stale edit with `ServiceError('conflict')`.
+   */
+  updatePreferences(guestId: ID, patch: PreferencesPatch, opts?: { expectedVersion?: number }): Promise<VersionedPreferences>;
   listCompanions(guestId: ID): Promise<TravelCompanion[]>;
   listOccasions(guestId: ID): Promise<SpecialOccasion[]>;
 }

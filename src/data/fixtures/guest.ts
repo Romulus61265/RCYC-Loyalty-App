@@ -29,6 +29,7 @@ export const guestData: DevGuestData = {
       dining: {
         cuisines: ['Mediterranean', 'Ligurian', 'Provençal', 'Catalan'],
         tablePreference: 'window',
+        preferredTime: '20:30',
         preferredSeating: 'Window table for two, facing the sea',
         notes: 'Prefers dinner from 20:30. Enjoys a word with the chef; dislikes long tasting menus on port days.',
       },
@@ -62,6 +63,25 @@ export const guestData: DevGuestData = {
         pressure: 'firm',
         preferredTime: 'morning',
         notes: 'Male or female therapist, no preference. Unscented oil.',
+      },
+      transportation: {
+        arrivals: 'private-car',
+        cabin: 'business',
+        helicopterWelcome: true,
+        notes: 'Prefers a sedan to an SUV. No music in the car, please.',
+      },
+      accessibility: {
+        mobility: 'none',
+        tenderAssistance: false,
+        hearingSupport: false,
+        visualSupport: false,
+        shareWithCrew: true,
+      },
+      privacy: {
+        personalisedRecommendations: true,
+        shareOccasionsWithCrew: true,
+        shareDietaryWithPartners: true,
+        analytics: false,
       },
       communication: {
         channels: { push: true, email: true, sms: true, whatsapp: false },

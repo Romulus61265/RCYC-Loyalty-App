@@ -10,6 +10,7 @@ import { useCallback } from 'react';
 import { reportError, toAppError } from '@/core/errors';
 import { useAsync } from '@/hooks/useAsync';
 import { useJourney } from '@/hooks/useJourney';
+import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus';
 import { useServices } from '@/services/ServiceProvider';
 import { settle as settleWith } from '@/features/shared/status';
 import { buildHomeViewModel, type HomeViewModel } from './homeModel';
@@ -45,6 +46,8 @@ export function useHomeDashboard(): HomeDashboard {
     const [overview, recognition, profile] = core;
     return buildHomeViewModel({ overview, recognition, profile }, { bookings, schedules, catalogue, alerts, recommendations }, phase, now);
   }, [guestId, reservationId, voyageId, phase]);
+
+  useRefreshOnFocus(reload);
 
   const dismissAlert = useCallback(
     (alertId: string) => {

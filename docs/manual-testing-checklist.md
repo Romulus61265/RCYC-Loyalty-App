@@ -120,3 +120,18 @@ On web, append these to the URL. On native, set `EXPO_PUBLIC_MOCK_SCENARIO` or `
 - [ ] **Request** or **Ask the concierge** opens Concierge.
 - [ ] Tablet (≥ 760 px): cards in two columns. 320 px: no horizontal scrolling.
 - [ ] `?scenario=partial-error`: cards still listed, with "Availability on request", plus inline messages for recommendations and availability.
+
+## 12 · Profile and preferences
+
+- [ ] Eight sections: Personal · Bonvoy · Preferences · Companions · Occasions · Voyage History · Communication · Privacy. `/profile?section=privacy` opens Privacy.
+- [ ] **Preferences** lists ten groups: Dining, Dietary, Beverage, Suite, Pillow, Spa, Activities, Destinations, Transportation, Accessibility. Dietary and Accessibility show a lock (sensitive).
+- [ ] **Edit Dining** → Terrace, 21:00, add a note → Save. The summary reads "Terrace, from 21:00" and the line says "Saved on this device".
+- [ ] **Persistence:** fully close and reopen the app (or reload on web). The change is still there.
+- [ ] **Cancel** discards changes. Only one group can be edited at a time. Save stays disabled until something changes.
+- [ ] **Suite** temperature stops at 16 °C and 28 °C. **Dietary**: an allergy without a name is refused with "Each allergy needs a name."
+- [ ] **Multi-choice**: "Add your own" (e.g. a destination) is saved and shown.
+- [ ] **Communication**: toggle WhatsApp; set quiet hours (choosing only one end is refused).
+- [ ] **Privacy**: switch off Personalised recommendations. Discover then shows no reasons and an empty "Recommended for You"; Home shows no picks. Switch it back on to restore them.
+- [ ] **Your data**: "Request a copy" and "Ask us to delete" confirm "Sent to our privacy team".
+- [ ] To reset the demo data on web, clear site data (key `rcyc.preferences.v1.*`). On a device, delete and reinstall the app.
+- [ ] Supabase (when configured): set `EXPO_PUBLIC_SERVICE_MODE=supabase` and the URL and key, sign in, and save. A row appears in `guest_preferences` with `version` incremented, and the line says "Saved to your account".

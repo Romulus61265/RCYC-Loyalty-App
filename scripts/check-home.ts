@@ -9,14 +9,14 @@ import { AppError } from '@/core/errors/AppError';
 import { buildHomeViewModel, type HomeCoreData, type HomeOptionalData, type HomeViewModel } from '@/features/home/homeModel';
 import { MockExperienceService } from '@/services/mock/MockExperienceService';
 import { MockLoyaltyService } from '@/services/mock/MockLoyaltyService';
-import { MockGuestProfileService, MockJourneyEventService, MockPersonalizationService } from '@/services/mock/MockMiscServices';
+import { MockGuestRecordSource, MockJourneyEventService, MockPersonalizationService } from '@/services/mock/MockMiscServices';
 import { MockVoyageService } from '@/services/mock/MockVoyageService';
 import { devDataset, IDS } from '@/data/fixtures';
 
 const voyage = new MockVoyageService();
 const loyalty = new MockLoyaltyService();
 const experience = new MockExperienceService();
-const profileSvc = new MockGuestProfileService();
+const profileSvc = new MockGuestRecordSource();
 const events = new MockJourneyEventService();
 const personalization = new MockPersonalizationService();
 

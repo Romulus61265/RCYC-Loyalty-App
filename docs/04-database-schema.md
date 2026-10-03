@@ -82,6 +82,14 @@ createdb rcyc && psql -d rcyc -f supabase/tests/00_local_stubs.sql \
 
 Or run `supabase db reset` with the Supabase CLI, which does not need the stubs.
 
+## Preferences v2 (`20261003000000_preferences_v2.sql`)
+
+* New JSONB groups: `excursions`, `spa`, `transportation`, `accessibility`, `privacy`.
+* `version` for optimistic concurrency. A trigger allows only `version = old + 1` and stamps `updated_at` with server time.
+* An audit trigger records the actor, the changed group names and the version. It never records values, because dietary and accessibility data are special-category.
+* Crew read access requires the guest's `accessibility.shareWithCrew` consent.
+* `supabase/tests/20_preferences_smoke.sql` checks: own-row writes, stale and skipped versions refused, another guest denied, crew access following consent, and the audit content.
+
 ## Realtime
 
 `concierge_messages`, `service_requests` and `journey_alerts` are published to `supabase_realtime`. RLS applies to Realtime as well, so guests only receive their own rows.

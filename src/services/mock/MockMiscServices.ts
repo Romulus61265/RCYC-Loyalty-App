@@ -4,13 +4,13 @@ import type {
   AuditService,
   AuthService,
   AuthSession,
-  GuestProfileService,
   JourneyEventService,
   PersonalizationService,
   Unsubscribe,
 } from '@/services/contracts';
 import { ServiceError } from '@/services/contracts';
 import { logger } from '@/core/logging';
+import type { GuestRecordSource } from '@/services/profile/RepositoryGuestProfileService';
 import { mergedRecommendations } from './MockRecommendationEngine';
 import { data, failIf, isEmptyScenario, latency, mockId, mockNow } from './support';
 
@@ -55,21 +55,20 @@ export class MockAuthService implements AuthService {
   }
 }
 
-export class MockGuestProfileService implements GuestProfileService {
-  private profile = guestProfile;
-
+/**
+ * Read-only guest record (CRM stand-in): identity, companions, occasions and
+ * the default preferences. Edits go through the PreferencesRepository.
+ */
+export class MockGuestRecordSource implements GuestRecordSource {
   getProfile(_guestId: ID) {
-    return latency(this.profile);
-  }
-  async updatePreferences(_guestId: ID, patch: Parameters<GuestProfileService['updatePreferences']>[1]) {
-    this.profile = { ...this.profile, preferences: { ...this.profile.preferences, ...patch } };
-    return latency(this.profile.preferences, 400);
+    failIf('core', 'guest record');
+    return latency(guestProfile);
   }
   listCompanions(_guestId: ID) {
-    return latency(this.profile.companions);
+    return latency(guestProfile.companions);
   }
   listOccasions(_guestId: ID) {
-    return latency(this.profile.occasions);
+    return latency(guestProfile.occasions);
   }
 }
 

@@ -17,7 +17,7 @@ import {
   type DiscoverOptionalData,
 } from '@/features/discover/discoverModel';
 import { MockExperienceService } from '@/services/mock/MockExperienceService';
-import { MockGuestProfileService, MockPersonalizationService } from '@/services/mock/MockMiscServices';
+import { MockGuestRecordSource, MockPersonalizationService } from '@/services/mock/MockMiscServices';
 import { MockVoyageService } from '@/services/mock/MockVoyageService';
 
 const failures: string[] = [];
@@ -31,7 +31,7 @@ async function main() {
   const exp = new MockExperienceService();
   const [overview, profile, catalogue, destinations, availability, bookings, recommendations] = await Promise.all([
     new MockVoyageService().getOverview(IDS.reservation),
-    new MockGuestProfileService().getProfile(IDS.guest),
+    new MockGuestRecordSource().getProfile(IDS.guest),
     exp.listCatalogue(IDS.voyage),
     exp.listDestinations(IDS.voyage),
     exp.listAvailability(IDS.voyage),

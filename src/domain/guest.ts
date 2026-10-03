@@ -50,6 +50,8 @@ export interface SpecialOccasion {
 
 export interface DiningPreferences {
   cuisines: string[];
+  /** Preferred dinner time, "HH:MM". */
+  preferredTime?: string;
   tablePreference?: 'window' | 'terrace' | 'quiet-corner' | 'chefs-table' | 'no-preference';
   preferredSeating?: string;
   notes?: string;
@@ -91,6 +93,38 @@ export interface SpaPreferences {
   notes?: string;
 }
 
+export interface TransportationPreferences {
+  /** How the guest likes to be met at airports and ports. */
+  arrivals: 'private-car' | 'private-van' | 'self-arranged';
+  cabin?: 'first' | 'business' | 'premium-economy' | 'economy';
+  helicopterWelcome: boolean;
+  notes?: string;
+}
+
+/**
+ * Accessibility needs. Health-adjacent special-category data: shared with
+ * crew only when the guest allows it.
+ */
+export interface AccessibilityPreferences {
+  mobility: 'none' | 'short-walks' | 'wheelchair-distances' | 'wheelchair';
+  tenderAssistance: boolean;
+  hearingSupport: boolean;
+  visualSupport: boolean;
+  notes?: string;
+  shareWithCrew: boolean;
+}
+
+/** What the guest allows us to do with their data. */
+export interface PrivacySettings {
+  personalisedRecommendations: boolean;
+  /** Let crew prepare quiet gestures for occasions. */
+  shareOccasionsWithCrew: boolean;
+  /** Share dietary needs with restaurants ashore that we book for you. */
+  shareDietaryWithPartners: boolean;
+  /** Anonymous usage analytics to improve the app. */
+  analytics: boolean;
+}
+
 export interface CommunicationPreferences {
   channels: { push: boolean; email: boolean; sms: boolean; whatsapp: boolean };
   /** Quiet hours in ship local time — no non-urgent notifications. */
@@ -109,8 +143,23 @@ export interface GuestPreferences {
   activityInterests: string[];
   excursions: ExcursionPreferences;
   spa: SpaPreferences;
+  transportation: TransportationPreferences;
+  accessibility: AccessibilityPreferences;
   communication: CommunicationPreferences;
+  privacy: PrivacySettings;
 }
+
+/** Preferences as stored, with an optimistic-concurrency version. */
+export interface VersionedPreferences {
+  preferences: GuestPreferences;
+  /** 0 = never saved (seeded from the guest record); increments on each save. */
+  version: number;
+  updatedAt: string | null;
+  source: 'seed' | 'device' | 'supabase';
+}
+
+/** A partial update: any top-level group, replaced as a whole. */
+export type PreferencesPatch = Partial<Omit<GuestPreferences, 'guestId'>>;
 
 /** Aggregate used by Profile and by guest-context hydration. */
 export interface GuestProfile {
