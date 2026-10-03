@@ -586,7 +586,8 @@ export function toMessage(r: MessageRow): ConciergeMessage {
   });
 }
 
-export const REQUEST_COLUMNS = 'id, reservation_id, type, summary, details, status, priority, assigned_team, assigned_to_name, created_at, updated_at, next_update_by, experience_id, booking_id';
+export const REQUEST_COLUMNS =
+  'id, reservation_id, type, summary, details, status, priority, assigned_team, assigned_to_name, created_at, updated_at, next_update_by, experience_id, booking_id, category, guest_id, resolution_notes, acknowledged_at, started_at, resolved_at, closed_at, occasion_step';
 
 export interface RequestRow {
   id: string;
@@ -603,6 +604,14 @@ export interface RequestRow {
   next_update_by: string | null;
   experience_id: string | null;
   booking_id: string | null;
+  category: NonNullable<ServiceRequest['category']>;
+  guest_id: string | null;
+  resolution_notes: string | null;
+  acknowledged_at: string | null;
+  started_at: string | null;
+  resolved_at: string | null;
+  closed_at: string | null;
+  occasion_step: string | null;
 }
 
 export function toRequest(r: RequestRow): ServiceRequest {
@@ -621,6 +630,14 @@ export function toRequest(r: RequestRow): ServiceRequest {
     nextUpdateBy: opt(r.next_update_by),
     experienceId: opt(r.experience_id),
     bookingId: opt(r.booking_id),
+    category: r.category,
+    guestId: opt(r.guest_id),
+    resolutionNotes: opt(r.resolution_notes),
+    acknowledgedAt: opt(r.acknowledged_at),
+    startedAt: opt(r.started_at),
+    resolvedAt: opt(r.resolved_at),
+    closedAt: opt(r.closed_at),
+    occasionStep: opt(r.occasion_step),
   });
 }
 

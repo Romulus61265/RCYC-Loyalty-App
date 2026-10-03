@@ -21,9 +21,15 @@ flowchart TB
   Home -.privileges.-> Profile
   Home -.your voyage card.-> Voyage
   Home -.at your service.-> Concierge
+  Home -.anniversary card.-> Celebration["/celebration/[key]"]
+  Home -.anything you need.-> Requests["/requests"]
+  Concierge -.requests tab.-> Requests
+  Celebration -.approved step.-> Request
+  Requests --> NewRequest["/requests/new"]
+  Requests --> Request["/requests/[id]"]
 
   Root -. future .-> Auth["(auth)/sign-in · verify · link-bonvoy"]
-  Root -. future .-> Modals["experience/[id] · booking/[id] · request/[id]"]
+  Root -. future .-> Modals["experience/[id] · booking/[id]"]
 ```
 
 ## Tabs
@@ -43,6 +49,17 @@ flowchart TB
 * **Planned deep links** (`rcycguest://`): `rcycguest://voyage`, `rcycguest://concierge`, and `rcycguest://experience/<id>` for push notifications and e-mail.
 * Within a tab, the guest moves between sections with in-page `SegmentedTabs`, which avoids deep stacks. Detail views will open as modal sheets so the tab context is kept.
 
+## Stack screens
+
+These are pushed above the tabs, each with a quiet "Back" (falling back to a sensible parent on a cold deep link).
+
+| Route | Screen |
+|---|---|
+| `/requests?view=active\|history` | Your requests: active and history |
+| `/requests/new` | Make a request |
+| `/requests/[id]` | One request: status timeline, resolution, details, withdraw or close |
+| `/celebration/[key]` | A celebration during the voyage: the message, the ideas, approval (`key` is URL-encoded, e.g. `anniversary%3A…`) |
+
 ## Planned stacks (next iterations)
 
 | Route | Presentation |
@@ -50,5 +67,4 @@ flowchart TB
 | `(auth)/sign-in`, `(auth)/verify`, `(auth)/link-bonvoy` | Full-screen, before the tabs; guarded in the root layout |
 | `experience/[id]` | Modal sheet: imagery, details, availability, request |
 | `booking/[id]` | Modal sheet: change or cancel |
-| `request/[id]` | Push: service request timeline |
 | `documents/[id]` | Modal sheet: secure upload to Storage |

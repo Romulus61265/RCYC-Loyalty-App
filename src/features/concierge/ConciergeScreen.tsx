@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Caption, ErrorState, LoadingState, SegmentedTabs, StatusLine } from '@/components';
+import { Caption, ErrorState, LoadingState, SegmentedTabs, StatusLine, TextLink } from '@/components';
 import { colors, spacing } from '@/theme';
 import { Composer, Header, PeoplePanel, QuickReplies, RequestsList } from './components/Chrome';
 import { ThreadView } from './components/Thread';
@@ -78,6 +78,10 @@ export function ConciergeScreen() {
         </>
       ) : (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.requests}>
+          <View style={styles.requestLinks}>
+            <TextLink label="Make a request" onPress={() => router.push('/requests/new')} />
+            <TextLink label="All requests and history" onPress={() => router.push('/requests')} />
+          </View>
           <RequestsList
             open={model.requests.open}
             closed={model.requests.closed}
@@ -94,6 +98,7 @@ export function ConciergeScreen() {
 }
 
 const styles = StyleSheet.create({
+  requestLinks: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, marginBottom: spacing.lg },
   tabs: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderStrong },
   thread: { padding: spacing.gutter, paddingBottom: spacing.lg, maxWidth: 760, width: '100%', alignSelf: 'center' },
   typing: { marginLeft: 28 + spacing.sm, marginTop: spacing.xs },

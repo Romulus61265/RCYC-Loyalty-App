@@ -56,6 +56,8 @@ In **Concierge**, try:
 | 8 | [Navigation model](docs/08-navigation-model.md) |
 | 9 | [Security architecture](docs/09-security-architecture.md) |
 | 10 | [Personalization architecture](docs/10-personalization-architecture.md) |
+| 11 | [Concierge AI architecture](docs/11-concierge-ai-architecture.md) |
+| 12 | [Special occasions and service requests](docs/12-occasions-and-service-requests.md) |
 
 ### Replacing mocks with enterprise APIs
 

@@ -192,6 +192,20 @@ Generated from the fictional dataset by `npm run seed:generate`, so do not edit 
 * `concierge_ai_runs` holds one row per answered request, written by `concierge-respond` (service role). It records the provider and model, prompt version, classification, context slices, safety flags, guard findings, escalation, transaction outcome, degradation, attempts, latency, usage and message IDs. It never holds text. `request_id` is unique, which is what makes retries idempotent. Crew on the yacht can read it; guests cannot read or write it.
 * See [11 · Concierge AI](11-concierge-ai-architecture.md).
 
+## Guest service requests (`20261007000000_guest_service_requests.sql`)
+
+* `service_requests` gains:
+  * `category` (10 values, backfilled from `type`);
+  * `guest_id`;
+  * `resolution_notes`;
+  * lifecycle stamps `acknowledged_at`, `started_at`, `resolved_at`, `closed_at`;
+  * `occasion_step` (the celebration-plan step a request came from).
+* The `service_request_lifecycle` trigger fills defaults on insert and stamps each status change.
+* The guest insert policy allows the opening state only.
+* `close_service_request()` is the guest's only change: withdraw a received request, or close a resolved one.
+* `service_requests_local` exposes the new columns in local time.
+* See [12](12-occasions-and-service-requests.md).
+
 ## Testing
 
 | Command | Needs | Covers |

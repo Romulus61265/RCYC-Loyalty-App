@@ -33,6 +33,8 @@ RCYC-Loyalty-App/
 │   ├── data/fixtures/            Fictional guest, voyage & experience data (mock only)
 │   ├── features/
 │   │   ├── auth/                 Sign-in: useSignIn (e-mail code state machine) + SignInScreen
+│   │   ├── celebrations/         A celebration during the voyage (/celebration/[key]): message, ideas, approval panel
+│   │   ├── requests/             Service requests (/requests, /requests/new, /requests/[id]): requestsModel, useRequests, screens
 │   │   ├── concierge/            Concierge (?view=requests)
 │   │   │   ├── conciergeModel.ts Thread blocks, action cards, confirmations, hand-offs, request status, guest context (scripts/check-concierge.ts)
 │   │   │   ├── useConcierge.ts   Service access: send, perform actions, escalate, live updates
@@ -78,6 +80,7 @@ RCYC-Loyalty-App/
 │   │   ├── repositories/         PreferencesRepository (+ Local), KeyValueStore (+ AsyncStorage, memory, resilient)
 │   │   ├── profile/              RepositoryGuestProfileService: guest record source + preferences repository
 │   │   ├── personalization/      buildInput: domain objects → rules-engine inputs
+│   │   ├── occasions/            Celebration detectors, playbooks and planner; ComposedOccasionService (approval)
 │   │   ├── registry.ts           Composition root: validate env → mode → implementations
 │   │   ├── instrument.ts         Logs every service call's failures & slow responses
 │   │   └── ServiceProvider.tsx   React context + useServices()

@@ -294,6 +294,10 @@ export function buildSeedRows(): TableRows[] {
     status: r.status, priority: r.priority, assigned_team: r.assignedTeam, assigned_to_name: r.assignedTo,
     next_update_by: r.nextUpdateBy, created_at: r.createdAt, updated_at: r.updatedAt, time_zone: zoneOn(r.createdAt),
     experience_id: r.experienceId ? uuidFor(r.experienceId) : null, booking_id: r.bookingId ? uuidFor(r.bookingId) : null,
+    category: r.category, guest_id: r.guestId ? uuidFor(r.guestId) : null, resolution_notes: r.resolutionNotes,
+    acknowledged_at: r.acknowledgedAt, started_at: r.startedAt, resolved_at: r.resolvedAt, closed_at: r.closedAt,
+    // Plan steps embed the occasion's ID: seed it as the occasion's UUID.
+    occasion_step: r.occasionStep?.replace(/dev_[a-z0-9_]+/g, (id) => uuidFor(id)),
   })));
 
   // Continuity

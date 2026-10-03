@@ -29,6 +29,9 @@ import { MemoryKeyValueStore, resilientStore } from './repositories/KeyValueStor
 import { LocalPreferencesRepository, type PreferencesRepository } from './repositories/PreferencesRepository';
 import { getSupabaseClient } from './remote/supabaseClient';
 import { MockScheduleService } from './mock/MockScheduleService';
+import { MockServiceRequestService } from './mock/MockServiceRequestService';
+import { MockRequestStore } from './mock/requestStore';
+import { ComposedOccasionService } from './occasions/ComposedOccasionService';
 import { MockVoyageService } from './mock/MockVoyageService';
 import { mockNow } from './mock/support';
 import { ApiClient } from './remote/apiClient';
@@ -56,6 +59,9 @@ function createMockServices(): Services {
   const experience = new MockExperienceService();
   // Shares the instances above: bookings and preference edits count at once.
   const personalization = new MockPersonalizationService({ profile, loyalty, voyage, experience });
+  const requestStore = new MockRequestStore();
+  // On board, a crew member picks a new request up within moments.
+  const requests = new MockServiceRequestService({ store: requestStore, voyage, simulateCrew: { acknowledgeMs: 8_000, startMs: 25_000 } });
   return {
     auth: new MockAuthService(),
     profile,
@@ -63,8 +69,10 @@ function createMockServices(): Services {
     voyage,
     experience,
     // Shares the instances above: what the concierge arranges shows everywhere.
-    concierge: new MockConciergeService({ voyage, experience, loyalty, profile, personalization }),
+    concierge: new MockConciergeService({ voyage, experience, loyalty, profile, personalization, requests: requestStore }),
     personalization,
+    requests,
+    occasions: new ComposedOccasionService({ profile, loyalty, voyage, experience, requests, clock: { now: mockNow } }),
     journeyEvents: new MockJourneyEventService(),
     schedule: new MockScheduleService(),
     audit: new ConsoleAuditService(),

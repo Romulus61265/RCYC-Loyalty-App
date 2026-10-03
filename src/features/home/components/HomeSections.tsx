@@ -355,3 +355,30 @@ const styles = StyleSheet.create({
   voyageTile: { padding: spacing.md },
   tileMedia: { marginBottom: spacing.md },
 });
+
+/** A quiet line: make a request, or see where your requests stand. */
+export function RequestsLine({ onNew, onAll }: { onNew: () => void; onAll: () => void }) {
+  return (
+    <Section eyebrow="Anything you need">
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg }}>
+        <TextLink label="Make a request" onPress={onNew} />
+        <TextLink label="Your requests" onPress={onAll} />
+      </View>
+    </Section>
+  );
+}
+
+/** The next celebration on the voyage: a quiet card into its plan. */
+export function CelebrationCard({ card, onOpen }: { card: { eyebrow: string; title: string; line: string; cta: string }; onOpen: () => void }) {
+  return (
+    <Section eyebrow={card.eyebrow}>
+      <Card onPress={onOpen} accessibilityLabel={`${card.title}. ${card.line} ${card.cta}`} style={{ padding: spacing.lg, borderColor: colors.accent, borderWidth: StyleSheet.hairlineWidth }}>
+        <Text variant="title">{card.title}</Text>
+        <Caption style={{ marginTop: spacing.xs }}>{card.line}</Caption>
+        <View style={{ marginTop: spacing.md }}>
+          <TextLink label={card.cta} onPress={onOpen} />
+        </View>
+      </Card>
+    </Section>
+  );
+}

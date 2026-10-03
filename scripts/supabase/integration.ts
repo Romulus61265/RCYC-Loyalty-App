@@ -22,6 +22,7 @@ import { MockExperienceService } from '@/services/mock/MockExperienceService';
 import { MockLoyaltyService } from '@/services/mock/MockLoyaltyService';
 import { MockGuestRecordSource, MockJourneyEventService, MockPersonalizationService } from '@/services/mock/MockMiscServices';
 import { MockScheduleService } from '@/services/mock/MockScheduleService';
+import { MockServiceRequestService } from '@/services/mock/MockServiceRequestService';
 import { MockVoyageService } from '@/services/mock/MockVoyageService';
 import { RepositoryGuestProfileService } from '@/services/profile/RepositoryGuestProfileService';
 import { MemoryKeyValueStore } from '@/services/repositories/KeyValueStore';
@@ -442,6 +443,80 @@ async function main() {
     check('pipeline: another guest cannot use this conversation', otherTry.status === 403 || otherTry.status === 404, otherTry);
     const bad = await guestDb.functions.invoke('concierge-respond', { body: { conversationId: convo.conversationId, body: 'hi', requestId: randomUUID(), guestId: randomUUID() } });
     check('pipeline: a guestId that is not the caller’s is refused', (bad.error as { context?: { status?: number } } | null)?.context?.status === 403, bad.error);
+  }
+
+  // ── Guest service requests ──
+  {
+    const service = createClient(gw.url, jwt({ role: 'service_role' }), { auth: { persistSession: false } });
+    const mockRequests = new MockServiceRequestService({ voyage: new MockVoyageService() });
+    same('requests: history as the guest sees it', toFixtureIds(await sb.requests.listHistory(r)), await mockRequests.listHistory(R));
+    const fixtureActive = toFixtureIds(await sb.requests.listActive(r)).filter((x) => x.id.startsWith('dev_srq_'));
+    same('requests: active fixture requests as the guest sees them', fixtureActive, (await mockRequests.listActive(R)).filter((x) => fixtureActive.some((y) => y.id === x.id)));
+
+    const created = await sb.requests.submit({ reservationId: r, category: 'maintenance', description: 'The terrace door is difficult to close.', priority: 'priority' });
+    check('requests: submitted, routed to Engineering, raised by the guest', created.status === 'submitted' && created.category === 'maintenance' && created.assignedTeam.label === 'Engineering' && created.guest.id === g && created.priority === 'priority', created);
+    const dbRow = (await service.from('service_requests').select('guest_id, category, type, status, acknowledged_at').eq('id', created.id).maybeSingle()).data as Record<string, unknown> | null;
+    check('requests: the trigger stamps the guest; category kept', dbRow?.guest_id === g && dbRow.category === 'maintenance' && dbRow.type === 'general' && dbRow.acknowledged_at === null, dbRow);
+    for (const [label, extra] of [
+      ['a resolved status', { status: 'completed' }],
+      ['resolution notes', { resolution_notes: 'Fixed' }],
+      ['an acknowledgement', { acknowledged_at: new Date().toISOString() }],
+      ['another guest', { guest_id: uuidFor(IDS.companion) }],
+    ] as const) {
+      const forged = await guestDb.from('service_requests').insert({ reservation_id: r, type: 'general', category: 'suite', summary: 'x', ...extra });
+      check(`requests: a guest cannot insert ${label}`, Boolean(forged.error), forged.error);
+    }
+    const bad = await guestDb.from('service_requests').insert({ reservation_id: r, type: 'general', category: 'yachts', summary: 'x' });
+    check('requests: unknown categories refused', Boolean(bad.error));
+    await guestDb.from('service_requests').update({ status: 'completed', resolution_notes: 'Done' }).eq('id', created.id);
+    check('requests: a guest cannot change status or notes', (await sb.requests.get(created.id)).status === 'submitted');
+
+    // The crew side (service role here): every change is stamped by the trigger.
+    await service.from('service_requests').update({ assigned_to_name: 'Engineering team' }).eq('id', created.id);
+    const ack = await sb.requests.get(created.id);
+    check('requests: assignment acknowledges it', ack.status === 'acknowledged' && ack.assignedTeam.person === 'Engineering team' && ack.timeline.some((t) => t.status === 'acknowledged'), ack);
+    await service.from('service_requests').update({ status: 'in_progress' }).eq('id', created.id);
+    const started = await sb.requests.get(created.id);
+    check('requests: in progress, with its moment', started.status === 'in_progress' && started.timeline.map((t) => t.status).join() === 'submitted,acknowledged,in_progress', started.timeline);
+    check('requests: in progress cannot be withdrawn', await rejects(sb.requests.close(created.id), 'conflict'));
+    const direct = await guestDb.rpc('close_service_request', { p_request: created.id });
+    check('requests: … not even by calling the database directly', direct.error?.code === '22023', direct.error);
+    await service.from('service_requests').update({ status: 'completed', resolution_notes: 'The door has been rehung and closes softly.' }).eq('id', created.id);
+    const resolved = await sb.requests.get(created.id);
+    check('requests: resolved, with notes', resolved.status === 'resolved' && resolved.resolutionNotes === 'The door has been rehung and closes softly.' && resolved.canClose);
+    const closed = await sb.requests.close(created.id);
+    check('requests: the guest closes a resolved request', closed.status === 'closed' && closed.timeline.map((t) => t.status).join() === 'submitted,acknowledged,in_progress,resolved,closed', closed.timeline);
+    check('requests: closed ones are history', (await sb.requests.listHistory(r)).some((x) => x.id === created.id) && !(await sb.requests.listActive(r)).some((x) => x.id === created.id));
+
+    const second = await sb.requests.submit({ reservationId: r, category: 'spa', description: 'A later time for the massage, please.' });
+    const withdrawn = await sb.requests.close(second.id);
+    check('requests: withdrawn before work starts', withdrawn.status === 'closed' && withdrawn.resolutionNotes === 'Withdrawn by the guest.' && withdrawn.timeline.map((t) => t.status).join() === 'submitted,closed', withdrawn);
+    check('requests: cannot close twice', await rejects(sb.requests.close(second.id), 'conflict'));
+
+    check('requests: another guest cannot list them', (await rejects(other.requests.listActive(r), 'not_found')) && (await rejects(other.requests.listHistory(r), 'not_found')));
+    check('requests: … nor one by its ID', await rejects(other.requests.get(created.id), 'not_found'));
+    const theirs = await otherDb.rpc('close_service_request', { p_request: second.id });
+    check('requests: … nor close it', theirs.error?.code === 'P0002', theirs.error);
+  }
+
+  // ── Special occasions on Supabase (the same orchestration over these services) ──
+  {
+    const service = createClient(gw.url, jwt({ role: 'service_role' }), { auth: { persistSession: false } });
+    const plans = await sb.occasions.listCelebrations(g, r);
+    const p = plans[0];
+    check('occasions: the anniversary is detected from the database', plans.length === 1 && p?.celebration.kind === 'anniversary' && p.celebration.date === '2027-05-20' && p.celebration.port === 'Monte Carlo', plans.map((x) => x.celebration));
+    check('occasions: the personal message', p?.message.title === 'Twenty years' && /your second day in Monte Carlo/.test(p.message.body[0] ?? '') && p.message.signature === 'Elena, your Suite Ambassador', p?.message);
+    const state = (k: string) => p?.steps.find((s) => s.kind === k);
+    check('occasions: what is in hand is recognised', state('private-dining')?.inHand?.label === 'Being arranged' && state('wine')?.inHand?.label === 'Arranged' && state('private-shore')?.inHand?.label === 'Confirmed' && state('spa')?.inHand?.label === 'Confirmed', p?.steps.map((s) => [s.kind, s.state, s.inHand?.label]));
+    const amenity = state('suite-amenity')!;
+    const count = async () => (await service.from('service_requests').select('id', { count: 'exact', head: true }).eq('reservation_id', r)).count ?? 0;
+    const n = await count();
+    check('occasions: no approval, no request', (await rejects(sb.occasions.approveStep(g, r, p!.celebration.key, { stepId: amenity.id } as never), 'validation')) && (await count()) === n);
+    const ok = await sb.occasions.approveStep(g, r, p!.celebration.key, { stepId: amenity.id, approved: true, note: 'White flowers, please.' });
+    const row = (await service.from('service_requests').select('category, occasion_step, details, status').eq('id', ok.requestId ?? '').maybeSingle()).data as Record<string, unknown> | null;
+    check('occasions: approved → a suite request, tagged with its step', (await count()) === n + 1 && row?.category === 'suite' && row.occasion_step === amenity.id && row.status === 'received' && /White flowers/.test(String(row.details)), row);
+    check('occasions: the plan now shows it requested', (await sb.occasions.getPlan(g, r, p!.celebration.key)).steps.find((s) => s.id === amenity.id)?.inHand?.label === 'Requested');
+    check('occasions: another guest gets nothing for this reservation', (await other.occasions.listCelebrations(g, r).catch(() => [])).length === 0);
   }
 
   gw.close();

@@ -14,22 +14,29 @@ import { SupabaseExperienceService } from './SupabaseExperienceService';
 import { SupabaseJourneyEventService, SupabasePersonalizationService } from './SupabaseJourneyAndPersonalization';
 import { SupabaseGuestRecordSource, SupabaseLoyaltyService } from './SupabaseProfileAndLoyalty';
 import { SupabaseScheduleService } from './SupabaseScheduleService';
+import { SupabaseServiceRequestService } from './SupabaseServiceRequestService';
 import { SupabaseVoyageService } from './SupabaseVoyageService';
 import type { Db } from './support';
+import { ComposedOccasionService } from '@/services/occasions/ComposedOccasionService';
 
 export function createSupabaseServices(db: Db, clock: ClockService = { now: () => new Date() }): Services {
   const deps = { db, clock };
   const voyage = new SupabaseVoyageService(deps);
   const experience = new SupabaseExperienceService(deps);
   const audit = logger.child('audit');
+  const profile = new RepositoryGuestProfileService(new SupabaseGuestRecordSource(deps), new SupabasePreferencesRepository(db));
+  const loyalty = new SupabaseLoyaltyService(deps);
+  const requests = new SupabaseServiceRequestService(deps);
   return {
     auth: new SupabaseAuthService(db),
-    profile: new RepositoryGuestProfileService(new SupabaseGuestRecordSource(deps), new SupabasePreferencesRepository(db)),
-    loyalty: new SupabaseLoyaltyService(deps),
+    profile,
+    loyalty,
     voyage,
     experience,
     concierge: new SupabaseConciergeService(deps),
     personalization: new SupabasePersonalizationService(deps),
+    requests,
+    occasions: new ComposedOccasionService({ profile, loyalty, voyage, experience, requests, clock }),
     journeyEvents: new SupabaseJourneyEventService(deps),
     schedule: new SupabaseScheduleService(voyage, experience),
     // Advisory only: the authoritative trail is written by database triggers
@@ -39,4 +46,4 @@ export function createSupabaseServices(db: Db, clock: ClockService = { now: () =
   };
 }
 
-export { SupabaseAuthService, SupabaseConciergeService, SupabaseExperienceService, SupabaseGuestRecordSource, SupabaseJourneyEventService, SupabaseLoyaltyService, SupabasePersonalizationService, SupabaseScheduleService, SupabaseVoyageService };
+export { SupabaseAuthService, SupabaseConciergeService, SupabaseExperienceService, SupabaseGuestRecordSource, SupabaseJourneyEventService, SupabaseLoyaltyService, SupabasePersonalizationService, SupabaseScheduleService, SupabaseServiceRequestService, SupabaseVoyageService };

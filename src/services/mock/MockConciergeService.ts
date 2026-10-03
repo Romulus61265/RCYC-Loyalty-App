@@ -29,6 +29,8 @@ import { MockExperienceService } from './MockExperienceService';
 import { MockLoyaltyService } from './MockLoyaltyService';
 import { MockGuestRecordSource, MockPersonalizationService } from './MockMiscServices';
 import { MockVoyageService } from './MockVoyageService';
+import { MockRequestStore } from './requestStore';
+import { categoryOf } from '@/services/shared/serviceRequests';
 import { data, latency, mockEventTime, mockId, mockNow, notFound } from './support';
 
 export interface MockConciergeDeps {
@@ -38,6 +40,8 @@ export interface MockConciergeDeps {
   loyalty: LoyaltyService;
   profile: GuestProfileService;
   personalization: PersonalizationService;
+  /** Shared with MockServiceRequestService. */
+  requests: MockRequestStore;
 }
 
 const HOUR = 3_600_000;
@@ -56,7 +60,6 @@ const TOPIC: Partial<Record<NonNullable<ConciergeMessage['intent']>, string>> = 
 
 export class MockConciergeService implements ConciergeService {
   private conversations = new Map<ID, ConciergeMessage[]>();
-  private requests: ServiceRequest[] = data.concierge.requests.map((r) => ({ ...r }));
   private listeners = new Map<ID, Set<(m: ConciergeMessage) => void>>();
   private readonly deps: MockConciergeDeps;
   private readonly ai: MockConciergeAI;
@@ -69,8 +72,13 @@ export class MockConciergeService implements ConciergeService {
       loyalty: deps.loyalty ?? new MockLoyaltyService(),
       profile: deps.profile ?? new RepositoryGuestProfileService(new MockGuestRecordSource(), new LocalPreferencesRepository(new MemoryKeyValueStore())),
       personalization: deps.personalization ?? new MockPersonalizationService(),
+      requests: deps.requests ?? new MockRequestStore(),
     };
     this.ai = ai ?? new MockConciergeAI((id) => this.snapshot(id));
+  }
+
+  private get requests(): ServiceRequest[] {
+    return this.deps.requests.items;
   }
 
   private reservationOf(conversationId: ID): ID {
@@ -125,14 +133,12 @@ export class MockConciergeService implements ConciergeService {
 
   private record(s: Lite, r: Omit<ServiceRequest, 'id' | 'reservationId' | 'createdAt' | 'updatedAt'>): ServiceRequest {
     const now = this.stamp(s);
-    const request: ServiceRequest = { id: mockId('srq'), reservationId: s.overview.reservation.id, createdAt: now, updatedAt: now, ...r };
-    this.requests.unshift(request);
-    return request;
+    const request: ServiceRequest = { id: mockId('srq'), reservationId: s.overview.reservation.id, createdAt: now, updatedAt: now, guestId: data.guest.profile.guest.id, category: categoryOf(r), ...r };
+    return this.deps.requests.add(request);
   }
 
   private update(id: ID, change: Partial<ServiceRequest>, s: Lite) {
-    const r = this.requests.find((x) => x.id === id);
-    if (r) Object.assign(r, change, { updatedAt: this.stamp(s) });
+    this.deps.requests.update(id, { ...change, updatedAt: this.stamp(s) });
   }
 
   // ─── Conversation ────────────────────────────────────────────────────────

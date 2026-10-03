@@ -43,6 +43,11 @@ import type {
   PersonalizedRecommendation,
   Recommendation,
   RecommendationSurface,
+  CelebrationApproval,
+  CelebrationApprovalResult,
+  CelebrationPlan,
+  GuestServiceRequest,
+  NewServiceRequest,
   ServiceRequest,
   ServiceRequestType,
   TravelDocument,
@@ -230,6 +235,43 @@ export interface PersonalizationService {
   recordFeedback(guestId: ID, recommendationId: ID, signal: 'viewed' | 'dismissed' | 'saved' | 'booked'): Promise<void>;
 }
 
+// ─── Guest service requests ────────────────────────────────────────────────
+
+/**
+ * The guest's requests to the crew: suite, dining, housekeeping, maintenance,
+ * transport, excursions, spa, concierge, special assistance. Shares one store
+ * with requests the concierge raises, so everything appears in one place.
+ * Guests submit, follow and close; status changes are the crew's.
+ */
+export interface ServiceRequestService {
+  submit(input: NewServiceRequest): Promise<GuestServiceRequest>;
+  /** Submitted, acknowledged and in progress; newest activity first. */
+  listActive(reservationId: ID): Promise<GuestServiceRequest[]>;
+  /** Resolved and closed; newest first. */
+  listHistory(reservationId: ID): Promise<GuestServiceRequest[]>;
+  get(requestId: ID): Promise<GuestServiceRequest>;
+  /** Withdraws a request before work starts, or closes a resolved one. */
+  close(requestId: ID): Promise<GuestServiceRequest>;
+  /** Live updates (crew acknowledging, progress, resolution). */
+  subscribe(reservationId: ID, listener: (request: GuestServiceRequest) => void): Unsubscribe;
+}
+
+// ─── Special occasions ─────────────────────────────────────────────────────
+
+/**
+ * Celebrations that fall during the voyage (birthday, anniversary,
+ * honeymoon, milestone voyage, Bonvoy milestone), each with a plan: a
+ * personal message and steps, some already in hand. Plans only propose.
+ * approveStep is the only way a step becomes a request or a booking request,
+ * and it requires the guest's explicit approval (and acknowledgement of any
+ * charge). Nothing is ever purchased automatically.
+ */
+export interface OccasionService {
+  listCelebrations(guestId: ID, reservationId: ID): Promise<CelebrationPlan[]>;
+  getPlan(guestId: ID, reservationId: ID, celebrationKey: string): Promise<CelebrationPlan>;
+  approveStep(guestId: ID, reservationId: ID, celebrationKey: string, approval: CelebrationApproval): Promise<CelebrationApprovalResult>;
+}
+
 // ─── Journey events / service continuity ───────────────────────────────────
 
 // ─── Schedule (combined guest calendar) ───────────────────────────────────
@@ -283,6 +325,8 @@ export interface Services {
   experience: ExperienceService;
   concierge: ConciergeService;
   personalization: PersonalizationService;
+  requests: ServiceRequestService;
+  occasions: OccasionService;
   journeyEvents: JourneyEventService;
   schedule: ScheduleService;
   audit: AuditService;

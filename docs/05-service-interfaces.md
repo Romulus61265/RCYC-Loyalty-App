@@ -186,6 +186,20 @@ recordFeedback(guestId, recommendationId, signal)
 * **Supabase.** `SupabasePersonalizationService` calls the `personalization-next-best` Edge Function. It loads the inputs guests cannot read with the service role, runs the same engine, and returns guest-safe output.
 * **Surfaces.** For Discover and Voyage, `getRecommendations` explains every experience with the engine (booked ones too) and merges in the curated picks. Home keeps its curated picks. Crew-audience opportunities are never returned to the guest app.
 
+### ServiceRequestService
+`submit`, `listActive`, `listHistory`, `get`, `close` (withdraw before work starts, or close once resolved) and `subscribe`. It returns `GuestServiceRequest` with:
+
+* category (10), the five guest statuses, priority;
+* guest and voyage, the assigned team and department, resolution notes;
+* a timeline.
+
+It shares one store with the concierge's requests. Implementations: `MockServiceRequestService` (shared `MockRequestStore`, optional crew simulation) and `SupabaseServiceRequestService`. See [12](12-occasions-and-service-requests.md).
+
+### OccasionService
+`listCelebrations`, `getPlan`, `approveStep`. Celebrations (birthday, anniversary, honeymoon, milestone voyage, Bonvoy milestone) are detected during the voyage and planned from playbooks.
+
+`approveStep` is the only way a step becomes a booking request or a service request. It requires `approved: true`, and `acknowledgedCharge: true` for anything with a cost. `ComposedOccasionService` implements it over the other contracts in both modes. See [12](12-occasions-and-service-requests.md).
+
 ### GuestProfileService and preference persistence
 ```ts
 getProfile(guestId)                       // guest record + latest saved preferences

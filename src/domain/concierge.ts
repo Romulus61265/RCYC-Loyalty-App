@@ -1,5 +1,6 @@
 import type { ID, ISODateTime, RequestStatus } from './common';
 import type { JourneyPhase } from './voyage';
+import type { ServiceRequestCategory } from './requests';
 
 export type ConciergeAuthor = 'guest' | 'ai' | 'human';
 
@@ -96,6 +97,18 @@ export interface ServiceRequest {
   /** The experience or booking the request is about, when there is one. */
   experienceId?: ID;
   bookingId?: ID;
+  /** Guest-facing category (derived from `type` when not set). */
+  category?: ServiceRequestCategory;
+  /** The guest who raised it. */
+  guestId?: ID;
+  resolutionNotes?: string;
+  /** Lifecycle moments, stamped server-side. */
+  acknowledgedAt?: ISODateTime;
+  startedAt?: ISODateTime;
+  resolvedAt?: ISODateTime;
+  closedAt?: ISODateTime;
+  /** The occasion-plan step it came from, e.g. "anniversary:dev_occ_anniv_20:suite-amenity". */
+  occasionStep?: string;
 }
 
 export interface EscalationRequest {

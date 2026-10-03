@@ -4,5 +4,7 @@ export * from './loyalty';
 export * from './voyage';
 export * from './experience';
 export * from './concierge';
+export * from './requests';
+export * from './celebrations';
 export * from './events';
 export * from './personalization';

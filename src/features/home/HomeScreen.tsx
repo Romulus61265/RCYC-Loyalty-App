@@ -21,6 +21,8 @@ import { colors } from '@/theme';
 import { HomeHero } from './components/HomeHero';
 import { HomeSkeleton } from './components/HomeSkeleton';
 import {
+  CelebrationCard,
+  RequestsLine,
   ArrangedSection,
   ArrivalSection,
   AttentionSection,
@@ -31,10 +33,13 @@ import {
   VoyageSection,
 } from './components/HomeSections';
 import { useHomeDashboard } from './useHomeDashboard';
+import { celebrationHref } from '@/features/celebrations/celebrationModel';
+import { useNextCelebration } from '@/features/celebrations/useCelebrations';
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { model, loading, error, reload, dismissAlert } = useHomeDashboard();
+  const celebration = useNextCelebration();
 
   if (loading && !model) return <HomeSkeleton topInset={insets.top} />;
   if (error || !model) {
@@ -59,12 +64,14 @@ export function HomeScreen() {
         onDismiss={(a) => dismissAlert(a.id)}
         onRetry={reload}
       />
+      {celebration ? <CelebrationCard card={celebration} onOpen={() => router.push(celebrationHref(celebration.key) as Href)} /> : null}
       {model.nextIsArrival || !model.nextKnown ? null : <NextActivity activity={model.next} onOpen={() => toVoyage('calendar')} />}
       <ArrivalSection embarkation={model.embarkation} transfer={model.transfer} isNext={model.nextIsArrival} onOpen={() => toVoyage('embarkation')} />
       <ArrangedSection items={model.arranged} error={model.errors.arranged} onOpen={() => toVoyage('calendar')} onArrange={toConcierge} onRetry={reload} />
       <VoyageSection yacht={model.yacht} suite={model.suite} onOpen={() => toVoyage('suite')} />
       <RecommendationRail items={model.recommendations} error={model.errors.recommendations} onRetry={reload} />
       <ConciergeInvitation ambassador={model.concierge.ambassador} prompt={model.concierge.prompt} onOpen={toConcierge} />
+      <RequestsLine onNew={() => router.push('/requests/new')} onAll={() => router.push('/requests')} />
     </Screen>
   );
 }

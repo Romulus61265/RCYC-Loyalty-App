@@ -1,0 +1,89 @@
+/** One request: where it stands, who has it, and what was done. */
+import { useState } from 'react';
+import { View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { Button, Caption, ErrorState, FactRow, InlineError, LoadingState, PageHeader, Screen, Section, StatusLine, Text } from '@/components';
+import { colors, spacing } from '@/theme';
+import { BackBar, StatusSteps } from './components/RequestParts';
+import { useRequestDetail } from './useRequests';
+
+export function RequestDetailScreen() {
+  const params = useLocalSearchParams<{ id: string; submitted?: string }>();
+  const id = String(params.id ?? '');
+  const { data: model, loading, error, reload, close, closing, notice, closeError } = useRequestDetail(id);
+  const [confirming, setConfirming] = useState(false);
+  const back = () => (router.canGoBack() ? router.back() : router.replace('/requests'));
+
+  if (loading && !model) return <LoadingState label="One moment…" />;
+  if (error || !model) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
+        <ErrorState error={error} onRetry={reload} />
+      </View>
+    );
+  }
+
+  return (
+    <Screen>
+      <BackBar label="Your requests" onBack={back} />
+      <PageHeader eyebrow={model.category} title={model.title} />
+      <View style={{ paddingHorizontal: spacing.gutter }}>
+        {params.submitted ? (
+          <Caption color={colors.calm} style={{ marginBottom: spacing.sm }} accessibilityRole="alert">
+            Sent. You will see each update here.
+          </Caption>
+        ) : null}
+        <StatusLine label={model.status.label} tone={model.status.tone} />
+        {model.nextUpdate ? <Caption style={{ marginTop: spacing.xxs }}>{model.nextUpdate}</Caption> : null}
+      </View>
+
+      <Section eyebrow="Status">
+        <StatusSteps steps={model.steps} />
+      </Section>
+
+      {model.resolution ? (
+        <Section eyebrow="Resolution">
+          <Text>{model.resolution}</Text>
+        </Section>
+      ) : null}
+
+      <Section eyebrow="Your request">
+        <View style={{ gap: spacing.sm }}>
+          {model.description.map((p, i) => (
+            <Text key={i}>{p}</Text>
+          ))}
+        </View>
+      </Section>
+
+      <Section eyebrow="Details">
+        <FactRow facts={model.facts} />
+      </Section>
+
+      <View style={{ paddingHorizontal: spacing.gutter, marginTop: spacing.lg }}>
+        {notice ? (
+          <Caption color={colors.calm} accessibilityRole="alert">
+            {notice}
+          </Caption>
+        ) : null}
+        {closeError ? <InlineError error={closeError} onRetry={reload} /> : null}
+        {model.close && !notice ? (
+          confirming ? (
+            <View style={{ gap: spacing.sm }}>
+              <Text>{model.close.confirm}</Text>
+              <Button
+                label={closing ? 'One moment…' : 'Yes'}
+                disabled={closing}
+                onPress={() => {
+                  void close(model.close!.done).then(() => setConfirming(false));
+                }}
+              />
+              <Button label="Keep it" variant="quiet" onPress={() => setConfirming(false)} />
+            </View>
+          ) : (
+            <Button label={model.close.label} variant="quiet" onPress={() => setConfirming(true)} />
+          )
+        ) : null}
+      </View>
+    </Screen>
+  );
+}

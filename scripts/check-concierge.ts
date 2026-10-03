@@ -261,7 +261,7 @@ async function main() {
     check('history is grouped under day dividers', m1.thread.filter((t) => t.kind === 'divider').map((t) => (t.kind === 'divider' ? t.label : '')).join('|') === 'Monday 26 April|Today', m1.thread.filter((t) => t.kind === 'divider'));
     check('people are named and distinct (ambassador, team, medical)', m1.people.map((p) => p.to).join() === 'suite-ambassador,concierge-team,medical' && m1.people[0]!.title === 'Elena, your Suite Ambassador');
     check('quick replies come from the last reply, and hide while sending', m1.quickReplies.length > 0 && buildConciergeModel({ ...base, messages: [...messages, ...r] }, { performed: new Set(), sending: true, now }).quickReplies.length === 0);
-    check('requests split into open and completed', m1.requests.open.length === 3 && m1.requests.closed.length === 2 && m1.requests.attention === 1, m1.requests);
+    check('requests split into open and completed', m1.requests.open.length === 4 && m1.requests.closed.length === 3 && m1.requests.attention === 1, m1.requests);
     const steps = requestCard(d.concierge.requests[0]!, now).steps.map((s) => `${s.label}:${s.state}`).join();
     check('request status steps', steps === 'Received:done,Being arranged:current,Confirmed:todo', steps);
     const profile = await new RepositoryGuestProfileService(new MockGuestRecordSource(), new LocalPreferencesRepository(new MemoryKeyValueStore())).getProfile(G);
