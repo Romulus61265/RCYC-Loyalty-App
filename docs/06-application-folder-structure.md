@@ -40,6 +40,11 @@ RCYC-Loyalty-App/
 │   │   │   ├── useVoyageArea.ts  Service access with per-source isolation
 │   │   │   ├── VoyageScreen.tsx  Section tabs bound to the URL
 │   │   │   └── components/       Overview, Itinerary/PortCard, Suite, Embarkation, Calendar, Category, Documents
+│   │   ├── discover/             Curated marketplace (?category= deep links)
+│   │   │   ├── discoverModel.ts  Cards, categories, filter options, applyDiscoverFilters() (scripts/check-discover.ts)
+│   │   │   ├── useDiscover.ts    Service access with per-source isolation
+│   │   │   ├── DiscoverScreen.tsx
+│   │   │   └── components/       ExperienceCard, RecommendedRail, RefineBar, FilterPanel, ExperienceResults, DestinationList
 │   │   └── shared/status.ts      Settled<T>, settle(), Tone, bookingStatus()
 │   ├── domain/                   Pure TypeScript domain model — no React, no I/O
 │   ├── hooks/

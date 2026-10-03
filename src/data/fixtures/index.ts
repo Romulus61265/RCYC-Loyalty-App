@@ -6,6 +6,7 @@
  */
 import type { DevDataset } from './types';
 import { bookings, daySchedules } from './bookings';
+import { availability } from './availability';
 import { catalogue, collections, destinations } from './catalogue';
 import { communicationData } from './communication';
 import { conciergeData } from './concierge';
@@ -26,7 +27,7 @@ export const devDataset: DevDataset = {
   },
   guest: guestData,
   voyage: voyageData,
-  experiences: { catalogue, bookings, daySchedules, collections, destinations },
+  experiences: { catalogue, bookings, daySchedules, collections, destinations, availability },
   concierge: conciergeData,
   communication: communicationData,
   personalization: personalizationData,

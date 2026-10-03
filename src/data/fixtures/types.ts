@@ -12,6 +12,7 @@ import type {
   Embarkation,
   Experience,
   ExperienceBooking,
+  ExperienceAvailability,
   FlightSegment,
   GuestNotification,
   GuestPrivilege,
@@ -68,6 +69,7 @@ export interface DevExperienceData {
   daySchedules: DaySchedule[];
   collections: DiscoverCollection[];
   destinations: Destination[];
+  availability: ExperienceAvailability[];
 }
 
 /** Opening state of the concierge, including a Suite Ambassador hand-off. */

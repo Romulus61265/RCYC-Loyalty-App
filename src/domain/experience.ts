@@ -3,6 +3,7 @@ import type { ID, ISODateTime, MediaAsset, Money, RequestStatus } from './common
 export type ExperienceCategory =
   | 'dining'
   | 'spa'
+  | 'wellness'
   | 'excursion'
   | 'marina'
   | 'entertainment'
@@ -28,9 +29,29 @@ export interface Experience {
   price?: Money;
   inclusive: boolean;
   privateAvailable: boolean;
+  /**
+   * How it is enjoyed: just the guest's party, a small group, a shared
+   * yacht event, or either on request.
+   */
+  format: ExperienceFormat;
   capacity?: number;
+  /** What the experience includes, e.g. "Private car and driver-guide". */
+  includes?: string[];
   tags: string[];
   hero: MediaAsset;
+}
+
+export type ExperienceFormat = 'private' | 'small-group' | 'shared' | 'private-or-group';
+
+export type AvailabilityStatus = 'available' | 'limited' | 'waitlist' | 'unavailable';
+
+/** Bookable times for an experience across the voyage. */
+export interface ExperienceAvailability {
+  experienceId: ID;
+  status: AvailabilityStatus;
+  slots: { start: ISODateTime; end?: ISODateTime; remaining: number }[];
+  /** e.g. "Two places left", "Opens 72 hours before the port day". */
+  note?: string;
 }
 
 /** A booking the guest holds — dining, spa, excursion, transfer… */

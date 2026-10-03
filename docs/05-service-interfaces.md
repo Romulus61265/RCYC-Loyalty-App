@@ -60,8 +60,31 @@ Reasoning sits behind `ConciergeAIProvider.respond()`. That method returns `{ me
 
 Medical requests go to the `medical` team with `urgent` priority.
 
+### ExperienceService.listAvailability
+`listAvailability(voyageId): Promise<ExperienceAvailability[]>` returns, per experience:
+
+* a status: `available`, `limited`, `waitlist` or `unavailable`;
+* dated slots with remaining places;
+* an optional guest-facing note, such as "Four places left".
+
 ### PersonalizationService
 `getRecommendations(guestId, surface, opts)` and `recordFeedback(guestId, recommendationId, signal)`. Crew-audience opportunities are never returned to the guest app.
+
+**MVP behaviour.** `MockPersonalizationService` serves Home its curated picks. For Discover and Voyage it merges those picks with `MockRecommendationEngine`.
+
+The engine is a transparent, rules-based scorer, **not** a learning system. Weights:
+
+| Signal | Weight |
+|---|---|
+| A loved past moment with overlapping tags (uses the signal's `memory` phrase and the voyage it happened on) | 0.35 + overlap |
+| The occasion this voyage | 0.3–0.5 |
+| The travelling companion's interests | 0.3 |
+| A stated interest | 0.2 |
+| Private style, window table | 0.12–0.15 |
+| First visit to the port | 0.05 |
+| Group formats ashore, after a poorly rated group tour | −0.3 |
+
+The strongest driver becomes the explanation, for example: "Recommended because you enjoyed a private vineyard lunch on Hvar on your Adriatic voyage in 2024." Curated recommendations always win. Production replaces the engine behind the same contract.
 
 ### ScheduleService
 `getCalendar(reservationId): Promise<CalendarDay[]>` returns the party's chronological calendar. It merges:

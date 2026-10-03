@@ -11,11 +11,12 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "verify": "npm run typecheck && npm run lint && npm run check:fixtures && npm run check:home && npm run check:voyage",
+    "verify": "npm run typecheck && npm run lint && npm run check:fixtures && npm run check:home && npm run check:voyage && npm run check:discover",
     "doctor": "npx expo-doctor",
     "check:fixtures": "tsx scripts/check-fixtures.ts",
     "check:home": "tsx scripts/check-home.ts",
-    "check:voyage": "tsx scripts/check-voyage.ts"
+    "check:voyage": "tsx scripts/check-voyage.ts",
+    "check:discover": "tsx scripts/check-discover.ts"
   },
   "dependencies": {
     "@expo-google-fonts/cormorant-garamond": "^0.4.1",

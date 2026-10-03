@@ -2,7 +2,7 @@ import type { ExperienceBooking, ExperienceCategory, ID, ISODateTime } from '@/d
 import type { AvailabilityQuery, ExperienceService } from '@/services/contracts';
 import { data, failIf, isEmptyScenario, latency, mockId, mockNow, notFound } from './support';
 
-const { bookings, catalogue, collections, daySchedules, destinations } = data.experiences;
+const { bookings, catalogue, collections, daySchedules, destinations, availability } = data.experiences;
 
 export class MockExperienceService implements ExperienceService {
   private bookings: ExperienceBooking[] = [...bookings];
@@ -45,6 +45,11 @@ export class MockExperienceService implements ExperienceService {
   getExperience(experienceId: ID) {
     const found = catalogue.find((e) => e.id === experienceId);
     return found ? latency(found) : notFound('Experience', experienceId);
+  }
+
+  listAvailability(_voyageId: ID) {
+    failIf('optional', 'availability');
+    return latency(availability);
   }
 
   listCollections(_voyageId: ID) {

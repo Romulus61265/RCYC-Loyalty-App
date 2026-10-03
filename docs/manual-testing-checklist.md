@@ -106,3 +106,17 @@ On web, append these to the URL. On native, set `EXPO_PUBLIC_MOCK_SCENARIO` or `
 - [ ] **Dining / Spa / Experiences:** reservations grouped by day, plus "Also available to you" where something remains unbooked.
 - [ ] **Documents:** a summary line, and no document numbers anywhere.
 - [ ] States: `?scenario=slow` shows "Gathering your voyage…"; `?scenario=error` shows the calm full-screen message; `?scenario=partial-error&section=calendar` shows an inline error while My Suite still works; `?scenario=empty&section=dining` shows "No dining reservations yet".
+
+## 11 · Discover marketplace
+
+- [ ] Tabs: All · Private Experiences · Destinations · Dining · Wine · Wellness · Spa · Marina · Culture · Shopping · Transportation. `/discover?category=wine` opens Wine.
+- [ ] **Recommended for You** (All, no filters): six experiences, none already reserved or fully booked, each with its own reason.
+- [ ] Every card shows: title, destination, duration, format (private / small group / shared), price and "Included in your voyage" or "At additional cost", availability (with note and next times), reservation status and a reason when recommended. **Details** expands the description and what's included.
+- [ ] Wine → Binissalem: "Recommended because you enjoyed a private vineyard lunch on Hvar on your Adriatic voyage in 2024." · Reserved, Sunday 16 May · 09:30.
+- [ ] Wellness → Tramuntana walk: Fully booked · Ask your concierge. Transportation → Helicopter: Waitlist · On request.
+- [ ] **Refine**: Port (Portofino → Riva and the lighthouse walk), Date (16 May → Palma and aboard), Interests (Wine), **Private only**, Availability (Bookable now hides waitlist and fully booked). The count appears on Refine; **Clear** resets.
+- [ ] An impossible combination (Portofino + Spa & wellbeing) shows "Nothing matches these choices" with **Clear filters**.
+- [ ] Destinations → tap Saint-Tropez → All, filtered to that port (2 experiences).
+- [ ] **Request** or **Ask the concierge** opens Concierge.
+- [ ] Tablet (≥ 760 px): cards in two columns. 320 px: no horizontal scrolling.
+- [ ] `?scenario=partial-error`: cards still listed, with "Availability on request", plus inline messages for recommendations and availability.

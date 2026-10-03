@@ -24,6 +24,11 @@ export interface PersonalizationSignal {
   kind: SignalKind;
   /** What was observed, e.g. "Private sail aboard a classic yacht, Hvar". */
   summary: string;
+  /**
+   * The same moment phrased as a memory, for explanations:
+   * "taking the helm of a classic yacht off Hvar".
+   */
+  memory?: string;
   category?: ExperienceCategory;
   /** Voyage on which it was observed, if any. */
   voyageId?: ID;

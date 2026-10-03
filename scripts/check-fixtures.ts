@@ -114,6 +114,30 @@ check('delivered notifications are in the past; scheduled ones in the future',
 check('alerts expire after they were created', communication.alerts.every((a) => !a.expiresAt || ms(a.expiresAt) > ms(a.createdAt)));
 check('concierge requests were created before "now"', concierge.requests.every((r) => ms(r.createdAt) <= ms(ds.meta.referenceNow) && ms(r.updatedAt) >= ms(r.createdAt)));
 
+// ── 4b · Availability & formats ───────────────────────────────────────────
+const availById = new Map(experiences.availability.map((a) => [a.experienceId, a]));
+check('every experience has availability', experiences.catalogue.every((e) => availById.has(e.id)), experiences.catalogue.filter((e) => !availById.has(e.id)).map((e) => e.id).join(', '));
+check('availability references catalogue experiences', experiences.availability.every((a) => expById.has(a.experienceId)));
+check('fully booked means no slots; waitlist means no open places', experiences.availability.every((a) => (a.status !== 'unavailable' || a.slots.length === 0) && (a.status !== 'waitlist' || a.slots.every((s) => s.remaining === 0))));
+const slotIssues = experiences.availability.flatMap((a) => {
+  const e = expById.get(a.experienceId);
+  const pc = e?.portCallId ? portById.get(e.portCallId) : undefined;
+  if (!pc || pc.type === 'embark' || pc.type === 'disembark' || e?.category === 'transfer') return [];
+  const [from, to] = shoreWindow(pc);
+  // An overnight port offers the same experience on either day.
+  const sameNameDays = itinerary.filter((p) => p.portName === pc.portName);
+  return a.slots.filter((s) => !sameNameDays.some((p) => p.date === s.start.slice(0, 10)) || (sameNameDays.length === 1 && (ms(s.start) < from || ms(s.end ?? s.start) > to))).map((s) => `${a.experienceId}@${s.start}`);
+});
+check('port slots fall on the port day, within the shore window', slotIssues.length === 0, slotIssues.join(', '));
+check('slot end times keep the local +02:00 offset', experiences.availability.every((a) => a.slots.every((s) => !s.end || s.end.endsWith('+02:00'))));
+check('booked experiences have a slot at the booked time (except bespoke)', experiences.bookings.every((b) => {
+  const a = availById.get(b.experienceId);
+  return !a || a.slots.length === 0 || a.slots.some((s) => s.start === b.start) || b.category === 'dining' || b.category === 'transfer';
+}), experiences.bookings.filter((b) => { const a = availById.get(b.experienceId); return a && a.slots.length > 0 && !a.slots.some((s) => s.start === b.start) && b.category !== 'dining' && b.category !== 'transfer'; }).map((b) => b.id).join(', '));
+check('private-format experiences are offered privately', experiences.catalogue.every((e) => e.format !== 'private' || e.privateAvailable));
+check('Wellness category is stocked', experiences.catalogue.filter((e) => e.category === 'wellness').length >= 3);
+check('positive past-voyage signals carry a memory phrase', personalization.signals.filter((s) => s.kind.endsWith('-history') && (s.rating ?? 0) >= 4 && s.voyageId && s.voyageId !== voyage.voyage.id).every((s) => !!s.memory));
+
 // ── 5 · Totals ────────────────────────────────────────────────────────────
 check('3 completed voyages', guest.relationship.voyagesCompleted === 3 && voyage.pastVoyages.length === 3);
 check('nights sailed equals past voyage nights', guest.relationship.nightsSailed === voyage.pastVoyages.reduce((n, v) => n + v.nights, 0));

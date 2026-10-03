@@ -22,6 +22,7 @@ import type {
   ExperienceCategory,
   ConciergeMessage,
   GuestContext,
+  ExperienceAvailability,
   CalendarDay,
   GuestNotification,
   GuestPreferences,
@@ -156,6 +157,8 @@ export interface ExperienceService {
   listCollections(voyageId: ID): Promise<DiscoverCollection[]>;
   listDestinations(voyageId: ID): Promise<Destination[]>;
   checkAvailability(query: AvailabilityQuery): Promise<AvailabilitySlot[]>;
+  /** Availability summary for every experience on the voyage (marketplace view). */
+  listAvailability(voyageId: ID): Promise<ExperienceAvailability[]>;
   /** Bookings are requests: crew may confirm, propose alternatives or decline. */
   requestBooking(reservationId: ID, experienceId: ID, slot: ISODateTime, partySize: number, note?: string): Promise<ExperienceBooking>;
   requestChange(bookingId: ID, change: { start?: ISODateTime; partySize?: number; note?: string }): Promise<ExperienceBooking>;

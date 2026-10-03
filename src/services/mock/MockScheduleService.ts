@@ -10,6 +10,7 @@ import { data, failIf, isEmptyScenario, latency } from './support';
 const KIND_BY_CATEGORY: Record<ExperienceCategory, CalendarEntryKind> = {
   dining: 'dining',
   spa: 'spa',
+  wellness: 'spa',
   excursion: 'excursion',
   culture: 'excursion',
   wine: 'excursion',

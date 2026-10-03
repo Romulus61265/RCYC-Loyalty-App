@@ -501,7 +501,7 @@ export function buildVoyageViewModel(core: VoyageCoreData, optional: VoyageOptio
     title: 'Spa',
     intro: [spaPref.pressure && `${spaPref.pressure[0]!.toUpperCase()}${spaPref.pressure.slice(1)} pressure`, spaPref.preferredTime && `${spaPref.preferredTime} appointments`, spaPref.notes].filter(Boolean).join(' · '),
     booked: groupByDay(bookings.filter((b) => b.category === 'spa'), now),
-    available: availableIn(['spa']),
+    available: availableIn(['spa', 'wellness']),
   };
   const experiences: CategorySectionModel = {
     title: 'Experiences',

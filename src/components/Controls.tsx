@@ -87,6 +87,27 @@ export function SegmentedTabs<T extends string>({ options, value, onChange }: { 
   );
 }
 
+/** Selectable pill for filters. Announces its selected state. */
+export function Chip({ label, selected, onPress, hint }: { label: string; selected: boolean; onPress: () => void; hint?: string }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      aria-selected={selected}
+      accessibilityLabel={hint ? `${label}, ${hint}` : label}
+      style={[styles.chip, selected && styles.chipSelected]}
+    >
+      <Caption color={selected ? colors.textInverse : colors.textPrimary}>{label}</Caption>
+      {hint ? (
+        <Caption color={selected ? colors.textInverseMuted : colors.textMuted} style={{ fontSize: 11, lineHeight: 14 }}>
+          {hint}
+        </Caption>
+      ) : null}
+    </Pressable>
+  );
+}
+
 /** Journey alert — calm wording; shows what has already been handled. */
 export function AlertNote({ alert, onDismiss, onAction }: { alert: JourneyAlert; onDismiss?: () => void; onAction?: () => void }) {
   const accent = alert.severity === 'urgent' ? colors.attention : alert.severity === 'action' ? colors.accent : colors.calm;
@@ -124,6 +145,8 @@ const styles = StyleSheet.create({
   buttonQuiet: { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderStrong },
   buttonInverse: { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.textInverseMuted },
   link: { flexDirection: 'row', alignItems: 'center' },
+  chip: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: radii.pill, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderStrong, backgroundColor: colors.surface, alignItems: 'center' },
+  chipSelected: { backgroundColor: colors.surfaceInverse, borderColor: colors.surfaceInverse },
   segments: { paddingHorizontal: spacing.gutter, gap: spacing.lg },
   segment: { paddingTop: spacing.xs },
   segmentRule: { height: 1, marginTop: spacing.xs, backgroundColor: 'transparent' },

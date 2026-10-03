@@ -11,6 +11,7 @@ import type {
 } from '@/services/contracts';
 import { ServiceError } from '@/services/contracts';
 import { logger } from '@/core/logging';
+import { mergedRecommendations } from './MockRecommendationEngine';
 import { data, failIf, isEmptyScenario, latency, mockId, mockNow } from './support';
 
 const LEAD_GUEST_ID = data.guest.profile.guest.id;
@@ -76,14 +77,14 @@ export class MockPersonalizationService implements PersonalizationService {
   getRecommendations(_guestId: ID, surface: RecommendationSurface, opts?: { limit?: number }) {
     failIf('optional', 'recommendations');
     if (isEmptyScenario()) return latency<Recommendation[]>([]);
-    // Guest app must never receive crew-only opportunities.
-    const list = recommendations
-      .filter((r) => r.audience === 'guest')
-      // Discover and Voyage draw on every guest recommendation; other surfaces on their own.
-      .filter((r) => surface === 'discover' || surface === 'voyage' || r.surface === surface)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, opts?.limit ?? 3);
-    return latency(list);
+    const curated = recommendations.filter((r) => r.audience === 'guest');
+    // Home keeps its three curated picks; Discover and Voyage use the rules
+    // engine merged with the curated set, so every experience can be explained.
+    const list =
+      surface === 'discover' || surface === 'voyage'
+        ? mergedRecommendations(curated)
+        : curated.filter((r) => r.surface === surface).sort((a, b) => b.score - a.score);
+    return latency(list.slice(0, opts?.limit ?? 3));
   }
   async recordFeedback() {
     await latency(undefined, 50);
