@@ -71,5 +71,7 @@ export interface JourneyAlert {
   handled?: string;
   action?: { label: string; route: string };
   createdAt: ISODateTime;
+  /** After this moment the alert is no longer relevant and is not shown. */
+  expiresAt?: ISODateTime;
   acknowledged: boolean;
 }

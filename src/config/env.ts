@@ -21,6 +21,7 @@ const raw = {
   apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
   logLevel: process.env.EXPO_PUBLIC_LOG_LEVEL,
   demoNow: process.env.EXPO_PUBLIC_DEMO_NOW,
+  mockScenario: process.env.EXPO_PUBLIC_MOCK_SCENARIO,
 };
 
 function pick<T extends string>(value: string | undefined, allowed: readonly T[], fallback: T): T {
@@ -38,6 +39,8 @@ export const env = {
   logLevel: pick(raw.logLevel, ['debug', 'info', 'warn', 'error'] as const, appEnv === 'production' ? 'warn' : 'debug'),
   /** Mock-only: pin "now" to demo a journey phase. Empty = the dataset's reference moment. */
   demoNow: raw.demoNow ?? '',
+  /** Mock-only: force a data condition to exercise empty / loading / error states. */
+  mockScenario: pick(raw.mockScenario, ['default', 'empty', 'slow', 'error', 'partial-error'] as const, 'default'),
 } as const;
 
 export type Env = typeof env;

@@ -1,6 +1,6 @@
 import type { ID } from '@/domain';
 import type { LoyaltyService } from '@/services/contracts';
-import { data, latency } from './support';
+import { data, failIf, latency } from './support';
 
 const { membership: loyaltyMembership, relationship: guestRelationship, privileges } = data.guest;
 
@@ -23,6 +23,7 @@ export class MockLoyaltyService implements LoyaltyService {
   }
 
   async getRecognition(guestId: ID, voyageId?: ID) {
+    failIf('core', 'loyalty recognition');
     const [membership, relationship, privs] = await Promise.all([
       this.getMembership(guestId),
       this.getRelationship(guestId),

@@ -53,3 +53,23 @@ export function formatMoney(amountMinor: number, currency: string): string {
   const symbol = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'USD' ? '$' : `${currency} `;
   return `${symbol}${Math.round(amountMinor / 100).toLocaleString('en-GB')}`;
 }
+
+/** Offset in minutes encoded in an ISO string ("+02:00" → 120); 0 for "Z". */
+function offsetMinutes(iso: string): number {
+  const m = /([+-])(\d{2}):(\d{2})$/.exec(iso);
+  return m ? (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3])) : 0;
+}
+
+/**
+ * "Today", "Tomorrow" or "Saturday 15 May", judged in the event's own
+ * time-zone (a 20:30 dinner in Barcelona is "today" in Barcelona).
+ */
+export function relativeDay(iso: string, now: Date): string {
+  const shift = offsetMinutes(iso) * 60_000;
+  const today = new Date(now.getTime() + shift).toISOString().slice(0, 10);
+  const tomorrow = new Date(now.getTime() + shift + 86_400_000).toISOString().slice(0, 10);
+  const day = iso.slice(0, 10);
+  if (day === today) return 'Today';
+  if (day === tomorrow) return 'Tomorrow';
+  return formatLongDate(iso);
+}

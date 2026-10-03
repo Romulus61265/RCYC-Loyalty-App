@@ -1,4 +1,4 @@
-import type { GuestNotification, ID, JourneyAlert, JourneyEvent, RecommendationSurface } from '@/domain';
+import type { GuestNotification, ID, JourneyAlert, JourneyEvent, Recommendation, RecommendationSurface } from '@/domain';
 import type {
   AuditEntry,
   AuditService,
@@ -11,7 +11,7 @@ import type {
 } from '@/services/contracts';
 import { ServiceError } from '@/services/contracts';
 import { logger } from '@/core/logging';
-import { data, latency, mockId, mockNow } from './support';
+import { data, failIf, isEmptyScenario, latency, mockId, mockNow } from './support';
 
 const LEAD_GUEST_ID = data.guest.profile.guest.id;
 const guestProfile = data.guest.profile;
@@ -74,6 +74,8 @@ export class MockGuestProfileService implements GuestProfileService {
 
 export class MockPersonalizationService implements PersonalizationService {
   getRecommendations(_guestId: ID, surface: RecommendationSurface, opts?: { limit?: number }) {
+    failIf('optional', 'recommendations');
+    if (isEmptyScenario()) return latency<Recommendation[]>([]);
     // Guest app must never receive crew-only opportunities.
     const list = recommendations
       .filter((r) => r.audience === 'guest')
@@ -91,6 +93,8 @@ export class MockJourneyEventService implements JourneyEventService {
   private alerts: JourneyAlert[] = [...alerts];
 
   listAlerts(_reservationId: ID) {
+    failIf('optional', 'alerts');
+    if (isEmptyScenario()) return latency<JourneyAlert[]>([]);
     return latency(this.alerts.filter((a) => !a.acknowledged));
   }
   listNotifications(guestId: ID, opts?: { includeScheduled?: boolean; now?: Date }): Promise<GuestNotification[]> {

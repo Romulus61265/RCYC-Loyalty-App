@@ -1,9 +1,12 @@
 import type { ReactNode } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { guestMessage } from '@/core/errors';
 import { colors, elevation, radii, spacing } from '@/theme';
 import { Caption, Eyebrow, Text, Title } from './Typography';
+
+/** Maximum width of the reading column; wider screens centre it. */
+export const CONTENT_MAX_WIDTH = 720;
 
 /** Scrollable page with generous gutters. `edgeToEdge` lets a hero bleed under the status bar. */
 export function Screen({ children, edgeToEdge = false }: { children: ReactNode; edgeToEdge?: boolean }) {
@@ -52,7 +55,7 @@ export function Section({ eyebrow, title, children, action, style }: { eyebrow?:
   );
 }
 
-export function Card({ children, style, onPress, accessibilityLabel }: { children: ReactNode; style?: ViewStyle; onPress?: () => void; accessibilityLabel?: string }) {
+export function Card({ children, style, onPress, accessibilityLabel }: { children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; accessibilityLabel?: string }) {
   if (onPress) {
     return (
       <Pressable
@@ -123,8 +126,9 @@ export function ErrorState({ error, onRetry }: { error?: unknown; onRetry?: () =
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  pageHeader: { paddingHorizontal: spacing.gutter, paddingBottom: spacing.lg },
-  section: { paddingHorizontal: spacing.gutter, marginTop: spacing.xl },
+  // Centred reading column: comfortable line lengths on tablets and web.
+  pageHeader: { paddingHorizontal: spacing.gutter, paddingBottom: spacing.lg, width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center' },
+  section: { paddingHorizontal: spacing.gutter, marginTop: spacing.xl, width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center' },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: spacing.md },
   card: {
     backgroundColor: colors.surfaceElevated,

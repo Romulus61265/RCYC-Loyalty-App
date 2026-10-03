@@ -1,6 +1,6 @@
 import type { ID, JourneyPhase } from '@/domain';
 import type { VoyageService } from '@/services/contracts';
-import { data, latency, mockNow, notFound } from './support';
+import { data, failIf, latency, mockNow, notFound } from './support';
 
 const { embarkation, pastVoyages, reservation, suite, documents: travelDocuments, flights, voyage, yacht } = data.voyage;
 
@@ -41,6 +41,7 @@ export class MockVoyageService implements VoyageService {
   }
 
   async getOverview(reservationId: ID) {
+    failIf('core', 'voyage overview');
     if (reservationId !== reservation.id) notFound('Reservation', reservationId);
     return latency({ reservation, voyage, yacht, suite, embarkation, documents: travelDocuments, flights });
   }

@@ -1,6 +1,6 @@
 import type { ExperienceBooking, ExperienceCategory, ID, ISODateTime } from '@/domain';
 import type { AvailabilityQuery, ExperienceService } from '@/services/contracts';
-import { data, latency, mockId, mockNow, notFound } from './support';
+import { data, failIf, isEmptyScenario, latency, mockId, mockNow, notFound } from './support';
 
 const { bookings, catalogue, collections, daySchedules, destinations } = data.experiences;
 
@@ -8,6 +8,8 @@ export class MockExperienceService implements ExperienceService {
   private bookings: ExperienceBooking[] = [...bookings];
 
   listBookings(reservationId: ID, filter?: { category?: ExperienceCategory }) {
+    failIf('optional', 'bookings');
+    if (isEmptyScenario()) return latency<ExperienceBooking[]>([]);
     return latency(
       this.bookings
         .filter((b) => b.reservationId === reservationId && b.status !== 'cancelled')
@@ -27,6 +29,8 @@ export class MockExperienceService implements ExperienceService {
   }
 
   listDaySchedules(_reservationId: ID) {
+    failIf('optional', 'day schedules');
+    if (isEmptyScenario()) return latency(daySchedules.map((d) => ({ ...d, items: [] })));
     return latency(daySchedules);
   }
 

@@ -27,7 +27,7 @@ module.exports = defineConfig([
     },
   },
   {
-    files: ['src/app/**/*.{ts,tsx}', 'src/components/**/*.{ts,tsx}', 'src/hooks/**/*.{ts,tsx}'],
+    files: ['src/app/**/*.{ts,tsx}', 'src/components/**/*.{ts,tsx}', 'src/hooks/**/*.{ts,tsx}', 'src/features/**/*.{ts,tsx}'],
     rules: { 'no-restricted-imports': ['error', presentationBoundary] },
   },
   {

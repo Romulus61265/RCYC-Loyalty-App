@@ -77,3 +77,20 @@ On every screen, check for:
 - [ ] iOS: portrait only, and the status bar is dark on light backgrounds.
 - [ ] Android: the adaptive icon shows on an ivory background, and there's no edge-to-edge overlap with the system bars.
 - [ ] Web, 390 px wide: no horizontal page scroll.
+
+## 9 · Home dashboard states
+
+On web, append these to the URL. On native, set `EXPO_PUBLIC_MOCK_SCENARIO` or `EXPO_PUBLIC_DEMO_NOW` and restart with `--clear`.
+
+| URL | Expect |
+|---|---|
+| `/` | "3 days until Barcelona", Prepare step highlighted, two alerts needing action, arrival (transfer + embarkation), dining / ashore / spa, yacht + suite, 3 recommendations, concierge invitation |
+| `/?scenario=slow` | Skeleton matching the layout, then content settles in place |
+| `/?scenario=empty` | "Nothing needs your attention", "Nothing is scheduled just yet", a hint in each arranged slot, the recommendation placeholder; hero, embarkation and suite intact |
+| `/?scenario=error` | Calm full-screen "We couldn't reach the yacht just now" with Try again; tab bar still works |
+| `/?scenario=partial-error` | Hero, recognition, embarkation, yacht and suite render; Attention, Arranged and Chosen-for-you each show an inline message; no "Nothing is scheduled" claim |
+| `/?now=2027-05-20T10:00:00%2B02:00` | "Day 6 · Monte Carlo", Sail step highlighted, "Next today: Couples terrace ritual", "Your journey home" with AA 7419, pre-voyage alerts gone |
+
+- [ ] Rotate a tablet, or widen the browser past 700 px: yacht and suite sit side by side, and the column stays centred (max 720 px).
+- [ ] At 320 px wide, journey step labels stay on one line and nothing scrolls horizontally.
+- [ ] With "Reduce Motion" on, skeleton blocks don't pulse.

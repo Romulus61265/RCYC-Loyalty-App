@@ -29,6 +29,12 @@ RCYC-Loyalty-App/
 │   │   ├── errors/               AppError taxonomy, toAppError, guestMessage, global handlers
 │   │   └── logging/              Logger interface, createLogger, Console/Memory/Remote sinks
 │   ├── data/fixtures/            Fictional guest, voyage & experience data (mock only)
+│   ├── features/
+│   │   └── home/                 Home dashboard feature
+│   │       ├── homeModel.ts      Pure view model: journey-aware decisions (tested by scripts/check-home.ts)
+│   │       ├── useHomeDashboard.ts  The only service access for Home; per-section failure isolation
+│   │       ├── HomeScreen.tsx    Composition and reading order
+│   │       └── components/       HomeHero, HomeSections, HomeSkeleton (presentational)
 │   ├── domain/                   Pure TypeScript domain model — no React, no I/O
 │   ├── hooks/
 │   │   ├── useAsync.ts           Minimal data hook (swappable for TanStack Query)
@@ -75,7 +81,8 @@ flowchart TD
   registry --> remote
 ```
 
-* `src/app` and `src/components` **must not** import from `services/mock`, `services/remote` or `data/fixtures`.
+* `src/app`, `src/features`, `src/components` and `src/hooks` **must not** import from `services/mock`, `services/remote` or `data/fixtures`.
+* A feature follows the same split as Home: a hook for data access, a pure view model for decisions, and presentational components.
 * `src/domain` has no dependencies.
 * Only `registry.ts` knows which implementations exist.
 

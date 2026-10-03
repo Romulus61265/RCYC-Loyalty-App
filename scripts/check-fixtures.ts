@@ -111,6 +111,7 @@ check('embarkation window is after the private morning', !!firstTransfer?.end &&
 check('reference "now" is before embarkation', ms(ds.meta.referenceNow) < ms(voyage.embarkation.arrivalWindowStart));
 check('delivered notifications are in the past; scheduled ones in the future',
   communication.notifications.every((n) => (n.deliveredAt ? ms(n.deliveredAt) <= ms(ds.meta.referenceNow) : ms(n.scheduledFor) > ms(ds.meta.referenceNow))));
+check('alerts expire after they were created', communication.alerts.every((a) => !a.expiresAt || ms(a.expiresAt) > ms(a.createdAt)));
 check('concierge requests were created before "now"', concierge.requests.every((r) => ms(r.createdAt) <= ms(ds.meta.referenceNow) && ms(r.updatedAt) >= ms(r.createdAt)));
 
 // ── 5 · Totals ────────────────────────────────────────────────────────────
