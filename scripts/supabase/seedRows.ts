@@ -76,6 +76,9 @@ const HOME_ZONE = 'America/New_York'; // Miami
 const AIRPORT_ZONE: Record<string, string> = { MIA: 'America/New_York', BCN: 'Europe/Madrid', FCO: 'Europe/Rome' };
 
 /** The zone the guest is in on a local date: the port's during the voyage, home otherwise. */
+/** Engine keys embed fixture IDs ("request:dev_srq_bridge:in_progress"): seed them with UUIDs. */
+const keyIds = (key: string) => key.replace(/dev_[a-z0-9_]+/g, (id) => uuidFor(id));
+
 export function zoneOn(iso: string): string {
   const date = iso.slice(0, 10);
   return d.voyage.voyage.itinerary.find((p) => p.date === date)?.timeZone ?? HOME_ZONE;
@@ -277,6 +280,7 @@ export function buildSeedRows(): TableRows[] {
     reservation_id: i.kind === 'booking' || i.kind === 'recommendation' ? uuidFor(reservationId) : null,
     day: s.dayNumber, starts_at: i.start, ends_at: i.end, title: i.title, location: i.location, kind: i.kind,
     booking_id: i.bookingId ? uuidFor(i.bookingId) : null, category: i.category, time_zone: zoneOn(i.start),
+    previous_starts_at: i.previousStart, changed_at: i.changedAt,
   }))));
 
   // Concierge
@@ -320,7 +324,10 @@ export function buildSeedRows(): TableRows[] {
     id: uuidFor(n.id), guest_id: uuidFor(n.guestId), reservation_id: n.reservationId ? uuidFor(n.reservationId) : null,
     channel: n.channel, category: n.category, title: n.title, body: n.body, deep_link: n.deepLink, scheduled_for: n.scheduledFor,
     delivered_at: n.deliveredAt, read_at: n.readAt, bypass_quiet_hours: n.bypassQuietHours, time_zone: zoneOn(n.scheduledFor),
+    type: n.type, dedupe_key: n.dedupeKey ? keyIds(n.dedupeKey) : null,
   })));
+  // Contextual notifications the guest had already read; keys embed record IDs.
+  add('public.notification_receipts', d.communication.readNotificationKeys.map((k) => ({ guest_id: uuidFor(guest.id), notification_key: keyIds(k), read_at: d.meta.referenceNow })));
 
   // Personalization: curated picks, crew opportunities, and the rules
   // scorer's output materialised server-side (as a batch job would).

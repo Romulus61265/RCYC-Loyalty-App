@@ -6,5 +6,6 @@ export * from './experience';
 export * from './concierge';
 export * from './requests';
 export * from './celebrations';
+export * from './notifications';
 export * from './events';
 export * from './personalization';

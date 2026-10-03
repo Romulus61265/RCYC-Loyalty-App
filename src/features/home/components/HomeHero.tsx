@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Eyebrow, MediaFrame, Text } from '@/components';
 import { CONTENT_MAX_WIDTH } from '@/components/Layout';
@@ -8,12 +9,17 @@ import type { HeroModel, JourneyStep } from '../homeModel';
  * Answers "Where am I in my journey?": greeting, the phase in words, the
  * headline (countdown or today's port) and a quiet five-step journey line.
  */
-export function HomeHero({ hero, topInset }: { hero: HeroModel; topInset: number }) {
+export function HomeHero({ hero, topInset, accessory }: { hero: HeroModel; topInset: number; accessory?: ReactNode }) {
   return (
     <MediaFrame media={hero.media} height={460 + topInset} rounded={false}>
       <View style={[styles.content, { paddingTop: topInset + spacing.lg }]}>
         <View style={styles.column}>
-          <Eyebrow color={colors.textInverseMuted}>{hero.greeting}</Eyebrow>
+          <View style={styles.top}>
+            <Eyebrow color={colors.textInverseMuted} style={{ flex: 1 }}>
+              {hero.greeting}
+            </Eyebrow>
+            {accessory}
+          </View>
           <View style={{ flex: 1 }} />
           <Text variant="subtitle" color={colors.accentSoft}>
             {hero.phaseLabel}
@@ -63,6 +69,7 @@ export function JourneySteps({ steps }: { steps: JourneyStep[] }) {
 }
 
 const styles = StyleSheet.create({
+  top: { flexDirection: 'row', alignItems: 'center' },
   content: { flex: 1, paddingHorizontal: spacing.gutter, paddingBottom: spacing.lg },
   column: { flex: 1, width: '100%', maxWidth: CONTENT_MAX_WIDTH - spacing.gutter * 2, alignSelf: 'center' },
   steps: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.lg },

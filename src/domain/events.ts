@@ -1,4 +1,5 @@
 import type { ID, ISODateTime } from './common';
+import type { NotificationType } from './notifications';
 
 /**
  * Journey events — the service-continuity backbone. Produced by enterprise
@@ -58,6 +59,10 @@ export interface GuestNotification {
   readAt?: ISODateTime;
   /** Respect quiet hours unless urgent. */
   bypassQuietHours: boolean;
+  /** The guest-facing type (derived from the category when absent). */
+  type?: NotificationType;
+  /** The engine key it was sent for (contextual notifications are never sent twice). */
+  dedupeKey?: string;
 }
 
 /** Guest-facing projection of an event. Calm wording, clear next step. */

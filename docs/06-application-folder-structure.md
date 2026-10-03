@@ -33,6 +33,7 @@ RCYC-Loyalty-App/
 │   ├── data/fixtures/            Fictional guest, voyage & experience data (mock only)
 │   ├── features/
 │   │   ├── auth/                 Sign-in: useSignIn (e-mail code state machine) + SignInScreen
+│   │   ├── notifications/        Inbox (/notifications) and settings (/notifications/settings): notificationsModel, useNotifications
 │   │   ├── celebrations/         A celebration during the voyage (/celebration/[key]): message, ideas, approval panel
 │   │   ├── requests/             Service requests (/requests, /requests/new, /requests/[id]): requestsModel, useRequests, screens
 │   │   ├── concierge/            Concierge (?view=requests)
@@ -80,6 +81,8 @@ RCYC-Loyalty-App/
 │   │   ├── repositories/         PreferencesRepository (+ Local), KeyValueStore (+ AsyncStorage, memory, resilient)
 │   │   ├── profile/              RepositoryGuestProfileService: guest record source + preferences repository
 │   │   ├── personalization/      buildInput: domain objects → rules-engine inputs
+│   │   ├── notifications/        buildNotifyInput, ComposedNotificationService, NotificationStateStore (memory)
+│   │   ├── push/                 PushRegistrar (device side of push; Expo adapter designed in docs/13), routeFromPush
 │   │   ├── occasions/            Celebration detectors, playbooks and planner; ComposedOccasionService (approval)
 │   │   ├── registry.ts           Composition root: validate env → mode → implementations
 │   │   ├── instrument.ts         Logs every service call's failures & slow responses
@@ -95,6 +98,9 @@ RCYC-Loyalty-App/
     │   ├── concierge-respond/    Endpoint: JWT → clients + provider → pipeline
     │   ├── journey-events/       HMAC webhook ingest → alert projection
     │   ├── _shared/personalization/  Rules engine rules-v1 (shared with the app's mock mode)
+    │   ├── _shared/notifications/    Notification engine, dispatcher, Expo/dry-run senders (shared with the app)
+    │   ├── _shared/requests/         Request status, timeline and routing rules (shared with the app)
+    │   ├── notifications-dispatch/   Scheduled push dispatch (cron secret; dry-run until switched on)
     │   └── personalization-next-best/  Endpoint: authorise → load inputs → engine → guest-safe output
     └── tests/                    Local stubs + SQL smoke tests (RLS, preferences, integration)
 scripts/

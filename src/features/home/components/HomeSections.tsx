@@ -2,7 +2,7 @@
  * Presentational Home sections. Each receives a slice of HomeViewModel and
  * callbacks; none fetches data or knows about services.
  */
-import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import type { ExperienceCategory, JourneyAlert } from '@/domain';
@@ -380,5 +380,21 @@ export function CelebrationCard({ card, onOpen }: { card: { eyebrow: string; tit
         </View>
       </Card>
     </Section>
+  );
+}
+
+/** The bell in the hero: notifications, with the unread count. */
+export function NotificationBell({ unread, onOpen }: { unread: number; onOpen: () => void }) {
+  return (
+    <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={unread ? `Notifications, ${unread} unread` : 'Notifications'} hitSlop={12} style={{ padding: 4 }}>
+      <Ionicons name="notifications-outline" size={22} color={colors.textInverse} />
+      {unread ? (
+        <View style={{ position: 'absolute', top: -2, right: -4, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
+          <Caption color={colors.textInverse} style={{ fontSize: 11, lineHeight: 14 }}>
+            {unread > 9 ? '9+' : String(unread)}
+          </Caption>
+        </View>
+      ) : null}
+    </Pressable>
   );
 }

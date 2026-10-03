@@ -86,6 +86,8 @@ export interface DevConciergeData {
 export interface DevCommunicationData {
   alerts: JourneyAlert[];
   notifications: GuestNotification[];
+  /** Contextual notification keys already read (seeded read state). */
+  readNotificationKeys: string[];
 }
 
 export interface DevPersonalizationData {

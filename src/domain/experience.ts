@@ -80,6 +80,9 @@ export interface ScheduleItem {
   kind: 'booking' | 'ship-event' | 'port' | 'recommendation';
   bookingId?: ID;
   category?: ExperienceCategory;
+  /** When its time was moved: where it was, and when the change was made. */
+  previousStart?: ISODateTime;
+  changedAt?: ISODateTime;
 }
 
 export interface DaySchedule {

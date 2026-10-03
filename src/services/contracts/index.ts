@@ -47,6 +47,12 @@ import type {
   CelebrationApprovalResult,
   CelebrationPlan,
   GuestServiceRequest,
+  InboxNotification,
+  NotificationPreferences,
+  NotificationSettings,
+  NotificationType,
+  PushDevice,
+  UpcomingNotification,
   NewServiceRequest,
   ServiceRequest,
   ServiceRequestType,
@@ -60,6 +66,7 @@ import type {
   TravelCompanion,
 } from '@/domain';
 import { AppError } from '@/core/errors/AppError';
+import type { PushRegistrar } from '@/services/push/PushRegistrar';
 
 export type ServiceErrorCode =
   | 'unauthenticated'
@@ -272,6 +279,34 @@ export interface OccasionService {
   approveStep(guestId: ID, reservationId: ID, celebrationKey: string, approval: CelebrationApproval): Promise<CelebrationApprovalResult>;
 }
 
+// ─── Notifications ─────────────────────────────────────────────────────────
+
+/**
+ * Contextual notifications (information, reminder, service update,
+ * reservation, itinerary change, urgent, recommendation), built from the
+ * guest's own data by the shared engine and merged with what the server has
+ * sent. Preferences decide which types push, which stay in the inbox, and
+ * which are off; urgent always pushes. Quiet hours hold pushes that can wait.
+ */
+export interface NotificationService {
+  /** The inbox: what is due now, newest first. */
+  list(guestId: ID, reservationId: ID, opts?: { type?: NotificationType }): Promise<InboxNotification[]>;
+  /** Pushes still to come, soonest first. */
+  upcoming(guestId: ID, reservationId: ID, opts?: { limit?: number }): Promise<UpcomingNotification[]>;
+  unreadCount(guestId: ID, reservationId: ID): Promise<number>;
+  markRead(guestId: ID, keys: string[]): Promise<void>;
+  markAllRead(guestId: ID, reservationId: ID): Promise<void>;
+  getSettings(guestId: ID): Promise<NotificationSettings>;
+  /** Urgent cannot be switched off or kept out of push. */
+  updatePreferences(guestId: ID, patch: Partial<NotificationPreferences>): Promise<NotificationSettings>;
+  /** Push devices (Expo push tokens). Tokens are stored server-side only. */
+  registerDevice(guestId: ID, registration: { token: string; platform: PushDevice['platform']; name?: string }): Promise<PushDevice>;
+  listDevices(guestId: ID): Promise<PushDevice[]>;
+  unregisterDevice(guestId: ID, deviceId: ID): Promise<void>;
+  /** Something changed (a request moved on, an alert arrived): reload. */
+  subscribe(guestId: ID, reservationId: ID, listener: () => void): Unsubscribe;
+}
+
 // ─── Journey events / service continuity ───────────────────────────────────
 
 // ─── Schedule (combined guest calendar) ───────────────────────────────────
@@ -327,6 +362,9 @@ export interface Services {
   personalization: PersonalizationService;
   requests: ServiceRequestService;
   occasions: OccasionService;
+  notifications: NotificationService;
+  /** The device side of push (token and permission). */
+  push: PushRegistrar;
   journeyEvents: JourneyEventService;
   schedule: ScheduleService;
   audit: AuditService;

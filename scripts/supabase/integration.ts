@@ -35,6 +35,10 @@ import { DEFAULT_CONFIG, handleConcierge } from '../../supabase/functions/_share
 import { MockLLMProvider } from '../../supabase/functions/_shared/concierge/providers/mock.ts';
 import { callerFor, supabasePorts } from '../../supabase/functions/_shared/concierge/supabasePorts.ts';
 import { handleNextBest } from '../../supabase/functions/_shared/personalization/handler.ts';
+import { dispatch, DryRunPushSender } from '../../supabase/functions/_shared/notifications/dispatch.ts';
+import { supabaseDispatchPorts } from '../../supabase/functions/_shared/notifications/supabaseDispatch.ts';
+import { ComposedNotificationService } from '@/services/notifications/ComposedNotificationService';
+import { MemoryNotificationState } from '@/services/notifications/state';
 
 const PGRST_URL = process.env.PGRST_URL;
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -268,6 +272,60 @@ async function main() {
   const home = await sb.personalization.getRecommendations(g, 'home');
   await sb.personalization.recordFeedback(g, home[0]!.id, 'viewed');
   check('feedback recorded', true);
+
+  // ── Notifications (before anything below changes the data) ──
+  {
+    const service = createClient(gw.url, jwt({ role: 'service_role' }), { auth: { persistSession: false } });
+    const voyageMock = new MockVoyageService();
+    const mockNotifications = new ComposedNotificationService(
+      { profile: mock.profile, voyage: voyageMock, experience: new MockExperienceService(), requests: new MockServiceRequestService({ voyage: voyageMock }), journeyEvents: new MockJourneyEventService(), personalization: new MockPersonalizationService(), clock },
+      new MemoryNotificationState({ [G]: d.communication.readNotificationKeys }),
+    );
+    const served = toFixtureIds(await sb.notifications.list(g, r));
+    const local = await mockNotifications.list(G, R);
+    same('notifications: the inbox matches (same engine, same data)', served.map((n) => [n.key, n.type, n.title, n.at, n.read]), local.map((n) => [n.key, n.type, n.title, n.at, n.read]));
+    same('notifications: what is coming up matches', toFixtureIds(await sb.notifications.upcoming(g, r, { limit: 5 })), await mockNotifications.upcoming(G, R, { limit: 5 }));
+    const unread = await sb.notifications.unreadCount(g, r);
+    const first = (await sb.notifications.list(g, r)).find((n) => !n.read)!;
+    await sb.notifications.markRead(g, [first.key]);
+    check('notifications: read state is kept', (await sb.notifications.unreadCount(g, r)) === unread - 1);
+    await sb.notifications.markRead(g, [first.key]);
+    check('notifications: reading twice is harmless', (await sb.notifications.unreadCount(g, r)) === unread - 1);
+    const otherDbN = clientFor(gw.url, OTHER_USER_ID);
+    const otherN = createSupabaseServices(() => otherDbN, clock);
+    const theirReceipts = await otherDbN.from('notification_receipts').select('notification_key');
+    check('notifications: another guest sees no receipts', (theirReceipts.data ?? []).length === 0, theirReceipts);
+    const forged = await otherDbN.from('notification_receipts').insert({ guest_id: g, notification_key: 'x' });
+    check('notifications: … nor writes them', Boolean(forged.error), forged.error);
+
+    const token = 'ExponentPushToken[integration0001]';
+    const device = await sb.notifications.registerDevice(g, { token, platform: 'ios', name: 'iPhone' });
+    check('push: device registered', device.platform === 'ios' && (await sb.notifications.listDevices(g)).length === 1);
+    check('push: re-registering is the same device', (await sb.notifications.registerDevice(g, { token, platform: 'ios' })).id === device.id && (await sb.notifications.listDevices(g)).length === 1);
+    const tokenRead = await guestDb.from('push_devices').select('token');
+    check('push: the token cannot be read back', Boolean(tokenRead.error), tokenRead);
+    const direct = await guestDb.from('push_devices').insert({ guest_id: g, user_id: GUEST_USER_ID, token: 'ExponentPushToken[forgedforged01]', platform: 'ios' });
+    check('push: devices only through registration', Boolean(direct.error), direct.error);
+    check('push: another guest sees no devices', (await otherN.notifications.listDevices(uuidFor('dev_guest_other')).catch(() => [])).length === 0);
+    check('push: bad tokens refused', await rejects(sb.notifications.registerDevice(g, { token: 'not-a-token', platform: 'ios' }), 'validation'));
+
+    // The dispatcher, as the scheduled Edge Function runs it (dry run).
+    const window = { since: new Date('2027-05-15T09:30:00+02:00'), until: new Date('2027-05-15T09:45:00+02:00') };
+    const dry = new DryRunPushSender();
+    const run1 = await dispatch(supabaseDispatchPorts(service), dry, window);
+    check('push: the driver and the 09:45 reminder go out', run1.sent === 2 && dry.sent.every((m) => m.to === token) && dry.sent.some((m) => m.title === 'Your transfer driver will arrive in 20 minutes.'), run1);
+    const rowsSent = (await service.from('notifications').select('type, dedupe_key, push_status, channel, time_zone').eq('guest_id', g).not('dedupe_key', 'is', null)).data as { type: string; dedupe_key: string; push_status: string; channel: string; time_zone: string }[] | null;
+    check('push: each recorded once, with its key, type and zone', (rowsSent ?? []).filter((x) => x.push_status === 'dry-run').length >= 2 && (rowsSent ?? []).some((x) => x.type === 'service-update' && x.channel === 'push' && x.time_zone === 'Europe/Madrid'), rowsSent);
+    const run2 = await dispatch(supabaseDispatchPorts(service), dry, window);
+    check('push: a second run sends nothing again (sent ones are now stored)', run2.sent === 0 && run2.due === 0 && dry.sent.length === 2, run2);
+    const later = createSupabaseServices(() => guestDb, { now: () => new Date('2027-05-15T09:50:00+02:00') });
+    const inboxAfter = toFixtureIds(await later.notifications.list(g, r));
+    check('push: the inbox shows the sent notification once', inboxAfter.filter((n) => n.key === 'transfer:dev_bkg_transfer_bcn:arriving').length === 1);
+    const deadSender = { name: 'expo', send: async (m: { to: string }[]) => m.map(() => ({ status: 'error' as const, message: 'gone', error: 'DeviceNotRegistered' })) };
+    await dispatch(supabaseDispatchPorts(service), deadSender, { since: new Date('2027-05-15T18:15:00+02:00'), until: new Date('2027-05-15T18:30:00+02:00') });
+    const deviceRow = (await service.from('push_devices').select('enabled, disabled_reason').eq('token', token).maybeSingle()).data as { enabled: boolean; disabled_reason: string } | null;
+    check('push: a dead token is disabled', deviceRow?.enabled === false && deviceRow.disabled_reason === 'DeviceNotRegistered', deviceRow);
+  }
 
   // ── Concierge ──
   const convo = await sb.concierge.openConversation(r);
@@ -517,6 +575,18 @@ async function main() {
     check('occasions: approved → a suite request, tagged with its step', (await count()) === n + 1 && row?.category === 'suite' && row.occasion_step === amenity.id && row.status === 'received' && /White flowers/.test(String(row.details)), row);
     check('occasions: the plan now shows it requested', (await sb.occasions.getPlan(g, r, p!.celebration.key)).steps.find((s) => s.id === amenity.id)?.inHand?.label === 'Requested');
     check('occasions: another guest gets nothing for this reservation', (await other.occasions.listCelebrations(g, r).catch(() => [])).length === 0);
+  }
+
+  // ── Notification preferences (saved last: earlier checks count preference versions) ──
+  {
+    const service = createClient(gw.url, jwt({ role: 'service_role' }), { auth: { persistSession: false } });
+    const settings = await sb.notifications.getSettings(g);
+    check('notifications: settings from communication preferences', settings.preferences.timeFormat === '12h' && settings.quietHours?.start === '23:00');
+    await sb.notifications.updatePreferences(g, { delivery: { ...settings.preferences.delivery, recommendation: 'off' } });
+    const prefRow = (await service.from('guest_preferences').select('communication').eq('guest_id', g).maybeSingle()).data as { communication?: { notifications?: { delivery?: Record<string, string> } } } | null;
+    check('notifications: preferences saved in the database', prefRow?.communication?.notifications?.delivery?.recommendation === 'off', prefRow);
+    check('notifications: urgent stays on', await rejects(sb.notifications.updatePreferences(g, { delivery: { ...settings.preferences.delivery, urgent: 'off' } }), 'validation'));
+
   }
 
   gw.close();

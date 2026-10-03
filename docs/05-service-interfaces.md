@@ -200,6 +200,13 @@ It shares one store with the concierge's requests. Implementations: `MockService
 
 `approveStep` is the only way a step becomes a booking request or a service request. It requires `approved: true`, and `acknowledgedCharge: true` for anything with a cost. `ComposedOccasionService` implements it over the other contracts in both modes. See [12](12-occasions-and-service-requests.md).
 
+### NotificationService
+`list` (the inbox), `upcoming`, `unreadCount`, `markRead`, `markAllRead`, `getSettings`, `updatePreferences` (urgent cannot be changed), `registerDevice`, `listDevices`, `unregisterDevice` and `subscribe`.
+
+Notifications are derived by the shared engine from the guest's data and merged with what the server sent. They come in seven types: information, reminder, service update, reservation, itinerary change, urgent, recommendation. Preferences are stored in `communication.notifications`.
+
+`ComposedNotificationService` implements it in both modes. It keeps read state and devices in a `NotificationStateStore` (memory or Supabase). The device side of push is `Services.push` (`PushRegistrar`). See [13](13-notifications.md).
+
 ### GuestProfileService and preference persistence
 ```ts
 getProfile(guestId)                       // guest record + latest saved preferences

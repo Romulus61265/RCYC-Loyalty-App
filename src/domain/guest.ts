@@ -1,4 +1,5 @@
 import type { ID, ISODate, MediaAsset, SourceRef } from './common';
+import type { NotificationPreferences } from './notifications';
 
 /** Guest identity — the golden record is mastered by enterprise CRM. */
 export interface Guest {
@@ -131,6 +132,8 @@ export interface CommunicationPreferences {
   quietHours?: { start: string; end: string };
   language: string;
   marketingConsent: boolean;
+  /** Which notification types reach the guest, and how (defaults by language when absent). */
+  notifications?: NotificationPreferences;
 }
 
 export interface GuestPreferences {

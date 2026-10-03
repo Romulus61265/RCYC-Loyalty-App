@@ -206,6 +206,20 @@ Generated from the fictional dataset by `npm run seed:generate`, so do not edit 
 * `service_requests_local` exposes the new columns in local time.
 * See [12](12-occasions-and-service-requests.md).
 
+## Notifications (`20261008000000_notifications.sql`)
+
+* `notifications` gains:
+  * `type` (the seven guest-facing types, backfilled from `category`);
+  * `dedupe_key` (unique per guest, the engine's key, so a push is recorded once);
+  * `push_status` and `push_ticket`.
+* `notification_receipts(guest_id, notification_key, read_at)` holds the read state of contextual notifications. A guest reads and inserts their own only.
+* `push_devices` holds Expo push tokens:
+  * registered only through `register_push_device()`;
+  * a guest sees their own devices (no token column) and may remove them;
+  * disabled when Expo reports a dead token.
+* `activities` gains `previous_starts_at` and `changed_at` (and `activities_local` their local times), so a moved programme item becomes an itinerary change.
+* See [13](13-notifications.md).
+
 ## Testing
 
 | Command | Needs | Covers |

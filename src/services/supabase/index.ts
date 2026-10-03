@@ -18,8 +18,12 @@ import { SupabaseServiceRequestService } from './SupabaseServiceRequestService';
 import { SupabaseVoyageService } from './SupabaseVoyageService';
 import type { Db } from './support';
 import { ComposedOccasionService } from '@/services/occasions/ComposedOccasionService';
+import { UnsupportedPushRegistrar, type PushRegistrar } from '@/services/push/PushRegistrar';
+import { ComposedNotificationService } from '@/services/notifications/ComposedNotificationService';
+import { SupabaseNotificationState } from './SupabaseNotificationState';
 
-export function createSupabaseServices(db: Db, clock: ClockService = { now: () => new Date() }): Services {
+/** `push`: the device side of push notifications (the app passes its platform's). */
+export function createSupabaseServices(db: Db, clock: ClockService = { now: () => new Date() }, push: PushRegistrar = new UnsupportedPushRegistrar()): Services {
   const deps = { db, clock };
   const voyage = new SupabaseVoyageService(deps);
   const experience = new SupabaseExperienceService(deps);
@@ -27,6 +31,8 @@ export function createSupabaseServices(db: Db, clock: ClockService = { now: () =
   const profile = new RepositoryGuestProfileService(new SupabaseGuestRecordSource(deps), new SupabasePreferencesRepository(db));
   const loyalty = new SupabaseLoyaltyService(deps);
   const requests = new SupabaseServiceRequestService(deps);
+  const personalization = new SupabasePersonalizationService(deps);
+  const journeyEvents = new SupabaseJourneyEventService(deps);
   return {
     auth: new SupabaseAuthService(db),
     profile,
@@ -34,10 +40,12 @@ export function createSupabaseServices(db: Db, clock: ClockService = { now: () =
     voyage,
     experience,
     concierge: new SupabaseConciergeService(deps),
-    personalization: new SupabasePersonalizationService(deps),
+    personalization,
     requests,
     occasions: new ComposedOccasionService({ profile, loyalty, voyage, experience, requests, clock }),
-    journeyEvents: new SupabaseJourneyEventService(deps),
+    notifications: new ComposedNotificationService({ profile, voyage, experience, requests, journeyEvents, personalization, clock }, new SupabaseNotificationState(deps)),
+    journeyEvents,
+    push,
     schedule: new SupabaseScheduleService(voyage, experience),
     // Advisory only: the authoritative trail is written by database triggers
     // and Edge Functions, which the client cannot alter.

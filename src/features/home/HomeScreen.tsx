@@ -22,6 +22,7 @@ import { HomeHero } from './components/HomeHero';
 import { HomeSkeleton } from './components/HomeSkeleton';
 import {
   CelebrationCard,
+  NotificationBell,
   RequestsLine,
   ArrangedSection,
   ArrivalSection,
@@ -35,11 +36,13 @@ import {
 import { useHomeDashboard } from './useHomeDashboard';
 import { celebrationHref } from '@/features/celebrations/celebrationModel';
 import { useNextCelebration } from '@/features/celebrations/useCelebrations';
+import { useUnreadCount } from '@/features/notifications/useNotifications';
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { model, loading, error, reload, dismissAlert } = useHomeDashboard();
   const celebration = useNextCelebration();
+  const unread = useUnreadCount();
 
   if (loading && !model) return <HomeSkeleton topInset={insets.top} />;
   if (error || !model) {
@@ -55,7 +58,7 @@ export function HomeScreen() {
 
   return (
     <Screen edgeToEdge>
-      <HomeHero hero={model.hero} topInset={insets.top} />
+      <HomeHero hero={model.hero} topInset={insets.top} accessory={<NotificationBell unread={unread} onOpen={() => router.push('/notifications')} />} />
       <RecognitionStrip model={model.recognition} onPrivileges={() => router.push('/profile')} />
       <AttentionSection
         alerts={model.alerts}

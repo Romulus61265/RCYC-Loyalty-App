@@ -1,8 +1,10 @@
 /**
  * Service request rules shared by every ServiceRequestService: categories,
  * routing to a team, the guest-facing status, the timeline and validation.
- * Pure: no I/O, no clock.
+ * Pure: no I/O, no clock. Status, timeline and routing rules are shared with
+ * the Edge Functions (supabase/functions/_shared/requests/rules.ts).
  */
+import { categoryFromType, routeFor, statusOf, teamLabel, timelineOf } from '../../../supabase/functions/_shared/requests/rules';
 import type {
   GuestServiceRequest,
   NewServiceRequest,
@@ -11,6 +13,8 @@ import type {
   ServiceRequestStatus,
   ServiceRequestType,
 } from '@/domain';
+
+export { routeFor, statusOf, timelineOf };
 
 export const DESCRIPTION_MAX = 1000;
 
@@ -40,63 +44,13 @@ export const categoryLabel = (c: ServiceRequestCategory) => SERVICE_REQUEST_CATE
 export const isCategory = (v: unknown): v is ServiceRequestCategory => SERVICE_REQUEST_CATEGORIES.some((c) => c.key === v);
 
 /** Requests raised before categories existed (or by the concierge) carry only a type. */
-const CATEGORY_OF_TYPE: Record<ServiceRequestType, ServiceRequestCategory> = {
-  'dining-change': 'dining',
-  transport: 'transportation',
-  occasion: 'concierge',
-  suite: 'suite',
-  excursion: 'excursion',
-  medical: 'special-assistance',
-  general: 'concierge',
-};
-
 export function categoryOf(r: Pick<ServiceRequest, 'category' | 'type'>): ServiceRequestCategory {
-  return r.category ?? CATEGORY_OF_TYPE[r.type] ?? 'other';
+  return r.category ?? categoryFromType(r.type);
 }
 
 /** The underlying type stored with a new request (the concierge reads it). */
 export function typeFor(c: ServiceRequestCategory): ServiceRequestType {
   return c === 'suite' || c === 'housekeeping' ? 'suite' : c === 'transportation' ? 'transport' : c === 'excursion' ? 'excursion' : c === 'dining' ? 'dining-change' : 'general';
-}
-
-const TEAM_LABEL: Record<ServiceRequest['assignedTeam'], string> = {
-  'shoreside-concierge': 'Shoreside Concierge',
-  'suite-ambassador': 'Suite Ambassador',
-  'guest-services': 'Guest Services',
-  medical: 'Medical Centre',
-  'destination-services': 'Destination Services',
-};
-
-/** Who looks after a category: the team, and the department within it. */
-export function routeFor(c: ServiceRequestCategory, where: 'home' | 'aboard'): { team: ServiceRequest['assignedTeam']; label: string } {
-  switch (c) {
-    case 'suite':
-    case 'other':
-      return { team: 'suite-ambassador', label: 'Suite Ambassador' };
-    case 'dining':
-      return { team: 'guest-services', label: 'Restaurants' };
-    case 'housekeeping':
-      return { team: 'guest-services', label: 'Housekeeping' };
-    case 'maintenance':
-      return { team: 'guest-services', label: 'Engineering' };
-    case 'spa':
-      return { team: 'guest-services', label: 'The Spa' };
-    case 'transportation':
-    case 'excursion':
-      return { team: 'destination-services', label: 'Destination Services' };
-    case 'special-assistance':
-      return { team: 'guest-services', label: 'Guest Services' };
-    case 'concierge':
-      return where === 'home' ? { team: 'shoreside-concierge', label: 'Shoreside Concierge' } : { team: 'guest-services', label: 'Guest Services' };
-  }
-}
-
-/** Underlying state → the five guest-facing statuses. */
-export function statusOf(r: Pick<ServiceRequest, 'status' | 'acknowledgedAt' | 'closedAt'>): ServiceRequestStatus {
-  if (r.closedAt || r.status === 'cancelled' || r.status === 'declined') return 'closed';
-  if (r.status === 'completed' || r.status === 'confirmed') return 'resolved';
-  if (r.status === 'in_progress' || r.status === 'awaiting_guest') return 'in_progress';
-  return r.acknowledgedAt ? 'acknowledged' : 'submitted';
 }
 
 export const ACTIVE_STATUSES: ServiceRequestStatus[] = ['submitted', 'acknowledged', 'in_progress'];
@@ -112,29 +66,6 @@ export const STATUS_LABEL: Record<ServiceRequestStatus, string> = {
 
 export const PRIORITY_LABEL: Record<ServiceRequest['priority'], string> = { routine: 'When convenient', priority: 'Soon', urgent: 'Urgent' };
 
-/**
- * The moments each status was reached. While a request is open, every step
- * up to the current one is shown (missing stamps fall back to the last
- * update). A closed request shows only the steps it actually went through.
- */
-export function timelineOf(r: ServiceRequest): GuestServiceRequest['timeline'] {
-  const status = statusOf(r);
-  const out: GuestServiceRequest['timeline'] = [{ status: 'submitted', at: r.createdAt }];
-  const done = r.status === 'completed' || r.status === 'confirmed';
-  if (status !== 'closed') {
-    const reached = ['submitted', 'acknowledged', 'in_progress', 'resolved'].indexOf(status);
-    if (reached >= 1) out.push({ status: 'acknowledged', at: r.acknowledgedAt ?? r.startedAt ?? r.updatedAt });
-    if (reached >= 2) out.push({ status: 'in_progress', at: r.startedAt ?? r.updatedAt });
-    if (reached >= 3) out.push({ status: 'resolved', at: r.resolvedAt ?? r.updatedAt });
-    return out;
-  }
-  if (r.acknowledgedAt) out.push({ status: 'acknowledged', at: r.acknowledgedAt });
-  if (r.startedAt) out.push({ status: 'in_progress', at: r.startedAt });
-  if (r.resolvedAt || done) out.push({ status: 'resolved', at: r.resolvedAt ?? r.closedAt ?? r.updatedAt });
-  out.push({ status: 'closed', at: r.closedAt ?? r.updatedAt });
-  return out;
-}
-
 export interface RequestContext {
   guest: { id: string; name: string };
   voyage: { id: string; name: string };
@@ -144,8 +75,7 @@ export interface RequestContext {
 export function toGuestRequest(r: ServiceRequest, ctx: RequestContext): GuestServiceRequest {
   const category = categoryOf(r);
   const status = statusOf(r);
-  const route = routeFor(category, ctx.where);
-  const label = route.team === r.assignedTeam ? route.label : TEAM_LABEL[r.assignedTeam];
+  const label = teamLabel(category, r.assignedTeam, ctx.where);
   const description = r.details ? `${r.summary}\n\n${r.details}` : r.summary;
   const out: GuestServiceRequest = {
     id: r.id,

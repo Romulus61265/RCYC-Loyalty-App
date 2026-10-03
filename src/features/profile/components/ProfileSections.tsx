@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { GuestPreferences } from '@/domain';
-import { Button, Caption, Card, DetailRow, Divider, EmptyNote, Eyebrow, FactRow, MediaFrame, Section, StatusLine, Text } from '@/components';
+import { router } from 'expo-router';
+import { Button, Caption, Card, DetailRow, Divider, EmptyNote, Eyebrow, FactRow, MediaFrame, Section, StatusLine, Text, TextLink } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 import type { GroupSummary, ProfileModel } from '../profileModel';
 import { groupByKey, type FormValues, type GroupKey } from '../preferenceSchema';
@@ -242,6 +243,9 @@ export function CommunicationSection({ summary, ...editing }: { summary: GroupSu
     <Section eyebrow="Communication preferences" title="How and when we reach you">
       <GroupCard summary={summary} {...editing} />
       <Caption style={{ marginTop: spacing.md }}>Urgent matters, such as a change to your embarkation, always reach you, even during quiet hours.</Caption>
+      <View style={{ marginTop: spacing.md }}>
+        <TextLink label="Notification settings" onPress={() => router.push('/notifications/settings')} />
+      </View>
     </Section>
   );
 }

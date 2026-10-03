@@ -188,7 +188,8 @@ export const daySchedules: DaySchedule[] = [
     dayNumber: 4, date: D[4], portCallId: 'dev_pc_4', headline: 'Saint-Tropez', dressCode: 'Riviera casual', sunset: t(D[4], '20:52'),
     items: [
       item('dev_s4a', D[4], '10:00', 'Under sail on a 1930s classic yacht', 'Marina platform', 'booking', { bookingId: 'dev_bkg_classic_sail', category: 'private', end: t(D[4], '13:30') }),
-      item('dev_s4b', D[4], '14:30', 'The marina platform opens', 'Deck 2 aft', 'ship-event', { category: 'marina', end: t(D[4], '17:00') }),
+      // Moved by half an hour on the sea-day evening (the itinerary-change example).
+      item('dev_s4b', D[4], '15:00', 'The marina platform opens', 'Deck 2 aft', 'ship-event', { category: 'marina', end: t(D[4], '17:00'), previousStart: t(D[4], '14:30'), changedAt: t(D[3], '18:00') }),
       item('dev_s4c', D[4], '20:30', 'Dinner at Il Giardino', 'Deck 9', 'booking', { bookingId: 'dev_bkg_dinner_4', category: 'dining' }),
       item('dev_s4d', D[4], '22:30', 'All aboard (last tender 22:15)', 'Tender pier', 'port'),
     ],

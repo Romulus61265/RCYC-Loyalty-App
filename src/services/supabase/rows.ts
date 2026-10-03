@@ -478,7 +478,7 @@ export function toBooking(r: BookingRow): ExperienceBooking {
   });
 }
 
-export const ACTIVITY_COLUMNS = 'id, day, title, location, kind, booking_id, category, start_local, end_local';
+export const ACTIVITY_COLUMNS = 'id, day, title, location, kind, booking_id, category, start_local, end_local, previous_start_local, changed_local';
 
 export interface ActivityRow {
   id: string;
@@ -490,6 +490,8 @@ export interface ActivityRow {
   category: ScheduleItem['category'] | null;
   start_local: string;
   end_local: string | null;
+  previous_start_local?: string | null;
+  changed_local?: string | null;
 }
 
 export function toScheduleItem(r: ActivityRow): ScheduleItem {
@@ -502,6 +504,8 @@ export function toScheduleItem(r: ActivityRow): ScheduleItem {
     kind: r.kind,
     bookingId: opt(r.booking_id),
     category: opt(r.category),
+    previousStart: opt(r.previous_start_local ?? null),
+    changedAt: opt(r.changed_local ?? null),
   });
 }
 
@@ -677,7 +681,7 @@ export function toAlert(r: AlertRow): JourneyAlert {
   });
 }
 
-export const NOTIFICATION_COLUMNS = 'id, guest_id, reservation_id, channel, category, title, body, deep_link, scheduled_for, delivered_at, read_at, bypass_quiet_hours';
+export const NOTIFICATION_COLUMNS = 'id, guest_id, reservation_id, channel, category, title, body, deep_link, scheduled_for, delivered_at, read_at, bypass_quiet_hours, type, dedupe_key';
 
 export interface NotificationRow {
   id: string;
@@ -692,6 +696,8 @@ export interface NotificationRow {
   delivered_at: string | null;
   read_at: string | null;
   bypass_quiet_hours: boolean;
+  type?: GuestNotification['type'] | null;
+  dedupe_key?: string | null;
 }
 
 export function toNotification(r: NotificationRow): GuestNotification {
@@ -708,6 +714,8 @@ export function toNotification(r: NotificationRow): GuestNotification {
     deliveredAt: opt(r.delivered_at),
     readAt: opt(r.read_at),
     bypassQuietHours: r.bypass_quiet_hours,
+    type: opt(r.type ?? null),
+    dedupeKey: opt(r.dedupe_key ?? null),
   });
 }
 

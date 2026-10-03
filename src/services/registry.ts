@@ -32,8 +32,12 @@ import { MockScheduleService } from './mock/MockScheduleService';
 import { MockServiceRequestService } from './mock/MockServiceRequestService';
 import { MockRequestStore } from './mock/requestStore';
 import { ComposedOccasionService } from './occasions/ComposedOccasionService';
+import { Platform } from 'react-native';
+import { UnsupportedPushRegistrar } from '@/services/push/PushRegistrar';
+import { ComposedNotificationService } from './notifications/ComposedNotificationService';
+import { MemoryNotificationState } from './notifications/state';
 import { MockVoyageService } from './mock/MockVoyageService';
-import { mockNow } from './mock/support';
+import { data, mockNow } from './mock/support';
 import { ApiClient } from './remote/apiClient';
 import { MarriottBonvoyService } from './remote/MarriottBonvoyService';
 import { createSupabaseServices } from './supabase';
@@ -52,6 +56,14 @@ function preferencesRepository(): PreferencesRepository {
   return new LocalPreferencesRepository(store);
 }
 
+/**
+ * The device side of push. Unsupported until expo-notifications is added to
+ * the native builds (see docs/13-notifications.md); the server side is ready.
+ */
+function devicePush() {
+  return new UnsupportedPushRegistrar(Platform.OS === 'ios' || Platform.OS === 'android' ? Platform.OS : 'web');
+}
+
 function createMockServices(): Services {
   const profile = new RepositoryGuestProfileService(new MockGuestRecordSource(), preferencesRepository());
   const loyalty = new MockLoyaltyService();
@@ -60,6 +72,7 @@ function createMockServices(): Services {
   // Shares the instances above: bookings and preference edits count at once.
   const personalization = new MockPersonalizationService({ profile, loyalty, voyage, experience });
   const requestStore = new MockRequestStore();
+  const journeyEvents = new MockJourneyEventService();
   // On board, a crew member picks a new request up within moments.
   const requests = new MockServiceRequestService({ store: requestStore, voyage, simulateCrew: { acknowledgeMs: 8_000, startMs: 25_000 } });
   return {
@@ -73,7 +86,9 @@ function createMockServices(): Services {
     personalization,
     requests,
     occasions: new ComposedOccasionService({ profile, loyalty, voyage, experience, requests, clock: { now: mockNow } }),
-    journeyEvents: new MockJourneyEventService(),
+    notifications: new ComposedNotificationService({ profile, voyage, experience, requests, journeyEvents, personalization, clock: { now: mockNow } }, new MemoryNotificationState({ [data.guest.profile.guest.id]: data.communication.readNotificationKeys })),
+    journeyEvents,
+    push: devicePush(),
     schedule: new MockScheduleService(),
     audit: new ConsoleAuditService(),
     clock: { now: mockNow },
@@ -98,7 +113,7 @@ export function createServices(mode: ServiceMode = env.serviceMode): Services {
 }
 
 function compose(mode: ServiceMode): Services {
-  if (mode === 'supabase') return createSupabaseServices(getSupabaseClient, { now: () => new Date() });
+  if (mode === 'supabase') return createSupabaseServices(getSupabaseClient, { now: () => new Date() }, devicePush());
   const mocks = createMockServices();
   if (mode === 'mock') return mocks;
 
