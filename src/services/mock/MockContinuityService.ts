@@ -16,6 +16,7 @@ import type { ContinuityService, Services, Unsubscribe } from '@/services/contra
 import { logger } from '@/core/logging';
 import { hhmm } from '../../../supabase/functions/_shared/continuity/engine';
 import { handleFlightUpdate, type ContinuityPorts, type ContinuityResult } from '../../../supabase/functions/_shared/continuity/orchestrator';
+import type { ActionOutcome, ArrivalContext, ContinuityAction } from '../../../supabase/functions/_shared/continuity/types';
 import { buildArrivalContext } from '../continuity/buildArrivalContext';
 import type { MockExperienceService } from './MockExperienceService';
 import type { MockTravelDisruptionService } from './MockTravelDisruptionService';
@@ -28,6 +29,22 @@ interface Deps extends Pick<Services, 'profile' | 'loyalty' | 'clock'> {
   travel: MockTravelDisruptionService;
 }
 
+/**
+ * How the transfer and embarkation teams are reached. By default, directly
+ * (the mock operator and desk); the event bus's TravelDisruptionHandler
+ * passes its own, which publish TRANSFER_DELAYED and EMBARKATION_UPDATED.
+ */
+export interface ContinuityTeams {
+  retimeTransfer(a: Extract<ContinuityAction, { kind: 'retime-transfer' }>, ctx: ArrivalContext): Promise<ActionOutcome>;
+  notifyEmbarkation(a: Extract<ContinuityAction, { kind: 'notify-embarkation' }>, ctx: ArrivalContext): Promise<ActionOutcome>;
+}
+
+export interface IngestOptions {
+  teams?: ContinuityTeams;
+  /** Record the new estimate on the flight (off when the voyage's own handler does it). */
+  recordFlight?: boolean;
+}
+
 let seq = 0;
 const log = logger.child('continuity');
 
@@ -38,10 +55,15 @@ export class MockContinuityService implements ContinuityService {
   private readonly listeners = new Set<{ reservationId: ID; fn: () => void }>();
   private pending: Promise<unknown> = Promise.resolve();
 
-  constructor(private readonly s: Deps) {
+  /** `listen: false` when the event bus delivers flight updates instead (see services/events). */
+  constructor(
+    private readonly s: Deps,
+    opts: { listen?: boolean } = {},
+  ) {
+    if (opts.listen === false) return;
     s.travel.subscribe((u) => {
       // One observation at a time, in order.
-      this.pending = this.pending.then(() => this.ingest(u)).catch((e: unknown) => log.warn('continuity failed', { reason: e instanceof Error ? e.message : 'unknown' }));
+      void this.ingest(u).catch((e: unknown) => log.warn('continuity failed', { reason: e instanceof Error ? e.message : 'unknown' }));
     });
   }
 
@@ -50,11 +72,18 @@ export class MockContinuityService implements ContinuityService {
     return this.pending;
   }
 
-  async ingest(update: FlightStatusUpdate): Promise<ContinuityResult[]> {
+  /** Runs one observation through the orchestrator. Serialised with any others in flight. */
+  ingest(update: FlightStatusUpdate, opts: IngestOptions = {}): Promise<ContinuityResult[]> {
+    const run = this.pending.then(() => this.run(update, opts));
+    this.pending = run.catch(() => undefined);
+    return run;
+  }
+
+  private async run(update: FlightStatusUpdate, opts: IngestOptions): Promise<ContinuityResult[]> {
     const { voyage, experience } = this.s;
     // The flight record learns the new estimate first.
     const flight = data.voyage.flights.find((f) => f.flightNumber === update.flightNumber && f.departure.slice(0, 10) === update.departureDate);
-    if (flight && (update.status === 'delayed' || update.status === 'cancelled')) {
+    if (opts.recordFlight !== false && flight && (update.status === 'delayed' || update.status === 'cancelled')) {
       voyage.applyFlightStatus(flight.id, { status: update.status, ...(update.estimatedArrival ? { estimatedArrival: update.estimatedArrival } : {}) });
     }
     const ports: ContinuityPorts = {
@@ -65,7 +94,8 @@ export class MockContinuityService implements ContinuityService {
         return ctx ? [ctx] : [];
       },
       transfer: {
-        retime: async (a) => {
+        retime: async (a, ctx) => {
+          if (opts.teams) return opts.teams.retimeTransfer(a, ctx);
           await experience.applyOperatorChange(a.bookingId, { start: a.start, ...(a.end ? { end: a.end } : {}), note: `Re-timed for your flight: your driver meets you at ${hhmm(a.start)} and is following the flight.` });
           return 'confirmed';
         },
@@ -78,6 +108,7 @@ export class MockContinuityService implements ContinuityService {
       },
       embarkation: {
         notify: async (a, ctx) => {
+          if (opts.teams) return opts.teams.notifyEmbarkation(a, ctx);
           voyage.applyEmbarkationChange(ctx.reservationId, {
             arrivalWindowStart: a.windowStart,
             arrivalWindowEnd: a.windowEnd,

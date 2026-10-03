@@ -61,6 +61,7 @@ In **Concierge**, try:
 | 13 | [Contextual notifications and push](docs/13-notifications.md) |
 | 14 | [Service recovery and goodwill rules](docs/14-service-recovery.md) |
 | 15 | [Shoreside-to-yacht continuity](docs/15-shoreside-continuity.md) |
+| 16 | [Internal event model](docs/16-internal-events.md) |
 
 ### Replacing mocks with enterprise APIs
 

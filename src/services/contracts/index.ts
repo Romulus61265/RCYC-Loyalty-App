@@ -60,6 +60,11 @@ import type {
   RecoveryNotice,
   RecoveryRecord,
   ArrivalUpdate,
+  HandlerRun,
+  InternalEvent,
+  InternalEventStatus,
+  InternalEventType,
+  NewInternalEvent,
   FlightStatusUpdate,
   ServiceRequest,
   ServiceRequestType,
@@ -344,6 +349,66 @@ export interface ServiceRecoveryOperations {
   listProposals(reservationId: ID): Promise<GoodwillProposal[]>;
   /** Approving records the authority to carry a gesture out; it does not carry it out. */
   decideProposal(proposalId: ID, decision: { approve: boolean; note?: string }): Promise<GoodwillProposal>;
+}
+
+// ─── Internal events ───────────────────────────────────────────────────────
+
+/** What a handler is given besides the event. */
+export interface HandlerContext {
+  /**
+   * Publishes a follow-up event, caused by this one and in the same chain
+   * (correlation). Its handlers run before this resolves, so the caller
+   * can act on their outcome.
+   */
+  emit<T extends InternalEventType>(event: NewInternalEvent<T>): Promise<PublishResult<T>>;
+  now(): Date;
+}
+
+export interface HandlerResult {
+  outcome: HandlerRun['outcome'];
+  detail?: string;
+}
+
+/**
+ * Reacts to some event types. One per service (transfers, voyage,
+ * notifications, concierge…). A handler that throws is recorded as failed;
+ * the other handlers still run.
+ */
+export interface EventHandler<T extends InternalEventType = InternalEventType> {
+  readonly name: string;
+  readonly handles: readonly T[];
+  handle(event: InternalEvent<T>, ctx: HandlerContext): Promise<HandlerResult>;
+}
+
+export interface PublishResult<T extends InternalEventType = InternalEventType> {
+  event: InternalEvent<T>;
+  runs: HandlerRun[];
+  /** Already published under this dedupe key: nothing ran again. */
+  duplicate: boolean;
+}
+
+/**
+ * The internal event bus. Publishing validates the event, gives it an id
+ * and a time, ignores duplicates, and runs every handler for its type in
+ * registration order, recording each run and the event's final status.
+ */
+export interface EventService {
+  publish<T extends InternalEventType>(event: NewInternalEvent<T>): Promise<PublishResult<T>>;
+  register(handler: EventHandler): Unsubscribe;
+  get(eventId: ID): Promise<InternalEvent | null>;
+  list(filter?: { guest_id?: ID; voyage_id?: ID; event_type?: InternalEventType; status?: InternalEventStatus; correlation_id?: ID }): Promise<InternalEvent[]>;
+  runs(eventId: ID): Promise<HandlerRun[]>;
+  /** Every event once processed (dev tools, audit sinks). */
+  subscribe(listener: (event: InternalEvent) => void): Unsubscribe;
+}
+
+/**
+ * Ground transport. Transfers are bookings, but moving one is the
+ * operator's decision: no transfer-supplier integration exists, so the mock
+ * operator confirms and a real one would answer "requested" until it does.
+ */
+export interface TransferService {
+  retime(bookingId: ID, change: { start: ISODateTime; end?: ISODateTime; reason: string }): Promise<'confirmed' | 'requested'>;
 }
 
 // ─── Shoreside-to-yacht continuity ─────────────────────────────────────────

@@ -171,6 +171,20 @@ export class MockPersonalizationService implements PersonalizationService {
 
 export class MockJourneyEventService implements JourneyEventService {
   private alerts: JourneyAlert[] = [...alerts];
+  private sent: GuestNotification[] = [...notifications];
+  private listeners = new Set<{ reservationId: ID; fn: (event: JourneyEvent, alert?: JourneyAlert) => void }>();
+
+  /**
+   * Mock-only: the outbound message a handler sends the guest (in production
+   * the server records it in `notifications` and pushes it). Once per dedupe key.
+   */
+  deliver(n: GuestNotification): 'sent' | 'duplicate' {
+    if (n.dedupeKey && this.sent.some((x) => x.dedupeKey === n.dedupeKey && x.guestId === n.guestId)) return 'duplicate';
+    this.sent.push(n);
+    const event: JourneyEvent = { id: n.id, type: 'service.request_updated', reservationId: n.reservationId ?? '', guestIds: [n.guestId], occurredAt: n.scheduledFor, severity: 'info', source: 'mock', payload: {}, dedupeKey: n.dedupeKey ?? n.id };
+    for (const l of this.listeners) if (!n.reservationId || l.reservationId === n.reservationId) l.fn(event);
+    return 'sent';
+  }
 
   listAlerts(_reservationId: ID) {
     failIf('optional', 'alerts');
@@ -180,7 +194,7 @@ export class MockJourneyEventService implements JourneyEventService {
   listNotifications(guestId: ID, opts?: { includeScheduled?: boolean; now?: Date }): Promise<GuestNotification[]> {
     const now = (opts?.now ?? mockNow()).getTime();
     return latency(
-      notifications
+      this.sent
         .filter((n) => n.guestId === guestId)
         .filter((n) => opts?.includeScheduled || Date.parse(n.scheduledFor) <= now)
         .sort((a, b) => Date.parse(b.scheduledFor) - Date.parse(a.scheduledFor)),
@@ -190,9 +204,11 @@ export class MockJourneyEventService implements JourneyEventService {
     this.alerts = this.alerts.map((a) => (a.id === alertId ? { ...a, acknowledged: true } : a));
     await latency(undefined, 100);
   }
-  subscribe(_reservationId: ID, _listener: (event: JourneyEvent, alert?: JourneyAlert) => void): Unsubscribe {
+  subscribe(reservationId: ID, listener: (event: JourneyEvent, alert?: JourneyAlert) => void): Unsubscribe {
     // Production: Supabase Realtime channel `journey:<reservationId>` fed by the event bus.
-    return () => undefined;
+    const l = { reservationId, fn: listener };
+    this.listeners.add(l);
+    return () => this.listeners.delete(l);
   }
 }
 

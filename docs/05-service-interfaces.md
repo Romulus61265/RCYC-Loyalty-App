@@ -209,6 +209,15 @@ Notifications are derived by the shared engine from the guest's data and merged 
 
 `ComposedNotificationService` implements it in both modes. It keeps read state and devices in a `NotificationStateStore` (memory or Supabase). The device side of push is `Services.push` (`PushRegistrar`). See [13](13-notifications.md).
 
+### EventService, EventHandler and TransferService
+`EventService` is the internal event bus: twelve event types in one snake_case envelope. Its methods are `publish`, `register`, `get`, `list`, `runs` and `subscribe`.
+
+* `EventHandler`s, one per service, react in registration order. They may `emit` follow-up events in the same chain.
+* `TransferService.retime` moves a transfer with its operator; the mock operator confirms.
+* The MVP implementation is `InMemoryEventService`. It is composed in the registry and is not part of the guest app's `Services`.
+
+See [16](16-internal-events.md).
+
 ### ContinuityService and TravelDisruptionService
 `ContinuityService` (`getArrivalUpdate`, `subscribe`): what the guest reads when travel to the yacht changes. Each step is done or requested, as its owner reported; "We've adjusted your arrival arrangements." appears only when the transfer and the embarkation team are done.
 

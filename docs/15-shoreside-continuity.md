@@ -115,7 +115,7 @@ interface ContinuityService {
 }
 ```
 
-* **Mock.** `MockContinuityService` listens to `MockTravelDisruptionService` and runs the shared orchestrator with the mock ports. It is the server, in the app.
+* **Mock.** `MockContinuityService` runs the shared orchestrator with the mock ports; it is the server, in the app. In the app, observations reach it through the internal event bus as `FLIGHT_DELAYED`. Transfer and embarkation are reached as `TRANSFER_DELAYED` and `EMBARKATION_UPDATED` events ([16](16-internal-events.md)). On its own (as in `check:continuity`), it listens to the source directly.
 * **Supabase.** `SupabaseContinuityService` reads `arrival_updates` under RLS and listens with Realtime.
 
 The guest app never talks to a flight-status source. In production, an adapter would run server-side and publish `flight.delayed`.

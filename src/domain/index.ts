@@ -11,3 +11,4 @@ export * from './events';
 export * from './personalization';
 export * from './recovery';
 export * from './continuity';
+export * from './internalEvents';

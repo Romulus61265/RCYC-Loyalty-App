@@ -143,6 +143,19 @@ export class MockConciergeService implements ConciergeService {
 
   // ─── Conversation ────────────────────────────────────────────────────────
 
+  /**
+   * Mock-only: a crew member writes to the guest first (an event handler
+   * briefing them on a change). In production, the crew console posts to the
+   * conversation and Realtime delivers it.
+   */
+  async postTeamMessage(reservationId: ID, message: { authorName: string; body: string }): Promise<ConciergeMessage> {
+    const { conversationId } = await this.openConversation(reservationId);
+    const msg: ConciergeMessage = { id: mockId('msg'), conversationId, author: 'human', authorName: message.authorName, createdAt: mockEventTime().toISOString(), body: message.body };
+    this.history(conversationId).push(msg);
+    this.emit(conversationId, msg);
+    return msg;
+  }
+
   async openConversation(reservationId: ID) {
     const conversationId = `cnv_${reservationId}`;
     if (!this.conversations.has(conversationId)) {

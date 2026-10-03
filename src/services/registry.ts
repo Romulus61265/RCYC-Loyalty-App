@@ -42,6 +42,9 @@ import { ComposedRecoveryService } from './recovery/ComposedRecoveryService';
 import { MemoryRecoveryStore } from './recovery/store';
 import { MockContinuityService } from './mock/MockContinuityService';
 import { MockTravelDisruptionService } from './mock/MockTravelDisruptionService';
+import { MockTransferService } from './mock/MockTransferService';
+import { InMemoryEventService } from './events/InMemoryEventService';
+import { flightDelayedEvent, registerFlightDelayHandlers } from './events/flightDelay';
 import { ApiClient } from './remote/apiClient';
 import { MarriottBonvoyService } from './remote/MarriottBonvoyService';
 import { createSupabaseServices } from './supabase';
@@ -96,9 +99,32 @@ function createMockServices(): Services {
           : undefined,
     },
   );
+  // Shares the instances above: what the concierge arranges shows everywhere.
+  const concierge = new MockConciergeService({ voyage, experience, loyalty, profile, personalization, requests: requestStore });
+
+  // The internal event bus, with the delayed-flight handlers.
+  const events = new InMemoryEventService(clock);
   // The flight-status source is a mock: no flight-data integration exists.
   const travel = new MockTravelDisruptionService();
-  const continuity = new MockContinuityService({ profile, loyalty, voyage, experience, travel, clock });
+  const continuity = new MockContinuityService({ profile, loyalty, voyage, experience, travel, clock }, { listen: false });
+  const { reservation } = data.voyage;
+  registerFlightDelayHandlers(
+    events,
+    {
+      voyage,
+      continuity,
+      transfers: new MockTransferService(experience),
+      outbox: journeyEvents,
+      concierge,
+      profile,
+      ambassador: async () => ({ firstName: (reservation.suiteAmbassadorContact?.name ?? 'Elena').split(' ')[0]!, title: reservation.suiteAmbassadorContact?.title ?? 'Suite Ambassador' }),
+    },
+    reservation.id,
+  );
+  travel.subscribe((u) => {
+    const event = flightDelayedEvent(u, { guest_id: reservation.leadGuestId, voyage_id: reservation.voyageId, reservation_id: reservation.id });
+    if (event) void events.publish(event).catch((e: unknown) => logger.child('events').warn('publish failed', { reason: e instanceof Error ? e.message : 'unknown' }));
+  });
   if (mockDemo() === 'flight-delay') {
     // Arrives while the guest is looking, as a live update would.
     setTimeout(() => travel.simulateDelay(data.voyage.flights.find((f) => f.direction === 'inbound')!.id, 120), 2500);
@@ -109,8 +135,7 @@ function createMockServices(): Services {
     loyalty,
     voyage,
     experience,
-    // Shares the instances above: what the concierge arranges shows everywhere.
-    concierge: new MockConciergeService({ voyage, experience, loyalty, profile, personalization, requests: requestStore }),
+    concierge,
     personalization,
     requests,
     occasions: new ComposedOccasionService({ profile, loyalty, voyage, experience, requests, clock: { now: mockNow } }),

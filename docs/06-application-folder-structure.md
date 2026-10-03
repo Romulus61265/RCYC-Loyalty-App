@@ -86,6 +86,7 @@ RCYC-Loyalty-App/
 │   │   ├── notifications/        buildNotifyInput, ComposedNotificationService, NotificationStateStore (memory)
 │   │   ├── push/                 PushRegistrar (device side of push; Expo adapter designed in docs/13), routeFromPush
 │   │   ├── occasions/            Celebration detectors, playbooks and planner; ComposedOccasionService (approval)
+│   │   ├── events/               InMemoryEventService, the delayed-flight wiring, and one handler per service (handlers/)
 │   │   ├── continuity/           buildArrivalContext (the continuity rules' context from the contracts)
 │   │   ├── recovery/             buildRecoveryContext, ComposedRecoveryService (approval), RecoveryNoticeStore + MemoryRecoveryStore (mock server, crew operations)
 │   │   ├── registry.ts           Composition root: validate env → mode → implementations
