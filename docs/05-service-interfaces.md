@@ -16,6 +16,7 @@ The source is `src/services/contracts/index.ts`. Screens obtain services only th
 | ScheduleService | `MockScheduleService` | `SupabaseScheduleService` | mock |
 | ConciergeService | `MockConciergeService` + `MockConciergeAI` | `SupabaseConciergeService` (`concierge-respond` Edge Function, Realtime) | mock |
 | PersonalizationService | `MockPersonalizationService` + rules engine (`rules-v1`) | `SupabasePersonalizationService` (`personalization-next-best` Edge Function, materialised recommendations) | mock |
+| ServiceRecoveryService | `ComposedRecoveryService` + `MemoryRecoveryStore` (records with the shared handler; `?demo=disruption`) | `ComposedRecoveryService` + `SupabaseRecoveryNoticeStore` (crew: `SupabaseRecoveryOperations`) | mock |
 | JourneyEventService | `MockJourneyEventService` | `SupabaseJourneyEventService` (alerts, notifications, Realtime) | mock |
 | ClockService | pinned demo moment (`?now=`, `EXPO_PUBLIC_DEMO_NOW`) | device clock | device clock |
 
@@ -206,6 +207,15 @@ It shares one store with the concierge's requests. Implementations: `MockService
 Notifications are derived by the shared engine from the guest's data and merged with what the server sent. They come in seven types: information, reminder, service update, reservation, itinerary change, urgent, recommendation. Preferences are stored in `communication.notifications`.
 
 `ComposedNotificationService` implements it in both modes. It keeps read state and devices in a `NotificationStateStore` (memory or Supabase). The device side of push is `Services.push` (`PushRegistrar`). See [13](13-notifications.md).
+
+### ServiceRecoveryService
+`listNotices`, `getNotice`, `acceptAlternative` (requires `approved: true`, and `acknowledgedCharge` for anything priced), `requestAssistance` and `subscribe`.
+
+A disruption is recorded once, server-side. The guest's notice is planned afresh by the shared engine, so its alternatives are what is free now. It never carries severity, the crew brief or goodwill.
+
+The crew's side is `ServiceRecoveryOperations` (`listRecords`, `listProposals`, `decideProposal`). It is not in the guest app's `Services`.
+
+Goodwill is only ever *proposed* by approved, authorised rules, and decided by a person with the role the rule names. Financial goodwill is off in the MVP. See [14](14-service-recovery.md).
 
 ### GuestProfileService and preference persistence
 ```ts

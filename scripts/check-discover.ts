@@ -104,7 +104,7 @@ async function main() {
 
   // ── Filters ──
   const tropez = filter({ port: 'Saint-Tropez' });
-  check('port filter: Saint-Tropez', tropez.map((c) => c.id).sort().join() === 'dev_exp_classic_sail,dev_exp_marina', tropez.map((c) => c.id));
+  check('port filter: Saint-Tropez', tropez.map((c) => c.id).sort().join() === 'dev_exp_classic_sail,dev_exp_marina,dev_exp_tropez_village', tropez.map((c) => c.id));
   check('port filter: Monte Carlo covers both days', filter({ port: 'Monte Carlo' }).some((c) => c.id === 'dev_exp_villa_ephrussi') && filter({ port: 'Monte Carlo' }).some((c) => c.id === 'dev_exp_oceanographic'));
   check('port filter: aboard', filter({ port: 'aboard' }).every((c) => c.destination === 'Aboard Evrima') && filter({ port: 'aboard' }).length > 5);
   const palmaDay = filter({ date: '2027-05-16' });

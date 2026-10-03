@@ -9,3 +9,4 @@ export * from './celebrations';
 export * from './notifications';
 export * from './events';
 export * from './personalization';
+export * from './recovery';

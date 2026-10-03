@@ -36,3 +36,9 @@ file_size_limit = "10MiB"
 
 [functions.journey-events]
 verify_jwt = false               # authenticated by HMAC signature instead
+
+[functions.notifications-dispatch]
+verify_jwt = false               # called by pg_cron with NOTIFICATIONS_CRON_SECRET, checked in the function
+
+[functions.service-recovery-scan]
+verify_jwt = false               # called by pg_cron with RECOVERY_CRON_SECRET, checked in the function

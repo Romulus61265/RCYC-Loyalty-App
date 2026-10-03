@@ -241,6 +241,16 @@ export const catalogue: Catalogue = [
     price: { amountMinor: 190000, currency: 'EUR' }, tags: ['private', 'transport'],
     hero: { alt: 'Helicopter over the coast', tone: tones.sea },
   },
+  // Ashore in Saint-Tropez when the bay is closed (the recovery demo's alternative).
+  {
+    id: 'dev_exp_tropez_village', category: 'culture', portCallId: 'dev_pc_4', destination: 'Saint-Tropez',
+    title: 'Saint-Tropez on Foot, Privately',
+    subtitle: 'The citadel, the old fishing quarter and the Place des Lices',
+    description: 'A local guide, the citadel ramparts before the crowds, and coffee in the fishing quarter of La Ponche.',
+    durationMinutes: 150, inclusive: false, privateAvailable: true, format: 'private', includes: ['Local guide', 'Citadel entry', 'Coffee in La Ponche'],
+    price: { amountMinor: 65000, currency: 'EUR' }, tags: ['private', 'culture', 'walking'],
+    hero: { alt: 'Ochre houses along the old port of Saint-Tropez', tone: tones.terracotta },
+  },
 ];
 
 export const collections: DevExperienceData['collections'] = [

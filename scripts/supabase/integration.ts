@@ -10,7 +10,8 @@
  * UUIDs back to fixture IDs. Writes and refusals are exercised as the
  * signed-in guest, a second guest and the anon key.
  *
- * Env: PGRST_URL (PostgREST), JWT_SECRET, GUEST_USER_ID, OTHER_USER_ID.
+ * Env: PGRST_URL (PostgREST), JWT_SECRET, GUEST_USER_ID, OTHER_USER_ID,
+ * CREW_USER_ID (a Suite Ambassador), SHORE_USER_ID (shore operations).
  */
 import { createHmac, randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
@@ -39,12 +40,17 @@ import { dispatch, DryRunPushSender } from '../../supabase/functions/_shared/not
 import { supabaseDispatchPorts } from '../../supabase/functions/_shared/notifications/supabaseDispatch.ts';
 import { ComposedNotificationService } from '@/services/notifications/ComposedNotificationService';
 import { MemoryNotificationState } from '@/services/notifications/state';
+import { SupabaseRecoveryOperations } from '@/services/supabase/SupabaseRecovery';
+import { processDisruption, scanReservation } from '../../supabase/functions/_shared/recovery/handler.ts';
+import { supabaseRecoveryPorts } from '../../supabase/functions/_shared/recovery/supabaseRecovery.ts';
 
 const PGRST_URL = process.env.PGRST_URL;
 const JWT_SECRET = process.env.JWT_SECRET;
 const GUEST_USER_ID = process.env.GUEST_USER_ID;
 const OTHER_USER_ID = process.env.OTHER_USER_ID;
-if (!PGRST_URL || !JWT_SECRET || !GUEST_USER_ID || !OTHER_USER_ID) {
+const CREW_USER_ID = process.env.CREW_USER_ID;
+const SHORE_USER_ID = process.env.SHORE_USER_ID;
+if (!PGRST_URL || !JWT_SECRET || !GUEST_USER_ID || !OTHER_USER_ID || !CREW_USER_ID || !SHORE_USER_ID) {
   console.error('Run via scripts/supabase/run-integration.sh');
   process.exit(2);
 }
@@ -575,6 +581,82 @@ async function main() {
     check('occasions: approved → a suite request, tagged with its step', (await count()) === n + 1 && row?.category === 'suite' && row.occasion_step === amenity.id && row.status === 'received' && /White flowers/.test(String(row.details)), row);
     check('occasions: the plan now shows it requested', (await sb.occasions.getPlan(g, r, p!.celebration.key)).steps.find((s) => s.id === amenity.id)?.inHand?.label === 'Requested');
     check('occasions: another guest gets nothing for this reservation', (await other.occasions.listCelebrations(g, r).catch(() => [])).length === 0);
+  }
+
+  // ── Service recovery: recorded server-side, read and answered by the guest, decided by crew ──
+  {
+    const service = createClient(gw.url, jwt({ role: 'service_role' }), { auth: { persistSession: false } });
+    const ports = supabaseRecoveryPorts(service);
+    const fixture = d.recovery.demoDisruption;
+    const disruption = { ...fixture, reservationId: r, guestIds: fixture.guestIds.map(uuidFor), subject: { bookingId: uuidFor(fixture.subject.bookingId!) } };
+    check('recovery: the guest sees no notices before', (await sb.recovery.listNotices(g, r)).length === 0);
+    const recorded = await processDisruption(ports, disruption, { now });
+    check('recovery: recorded by the server, with its alternatives and a proposal', recorded.status === 'recorded' && recorded.severity === 'high' && recorded.alternatives === 3 && recorded.proposals === 1, recorded);
+    check('recovery: once per disruption', (await processDisruption(ports, disruption, { now })).status === 'duplicate');
+    const audited = (await service.from('audit_log').select('metadata').eq('action', 'service_recovery.record')).data as { metadata: Record<string, unknown> }[] | null;
+    check('recovery: audited with counts, not words', audited?.length === 1 && audited[0]!.metadata.kind === 'excursion-cancellation' && !JSON.stringify(audited).includes('mistral'), audited);
+    const event = (await service.from('service_recovery_events').select('plan, disruption').eq('disruption_key', fixture.key).maybeSingle()).data as { plan: { message: { title: string; body: string[] }; alternatives: { id: string }[] }; disruption: { subject: { title?: string } } } | null;
+
+    const [notice] = await sb.recovery.listNotices(g, r);
+    check('recovery: the guest’s notice, under RLS', notice?.title === 'Under sail on a 1930s classic yacht will not go ahead' && notice.explanation === fixture.reason?.guest && notice.status === 'open', notice);
+    check('recovery: server and app agree to the word', !!event && event.plan.message.title === notice?.title && JSON.stringify(event.plan.message.body) === JSON.stringify(notice?.body) && JSON.stringify(event.plan.alternatives.map((a) => a.id)) === JSON.stringify(notice?.alternatives.map((a) => a.id)), { server: event?.plan.alternatives.map((a) => a.id), app: notice?.alternatives.map((a) => a.id) });
+    check('recovery: the first alternative is the private walk that morning', toFixtureIds(notice?.alternatives[0]?.experienceId) === 'dev_exp_tropez_village' && notice?.alternatives[0]?.time === '10:00');
+    const row = (await guestDb.from('recovery_notices').select('disruption').eq('id', notice!.id).maybeSingle()).data as { disruption: Record<string, unknown> } | null;
+    check('recovery: the stored notice carries no internal reason or guest ids', !!row && !JSON.stringify(row).includes('35 knots') && !('guestIds' in row.disruption), row);
+    check('recovery: guests cannot read the recorded event or proposals', ((await guestDb.from('service_recovery_events').select('id')).data ?? []).length === 0 && ((await guestDb.from('goodwill_proposals').select('id')).data ?? []).length === 0);
+    check('recovery: guests cannot write notices', !!(await guestDb.from('recovery_notices').update({ status: 'resolved' }).eq('id', notice!.id).select('id')).error || ((await guestDb.from('recovery_notices').select('status').eq('id', notice!.id).maybeSingle()).data as { status: string } | null)?.status === 'open');
+    const leaky = await service.from('recovery_notices').insert({ recovery_event_id: recorded.eventId, reservation_id: r, disruption: { reason: { internal: 'x' } }, title: 'x', occurred_at: now.toISOString() });
+    check('recovery: a notice with an internal reason is refused by the database', !!leaky.error);
+    check('recovery: another guest sees nothing', (await other.recovery.listNotices(g, r).catch(() => [])).length === 0);
+    check('recovery: another guest cannot answer it', !!(await otherDb.rpc('respond_to_recovery_notice', { p_notice: notice!.id, p_kind: 'assistance', p_request: null })).error);
+
+    // The operator cancels the booking at source; the notice reads the same.
+    await service.from('experience_bookings').update({ status: 'cancelled' }).eq('id', disruption.subject.bookingId);
+    const again = (await sb.recovery.getNotice(g, r, notice!.id));
+    check('recovery: after the booking is cancelled, the notice still reads the same', again.title === notice!.title && again.subject.title === event?.disruption.subject.title && again.alternatives.length === 3);
+
+    const village = again.alternatives[0]!;
+    check('recovery: no approval, nothing requested', await rejects(sb.recovery.acceptAlternative(g, r, notice!.id, { alternativeId: village.id } as never), 'validation'));
+    check('recovery: the price must be acknowledged', await rejects(sb.recovery.acceptAlternative(g, r, notice!.id, { alternativeId: village.id, approved: true }), 'validation'));
+    const chosen = await sb.recovery.acceptAlternative(g, r, notice!.id, { alternativeId: village.id, approved: true, acknowledgedCharge: true });
+    const booking = (await service.from('experience_bookings').select('status, experience_id, party_size, note').eq('id', chosen.bookingId ?? '').maybeSingle()).data as { status: string; experience_id: string; party_size: number; note: string } | null;
+    check('recovery: accepted → a booking request (received), never a booking', booking?.status === 'received' && toFixtureIds(booking.experience_id) === 'dev_exp_tropez_village' && booking.party_size === 2 && /^In place of/.test(booking.note), booking);
+    check('recovery: the choice is recorded on the notice', chosen.notice.accepted?.bookingId === chosen.bookingId && chosen.notice.status === 'resolved' && chosen.notice.alternatives.length === 0, chosen.notice);
+    check('recovery: once only', await rejects(sb.recovery.acceptAlternative(g, r, notice!.id, { alternativeId: again.alternatives[1]!.id, approved: true, acknowledgedCharge: true }), 'conflict'));
+    const helped = await sb.recovery.requestAssistance(g, r, notice!.id, 'Something quiet later.');
+    const helpRow = (await service.from('service_requests').select('category, occasion_step, status').eq('id', helped.requestId ?? '').maybeSingle()).data as Record<string, unknown> | null;
+    check('recovery: assistance → a request tagged to the notice', helpRow?.category === 'excursion' && helpRow.occasion_step === `recovery:${notice!.id}:assist` && helpRow.status === 'received' && helped.notice.assistance.requested, helpRow);
+    check('recovery: the event is now in hand', ((await service.from('service_recovery_events').select('status').eq('id', recorded.eventId!).maybeSingle()).data as { status: string } | null)?.status === 'in-hand');
+
+    // The crew's side.
+    const crewDb = clientFor(gw.url, CREW_USER_ID);
+    const shoreDb = clientFor(gw.url, SHORE_USER_ID);
+    const crew = new SupabaseRecoveryOperations({ db: () => crewDb, clock });
+    const shore = new SupabaseRecoveryOperations({ db: () => shoreDb, clock });
+    const [rec] = await crew.listRecords(r);
+    check('crew: the recorded event, with its brief', rec?.kind === 'excursion-cancellation' && rec.assessment.severity === 'high' && rec.assessment.escalate && rec.crewBrief.some((l) => l.includes('35 knots')) && rec.status === 'in-hand', rec);
+    const [prop] = await crew.listProposals(r);
+    check('crew: the gesture proposed, not applied', prop?.ruleId === 'dev_gw_private_lost_gesture' && prop.status === 'proposed' && !prop.financial && prop.approvalRole === 'suite_ambassador', prop);
+    check('guest: cannot decide', await rejects(new SupabaseRecoveryOperations({ db: () => guestDb, clock }).decideProposal(prop!.id, { approve: true }), 'not_found'));
+    check('shore operations: may read, may not approve a Suite Ambassador’s gesture', (await shore.listProposals(r)).length === 1 && (await rejects(shore.decideProposal(prop!.id, { approve: true }), 'forbidden')));
+    const decided = await crew.decideProposal(prop!.id, { approve: true, note: 'The 2007 Barolo.' });
+    check('crew: the Suite Ambassador approves, recorded by whom', decided.status === 'approved' && decided.decidedBy === CREW_USER_ID && decided.note === 'The 2007 Barolo.', decided);
+    check('crew: decided once', await rejects(crew.decideProposal(prop!.id, { approve: false }), 'conflict'));
+    const draftFinancial = await service.from('goodwill_rules').update({ status: 'approved' }).eq('id', 'dev_gw_repeat_service_credit').select('id');
+    check('rules: an approved rule must say who authorised it', !!draftFinancial.error);
+    const noCeiling = await service.from('goodwill_rules').insert({ id: 'dev_gw_bad_refund', name: 'x', applies_to: ['guest-complaint'], min_severity: 'high', action: { kind: 'refund', description: 'x' }, approval: { role: 'suite_ambassador', maxPerReservation: 1 } });
+    check('rules: money only with a ceiling and an admin', !!noCeiling.error);
+    check('rules: crew read, cannot write', ((await crewDb.from('goodwill_rules').select('id')).data ?? []).length === 4 && ((await crewDb.from('goodwill_rules').update({ status: 'retired' }).eq('id', 'dev_gw_complaint_visit').select('id')).data ?? []).length === 0);
+    const policy = (await crewDb.from('goodwill_policy').select('financial_enabled').maybeSingle()).data as { financial_enabled: boolean } | null;
+    check('policy: financial goodwill is off', policy?.financial_enabled === false);
+
+    // Disruptions in the guest's own data, once each.
+    const late = new Date('2027-05-12T17:00:00Z');
+    const scan1 = await scanReservation(ports, { reservationId: r, guestIds: [g] }, { now: late });
+    const scan2 = await scanReservation(ports, { reservationId: r, guestIds: [g] }, { now: late });
+    check('scan: a missed update is recorded', scan1.some((x) => x.status === 'recorded') && scan1.length > 0, scan1);
+    check('scan: and only once', scan2.length === scan1.length && scan2.every((x) => x.status === 'duplicate'), scan2);
+    check('scan: the request raised from the notice is not a new disruption', !((await service.from('service_recovery_events').select('disruption_key')).data as { disruption_key: string }[]).some((e) => e.disruption_key.includes(helped.requestId ?? '-')));
   }
 
   // ── Notification preferences (saved last: earlier checks count preference versions) ──

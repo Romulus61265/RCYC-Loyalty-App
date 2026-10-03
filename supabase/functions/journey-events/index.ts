@@ -7,9 +7,16 @@
 //  • Verify signature + timestamp (replay window 5 min).
 //  • Idempotent insert on dedupe_key.
 //  • Project to a calm, guest-facing JourneyAlert (or none).
+//  • A disruption (cancellation, delay, port change, weather, suite issue,
+//    missed service, complaint) is also recorded as a service recovery: its
+//    plan for the crew, the guest's notice with alternatives, and any
+//    goodwill proposals from approved rules (never applied automatically).
 //  • Supabase Realtime pushes the alert to the guest app; crew consoles
 //    subscribe to journey_events directly.
 import { audit, handle, HttpError, json, serviceClient } from '../_shared/auth.ts';
+import { fromJourneyEvent } from '../_shared/recovery/engine.ts';
+import { processDisruption } from '../_shared/recovery/handler.ts';
+import { supabaseRecoveryPorts } from '../_shared/recovery/supabaseRecovery.ts';
 
 const SECRET = Deno.env.get('JOURNEY_EVENTS_HMAC_SECRET')!;
 
@@ -52,12 +59,21 @@ Deno.serve(
     if (error) throw new HttpError(500, 'persist');
     if (!inserted) return json({ status: 'duplicate' }); // already processed
 
-    const alert = project(event);
+    // Recorded first, so the alert can open the guest's notice.
+    const disruption = fromJourneyEvent(event);
+    let noticeId: string | undefined;
+    if (disruption) {
+      const { data: policy } = await svc.from('goodwill_policy').select('financial_enabled').maybeSingle();
+      const recovery = await processDisruption(supabaseRecoveryPorts(svc), disruption, { now: new Date(), journeyEventId: inserted.id, policy: { financialEnabled: policy?.financial_enabled === true } });
+      noticeId = recovery.noticeId || undefined;
+    }
+
+    const alert = project(event, noticeId);
     if (alert) await svc.from('journey_alerts').insert({ event_id: inserted.id, event_type: event.type, reservation_id: event.reservationId, ...alert });
     await svc.from('journey_events').update({ processed_at: new Date().toISOString() }).eq('id', inserted.id);
 
-    await audit({ action: 'journey_event.ingest', resource: 'journey_event', resourceId: inserted.id, outcome: 'success', metadata: { type: event.type, source: event.source } });
-    return json({ status: 'accepted', alert: Boolean(alert) }, 202);
+    await audit({ action: 'journey_event.ingest', resource: 'journey_event', resourceId: inserted.id, outcome: 'success', metadata: { type: event.type, source: event.source, recovery: Boolean(noticeId) } });
+    return json({ status: 'accepted', alert: Boolean(alert), recovery: Boolean(noticeId) }, 202);
   }),
 );
 
@@ -85,21 +101,28 @@ type AlertDraft = { severity: JourneyEvent['severity']; title: string; body: str
  * never alarm, always give one clear next step. Occasion events are
  * crew-only (no guest alert) so recognition stays a gesture, not a push.
  */
-function project(e: JourneyEvent): AlertDraft | null {
+function project(e: JourneyEvent, noticeId?: string): AlertDraft | null {
   const p = e.payload as Record<string, string>;
+  // A recorded recovery: the alert opens the notice, with its alternatives.
+  const notice = noticeId ? { action_label: 'See alternatives', action_route: `/recovery/${noticeId}` } : null;
   switch (e.type) {
     case 'flight.delayed':
       return { severity: 'notice', title: `${p.flightNumber} is running late`, body: `Now expected at ${p.newArrivalLocal}.`, handled: 'Your driver has been informed and will meet you at the new time.' };
     case 'transfer.delayed':
-      return { severity: 'notice', title: 'Your transfer is a little delayed', body: `New pick-up ${p.newPickupLocal}.`, handled: 'The yacht has been told — your embarkation is unaffected.' };
+      return { severity: 'notice', title: 'Your transfer is a little delayed', body: `New pick-up ${p.newPickupLocal}.`, handled: 'The yacht has been told — your embarkation is unaffected.', ...(notice ? { action_label: 'Details', action_route: notice.action_route } : {}) };
     case 'embarkation.changed':
       return { severity: 'action', title: 'Your embarkation details have changed', body: p.summary ?? 'Please review your new arrival window.', action_label: 'Review', action_route: '/voyage' };
     case 'dining.cancelled':
     case 'excursion.cancelled':
-      return { severity: 'action', title: `${p.title} is no longer possible`, body: p.reason ?? 'Circumstances have changed.', handled: 'Your concierge has prepared alternatives for you.', action_label: 'See alternatives', action_route: '/concierge' };
+      return { severity: 'action', title: `${p.title} is no longer possible`, body: p.guestReason ?? p.reason ?? 'Circumstances have changed.', handled: 'Your concierge has prepared alternatives for you.', action_label: 'See alternatives', action_route: notice?.action_route ?? '/concierge' };
     case 'weather.disruption':
     case 'itinerary.port_changed':
-      return { severity: 'notice', title: p.title ?? 'A change to our course', body: p.summary ?? '', handled: 'Your reservations ashore have been adjusted accordingly.', action_label: 'View itinerary', action_route: '/voyage' };
+      return { severity: 'notice', title: p.title ?? 'A change to our course', body: p.summary ?? '', handled: 'Your reservations ashore have been adjusted accordingly.', ...(notice ?? { action_label: 'View itinerary', action_route: '/voyage' }) };
+    case 'suite.issue_reported':
+    case 'service.missed':
+    case 'guest.complaint':
+      // Told through the recovery notice itself; no second card.
+      return null;
     case 'service.request_updated':
       return { severity: 'info', title: p.summary ?? 'Your request has been updated', body: p.statusLabel ?? '' };
     case 'medical.assistance_requested':

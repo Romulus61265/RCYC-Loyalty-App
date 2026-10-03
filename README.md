@@ -59,6 +59,7 @@ In **Concierge**, try:
 | 11 | [Concierge AI architecture](docs/11-concierge-ai-architecture.md) |
 | 12 | [Special occasions and service requests](docs/12-occasions-and-service-requests.md) |
 | 13 | [Contextual notifications and push](docs/13-notifications.md) |
+| 14 | [Service recovery and goodwill rules](docs/14-service-recovery.md) |
 
 ### Replacing mocks with enterprise APIs
 
@@ -79,7 +80,7 @@ See [docs/05](docs/05-service-interfaces.md#implementations-and-modes).
 
 ```bash
 supabase start && supabase db reset          # applies migrations + supabase/seed.sql (fictional)
-supabase functions serve                     # concierge-respond, journey-events, personalization-next-best, notifications-dispatch
+supabase functions serve                     # concierge-respond, journey-events, personalization-next-best, notifications-dispatch, service-recovery-scan
 supabase secrets set CONCIERGE_AI_PROVIDER=mock PSEUDONYM_SALT=... JOURNEY_EVENTS_HMAC_SECRET=...
 # To connect Claude to the concierge (function secrets only, never in the app):
 supabase secrets set CONCIERGE_AI_PROVIDER=anthropic ANTHROPIC_API_KEY=... # optional CONCIERGE_AI_MODEL=...

@@ -52,6 +52,7 @@ export const availability: ExperienceAvailability[] = [
   // Culture, private & excursions
   { experienceId: 'dev_exp_sagrada_private', status: 'available', slots: slots([1], ['10:45'], 1, 120) },
   { experienceId: 'dev_exp_palma_seu', status: 'available', slots: slots([2], ['15:30', '16:45'], 1, 75) },
+  { experienceId: 'dev_exp_tropez_village', status: 'available', slots: slots([4], ['10:00', '15:00'], 1, 150) },
   { experienceId: 'dev_exp_classic_sail', status: 'available', slots: slots([4], ['10:00'], 1, 210) },
   { experienceId: 'dev_exp_oceanographic', status: 'available', slots: slots([5], ['08:30'], 1, 120) },
   { experienceId: 'dev_exp_villa_ephrussi', status: 'available', slots: slots([5, 6], ['09:30'], 1, 180) },

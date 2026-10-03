@@ -62,6 +62,13 @@ grant anon, authenticated, service_role to authenticator;
 insert into auth.users (id, email, email_confirmed_at) values ('b0000000-0000-0000-0000-0000000000b2', 'other.guest@example.com', now());
 insert into public.guests (id, auth_user_id, salutation, first_name, last_name, email_masked, source_system)
   values ('c0000000-0000-0000-0000-0000000000b2', 'b0000000-0000-0000-0000-0000000000b2', 'Ms', 'Other', 'Guest', 'o•••@example.com', 'mock');
+-- Crew: a Suite Ambassador and a shore operations agent (fleet-wide roles).
+insert into auth.users (id, email, email_confirmed_at) values
+  ('b0000000-0000-0000-0000-0000000000c3', 'ambassador.crew@example.com', now()),
+  ('b0000000-0000-0000-0000-0000000000d4', 'shore.crew@example.com', now());
+insert into public.user_roles (user_id, role) values
+  ('b0000000-0000-0000-0000-0000000000c3', 'suite_ambassador'),
+  ('b0000000-0000-0000-0000-0000000000d4', 'shore_ops');
 SQL
 
 cat > "$WORK/rest.conf" <<CONF
@@ -80,4 +87,5 @@ echo "── Services through PostgREST"
 GUEST=$(pgrun "$PSQL -d app -At -c \"select auth_user_id from public.guests where first_name = 'Alexander'\"")
 cd "$ROOT"
 PGRST_URL="http://127.0.0.1:$REST_PORT" JWT_SECRET="$JWT_SECRET" GUEST_USER_ID="$GUEST" OTHER_USER_ID="b0000000-0000-0000-0000-0000000000b2" \
+  CREW_USER_ID="b0000000-0000-0000-0000-0000000000c3" SHORE_USER_ID="b0000000-0000-0000-0000-0000000000d4" \
   npx tsx scripts/supabase/integration.ts

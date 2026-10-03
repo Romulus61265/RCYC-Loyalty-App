@@ -37,7 +37,9 @@ import { UnsupportedPushRegistrar } from '@/services/push/PushRegistrar';
 import { ComposedNotificationService } from './notifications/ComposedNotificationService';
 import { MemoryNotificationState } from './notifications/state';
 import { MockVoyageService } from './mock/MockVoyageService';
-import { data, mockNow } from './mock/support';
+import { data, mockDemo, mockNow } from './mock/support';
+import { ComposedRecoveryService } from './recovery/ComposedRecoveryService';
+import { MemoryRecoveryStore } from './recovery/store';
 import { ApiClient } from './remote/apiClient';
 import { MarriottBonvoyService } from './remote/MarriottBonvoyService';
 import { createSupabaseServices } from './supabase';
@@ -75,6 +77,23 @@ function createMockServices(): Services {
   const journeyEvents = new MockJourneyEventService();
   // On board, a crew member picks a new request up within moments.
   const requests = new MockServiceRequestService({ store: requestStore, voyage, simulateCrew: { acknowledgeMs: 8_000, startMs: 25_000 } });
+  const clock = { now: mockNow };
+  // Stands in for the server: records each disruption with the shared handler.
+  const recoveryStore = new MemoryRecoveryStore(
+    { profile, loyalty, voyage, experience, requests, clock },
+    {
+      rules: data.recovery.goodwillRules,
+      prepare:
+        mockDemo() === 'disruption'
+          ? async (store) => {
+              // Recorded as the event arrives; the operator's cancellation reaches the booking too.
+              const d = data.recovery.demoDisruption;
+              await store.report(d);
+              if (d.subject.bookingId) await experience.cancelBooking(d.subject.bookingId);
+            }
+          : undefined,
+    },
+  );
   return {
     auth: new MockAuthService(),
     profile,
@@ -87,6 +106,7 @@ function createMockServices(): Services {
     requests,
     occasions: new ComposedOccasionService({ profile, loyalty, voyage, experience, requests, clock: { now: mockNow } }),
     notifications: new ComposedNotificationService({ profile, voyage, experience, requests, journeyEvents, personalization, clock: { now: mockNow } }, new MemoryNotificationState({ [data.guest.profile.guest.id]: data.communication.readNotificationKeys })),
+    recovery: new ComposedRecoveryService({ profile, loyalty, voyage, experience, requests, clock }, recoveryStore),
     journeyEvents,
     push: devicePush(),
     schedule: new MockScheduleService(),

@@ -16,6 +16,9 @@ export type JourneyEventType =
   | 'itinerary.port_changed'
   | 'service.request_updated'
   | 'medical.assistance_requested'
+  | 'suite.issue_reported'
+  | 'service.missed'
+  | 'guest.complaint'
   | 'occasion.anniversary'
   | 'occasion.birthday';
 

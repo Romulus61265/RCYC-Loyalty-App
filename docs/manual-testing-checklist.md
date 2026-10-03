@@ -190,3 +190,21 @@ Prerequisites:
 - [ ] **Human escalation.** "I would like to speak to a real person" brings Marco (Shoreside Concierge) before the voyage, or Sofia (Guest Services) aboard. "I feel unwell" goes to the Medical Centre, with emergency advice for where you are. An unclear message offers a person; a second one hands you over.
 - [ ] **Failures.** With `?scenario=error`, a calm message with Try again. Losing the network mid-message shows "Your message didn't reach us…" and keeps your text in the box.
 - [ ] **320 px and large text.** No horizontal scrolling; cards and buttons wrap.
+
+## Service recovery (`?demo=disruption`)
+
+- [ ] **Unchanged by default.** Without the parameter, Home shows no disruption.
+- [ ] **Home.** With `/?demo=disruption`, "For your attention" opens with **A change to your plans · 18 May**: "Under sail on a 1930s classic yacht will not go ahead", and "Elena has 3 comparable alternatives for you." There is no "Nothing needs your attention" beside it.
+- [ ] **The notice.** **See the alternatives** opens a letter from Elena:
+  - "Alexander, we are sorry to tell you that…", calm, with no exclamation marks;
+  - **The reason**: the mistral and the skipper;
+  - nothing about severity, the Hotel Director, goodwill or money.
+- [ ] **Alternatives.** Three of them:
+  - Saint-Tropez on Foot, Privately (the same morning, 10:00, €650);
+  - the wellness coach aboard;
+  - the Monte Carlo atelier.
+  
+  Nothing on the water that day, and nothing already booked or requested.
+- [ ] **Approval.** **Request 10:00** shows "Before we send it", with exactly what will be sent. **Send the request** stays disabled until you tick "I understand €650 will be charged… once the team confirms it". Then **Your choice** shows Requested, and the other alternatives are gone.
+- [ ] **Ask Elena.** Add a note and send it: "Elena has this in hand", **In hand**, and the request appears in Your requests ("Excursion cancellation: …").
+- [ ] **320 px.** No horizontal scrolling.

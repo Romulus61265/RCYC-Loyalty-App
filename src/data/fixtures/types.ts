@@ -5,6 +5,7 @@
  * services and future enterprise adapters return identical shapes. The
  * dataset-level wrapper below exists only in development.
  */
+import type { Disruption, GoodwillRule } from '../../../supabase/functions/_shared/recovery/types';
 import type {
   DaySchedule,
   Destination,
@@ -103,4 +104,10 @@ export interface DevDataset {
   concierge: DevConciergeData;
   communication: DevCommunicationData;
   personalization: DevPersonalizationData;
+  recovery: DevRecoveryData;
+}
+
+export interface DevRecoveryData {
+  goodwillRules: GoodwillRule[];
+  demoDisruption: Disruption;
 }

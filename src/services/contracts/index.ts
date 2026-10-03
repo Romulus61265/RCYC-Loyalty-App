@@ -54,6 +54,11 @@ import type {
   PushDevice,
   UpcomingNotification,
   NewServiceRequest,
+  GoodwillProposal,
+  RecoveryAcceptance,
+  RecoveryApproval,
+  RecoveryNotice,
+  RecoveryRecord,
   ServiceRequest,
   ServiceRequestType,
   TravelDocument,
@@ -307,6 +312,38 @@ export interface NotificationService {
   subscribe(guestId: ID, reservationId: ID, listener: () => void): Unsubscribe;
 }
 
+// ─── Service recovery ──────────────────────────────────────────────────────
+
+/**
+ * Disruptions (a transfer delay, a cancelled dinner or excursion, a suite
+ * issue, a port change, the weather, a missed service, a complaint) as the
+ * guest is told about them: calmly, the reason when known, comparable
+ * alternatives, and a person to help. Each disruption is recorded once,
+ * server-side, with its plan for the crew.
+ *
+ * Nothing is booked without the guest's explicit approval, and nothing is
+ * ever compensated here: goodwill is proposed to the crew by authorised
+ * business rules and decided by people (ServiceRecoveryOperations).
+ */
+export interface ServiceRecoveryService {
+  /** Open notices first, newest first. */
+  listNotices(guestId: ID, reservationId: ID): Promise<RecoveryNotice[]>;
+  getNotice(guestId: ID, reservationId: ID, noticeId: ID): Promise<RecoveryNotice>;
+  /** Requests the chosen alternative (a booking request, or a request to the team). */
+  acceptAlternative(guestId: ID, reservationId: ID, noticeId: ID, approval: RecoveryApproval): Promise<RecoveryAcceptance>;
+  /** Asks the Suite Ambassador to help, as a service request. */
+  requestAssistance(guestId: ID, reservationId: ID, noticeId: ID, note?: string): Promise<RecoveryAcceptance>;
+  subscribe(reservationId: ID, listener: () => void): Unsubscribe;
+}
+
+/** The crew's side: recorded recoveries and goodwill proposals. Never in the guest app. */
+export interface ServiceRecoveryOperations {
+  listRecords(reservationId: ID): Promise<RecoveryRecord[]>;
+  listProposals(reservationId: ID): Promise<GoodwillProposal[]>;
+  /** Approving records the authority to carry a gesture out; it does not carry it out. */
+  decideProposal(proposalId: ID, decision: { approve: boolean; note?: string }): Promise<GoodwillProposal>;
+}
+
 // ─── Journey events / service continuity ───────────────────────────────────
 
 // ─── Schedule (combined guest calendar) ───────────────────────────────────
@@ -363,6 +400,7 @@ export interface Services {
   requests: ServiceRequestService;
   occasions: OccasionService;
   notifications: NotificationService;
+  recovery: ServiceRecoveryService;
   /** The device side of push (token and permission). */
   push: PushRegistrar;
   journeyEvents: JourneyEventService;

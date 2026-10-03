@@ -35,6 +35,7 @@ RCYC-Loyalty-App/
 │   │   ├── auth/                 Sign-in: useSignIn (e-mail code state machine) + SignInScreen
 │   │   ├── notifications/        Inbox (/notifications) and settings (/notifications/settings): notificationsModel, useNotifications
 │   │   ├── celebrations/         A celebration during the voyage (/celebration/[key]): message, ideas, approval panel
+│   │   ├── recovery/             A disruption, told calmly (/recovery/[id]): reason, comparable alternatives, approval, Ask Elena; Home card
 │   │   ├── requests/             Service requests (/requests, /requests/new, /requests/[id]): requestsModel, useRequests, screens
 │   │   ├── concierge/            Concierge (?view=requests)
 │   │   │   ├── conciergeModel.ts Thread blocks, action cards, confirmations, hand-offs, request status, guest context (scripts/check-concierge.ts)
@@ -84,6 +85,7 @@ RCYC-Loyalty-App/
 │   │   ├── notifications/        buildNotifyInput, ComposedNotificationService, NotificationStateStore (memory)
 │   │   ├── push/                 PushRegistrar (device side of push; Expo adapter designed in docs/13), routeFromPush
 │   │   ├── occasions/            Celebration detectors, playbooks and planner; ComposedOccasionService (approval)
+│   │   ├── recovery/             buildRecoveryContext, ComposedRecoveryService (approval), RecoveryNoticeStore + MemoryRecoveryStore (mock server, crew operations)
 │   │   ├── registry.ts           Composition root: validate env → mode → implementations
 │   │   ├── instrument.ts         Logs every service call's failures & slow responses
 │   │   └── ServiceProvider.tsx   React context + useServices()
@@ -96,10 +98,12 @@ RCYC-Loyalty-App/
     │   ├── _shared/auth.ts       JWT verification, roles, audit, error handling
     │   ├── _shared/concierge/    Concierge AI pipeline (runtime-agnostic; docs/11)
     │   ├── concierge-respond/    Endpoint: JWT → clients + provider → pipeline
-    │   ├── journey-events/       HMAC webhook ingest → alert projection
+    │   ├── journey-events/       HMAC webhook ingest → service recovery (disruptions) → alert projection
     │   ├── _shared/personalization/  Rules engine rules-v1 (shared with the app's mock mode)
     │   ├── _shared/notifications/    Notification engine, dispatcher, Expo/dry-run senders (shared with the app)
     │   ├── _shared/requests/         Request status, timeline and routing rules (shared with the app)
+    │   ├── _shared/recovery/         Service recovery rules, goodwill rules and proposals, recording handler (shared with the app)
+    │   ├── service-recovery-scan/    Scheduled detection of disruptions in the guests' own data (cron secret)
     │   ├── notifications-dispatch/   Scheduled push dispatch (cron secret; dry-run until switched on)
     │   └── personalization-next-best/  Endpoint: authorise → load inputs → engine → guest-safe output
     └── tests/                    Local stubs + SQL smoke tests (RLS, preferences, integration)

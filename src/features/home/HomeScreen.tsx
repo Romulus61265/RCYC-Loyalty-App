@@ -4,7 +4,7 @@
  * Reading order answers, in turn:
  *   Where am I in my journey?           → hero (phase, countdown / today's port, journey line)
  *   Do they know me?                    → Bonvoy recognition
- *   Does anything need my attention?    → journey alerts (or a reassuring all-clear)
+ *   Does anything need my attention?    → a disruption and its alternatives, journey alerts (or a reassuring all-clear)
  *   What happens next?                  → next activity, then arrival (transfer + embarkation)
  *   What has been arranged for me?      → dining, ashore, spa
  *   Where will I be?                    → yacht and suite
@@ -37,12 +37,15 @@ import { useHomeDashboard } from './useHomeDashboard';
 import { celebrationHref } from '@/features/celebrations/celebrationModel';
 import { useNextCelebration } from '@/features/celebrations/useCelebrations';
 import { useUnreadCount } from '@/features/notifications/useNotifications';
+import { recoveryHref } from '@/features/recovery/recoveryModel';
+import { useOpenRecovery } from '@/features/recovery/useRecovery';
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { model, loading, error, reload, dismissAlert } = useHomeDashboard();
   const celebration = useNextCelebration();
   const unread = useUnreadCount();
+  const recovery = useOpenRecovery();
 
   if (loading && !model) return <HomeSkeleton topInset={insets.top} />;
   if (error || !model) {
@@ -66,6 +69,7 @@ export function HomeScreen() {
         onAction={(a) => a.action && router.push(a.action.route as Href)}
         onDismiss={(a) => dismissAlert(a.id)}
         onRetry={reload}
+        recovery={recovery ? { ...recovery, onOpen: () => router.push(recoveryHref(recovery.id) as Href) } : null}
       />
       {celebration ? <CelebrationCard card={celebration} onOpen={() => router.push(celebrationHref(celebration.key) as Href)} /> : null}
       {model.nextIsArrival || !model.nextKnown ? null : <NextActivity activity={model.next} onOpen={() => toVoyage('calendar')} />}

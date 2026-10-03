@@ -23,6 +23,14 @@ export function mockScenario(): MockScenario {
   return fromUrl && (SCENARIOS as readonly string[]).includes(fromUrl) ? (fromUrl as MockScenario) : env.mockScenario;
 }
 
+/**
+ * A demonstration layered on the data (`?demo=disruption`: the classic sail in
+ * Saint-Tropez cancelled for a forecast mistral, with its recovery).
+ */
+export function mockDemo(): 'disruption' | null {
+  return urlParam('demo') === 'disruption' ? 'disruption' : null;
+}
+
 /** True when the scenario asks for lists with nothing in them. */
 export const isEmptyScenario = () => mockScenario() === 'empty';
 

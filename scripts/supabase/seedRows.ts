@@ -345,6 +345,13 @@ export function buildSeedRows(): TableRows[] {
     value: json({ ref: s.id, summary: s.summary, memory: s.memory, category: s.category, voyageId: s.voyageId ? uuidFor(s.voyageId) : undefined, rating: s.rating, tags: s.tags }),
   })));
 
+  // Service recovery: the goodwill rules (business configuration; the draft is never matched).
+  add('public.goodwill_rules', d.recovery.goodwillRules.map((r) => ({
+    id: r.id, version: r.version, status: r.status, name: r.name, applies_to: texts(r.appliesTo), min_severity: r.minSeverity,
+    conditions: json(r.conditions), action: json(r.action), approval: json(r.approval),
+    authorized_by: r.authorizedBy ?? null, authorized_at: r.authorizedAt ?? null, effective_from: r.effectiveFrom ?? null, effective_to: r.effectiveTo ?? null,
+  })));
+
   return tables;
 }
 

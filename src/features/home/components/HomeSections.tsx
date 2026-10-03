@@ -79,19 +79,34 @@ export function AttentionSection({
   onAction,
   onDismiss,
   onRetry,
+  recovery,
 }: {
   alerts: JourneyAlert[];
   error?: unknown;
   onAction: (alert: JourneyAlert) => void;
   onDismiss: (alert: JourneyAlert) => void;
   onRetry: () => void;
+  /** A disruption the guest has been told about, with alternatives to choose from. */
+  recovery?: { eyebrow: string; title: string; line: string; cta: string; onOpen: () => void } | null;
 }) {
   const needsAction = alerts.filter((a) => a.severity === 'action' || a.severity === 'urgent');
   return (
     <Section eyebrow="For your attention">
+      {recovery ? (
+        <Card onPress={recovery.onOpen} accessibilityLabel={`${recovery.title}. ${recovery.line} ${recovery.cta}`} style={{ padding: spacing.lg, marginBottom: spacing.md, borderColor: colors.accent, borderWidth: StyleSheet.hairlineWidth }}>
+          <Eyebrow>{recovery.eyebrow}</Eyebrow>
+          <Text variant="bodyStrong" style={{ marginTop: spacing.xs }}>
+            {recovery.title}
+          </Text>
+          <Caption style={{ marginTop: spacing.xs }}>{recovery.line}</Caption>
+          <View style={{ marginTop: spacing.md }}>
+            <TextLink label={recovery.cta} onPress={recovery.onOpen} />
+          </View>
+        </Card>
+      ) : null}
       {error ? (
         <InlineError error={error} onRetry={onRetry} />
-      ) : alerts.length === 0 ? (
+      ) : alerts.length === 0 && recovery ? null : alerts.length === 0 ? (
         <View style={styles.allClear}>
           <Ionicons name="checkmark-circle-outline" size={18} color={colors.calm} />
           <Caption style={{ marginLeft: spacing.xs, flex: 1 }} color={colors.textPrimary}>

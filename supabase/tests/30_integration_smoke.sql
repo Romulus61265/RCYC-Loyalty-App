@@ -133,7 +133,7 @@ do $$ begin
   raise notice 'NOT REFUSED';
 exception when no_data_found then raise notice 'B cannot cancel A booking';
 end $$;
-select 'B can read the catalogue' t, count(*) = 27 ok from experiences;
+select 'B can read the catalogue' t, count(*) = 28 ok from experiences;
 reset role;
 
 -- ─── anon reaches nothing ──────────────────────────────────────────────────

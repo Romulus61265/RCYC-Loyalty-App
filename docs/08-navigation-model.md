@@ -24,6 +24,7 @@ flowchart TB
   Home -.anniversary card.-> Celebration["/celebration/[key]"]
   Home -.anything you need.-> Requests["/requests"]
   Home -.bell.-> Notifications["/notifications"]
+  Home -.attention.-> Recovery["/recovery/[id]"]
   Notifications --> NotificationSettings["/notifications/settings"]
   Notifications -.deep link.-> Voyage
   Concierge -.requests tab.-> Requests
@@ -63,6 +64,7 @@ These are pushed above the tabs, each with a quiet "Back" (falling back to a sen
 | `/requests/[id]` | One request: status timeline, resolution, details, withdraw or close |
 | `/notifications` | Notifications: inbox by day, filter by type, coming up, mark read |
 | `/notifications/settings` | Notification types, times, reminder timing, push on this device |
+| `/recovery/[id]` | A disruption: the message, the reason (when known), comparable alternatives with approval, Ask Elena. Opened from Home's attention area and from the journey alert |
 | `/celebration/[key]` | A celebration during the voyage: the message, the ideas, approval (`key` is URL-encoded, e.g. `anniversary%3A…`) |
 
 ## Planned stacks (next iterations)

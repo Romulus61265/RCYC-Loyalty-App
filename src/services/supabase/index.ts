@@ -21,6 +21,8 @@ import { ComposedOccasionService } from '@/services/occasions/ComposedOccasionSe
 import { UnsupportedPushRegistrar, type PushRegistrar } from '@/services/push/PushRegistrar';
 import { ComposedNotificationService } from '@/services/notifications/ComposedNotificationService';
 import { SupabaseNotificationState } from './SupabaseNotificationState';
+import { ComposedRecoveryService } from '@/services/recovery/ComposedRecoveryService';
+import { SupabaseRecoveryNoticeStore, SupabaseRecoveryOperations } from './SupabaseRecovery';
 
 /** `push`: the device side of push notifications (the app passes its platform's). */
 export function createSupabaseServices(db: Db, clock: ClockService = { now: () => new Date() }, push: PushRegistrar = new UnsupportedPushRegistrar()): Services {
@@ -44,6 +46,7 @@ export function createSupabaseServices(db: Db, clock: ClockService = { now: () =
     requests,
     occasions: new ComposedOccasionService({ profile, loyalty, voyage, experience, requests, clock }),
     notifications: new ComposedNotificationService({ profile, voyage, experience, requests, journeyEvents, personalization, clock }, new SupabaseNotificationState(deps)),
+    recovery: new ComposedRecoveryService({ profile, loyalty, voyage, experience, requests, clock }, new SupabaseRecoveryNoticeStore(deps)),
     journeyEvents,
     push,
     schedule: new SupabaseScheduleService(voyage, experience),
@@ -54,4 +57,5 @@ export function createSupabaseServices(db: Db, clock: ClockService = { now: () =
   };
 }
 
+export { SupabaseRecoveryNoticeStore, SupabaseRecoveryOperations };
 export { SupabaseAuthService, SupabaseConciergeService, SupabaseExperienceService, SupabaseGuestRecordSource, SupabaseJourneyEventService, SupabaseLoyaltyService, SupabasePersonalizationService, SupabaseScheduleService, SupabaseServiceRequestService, SupabaseVoyageService };

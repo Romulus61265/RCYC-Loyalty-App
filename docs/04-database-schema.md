@@ -141,6 +141,8 @@ Row changes on guest-writable tables are written to `audit_log` by `private.audi
 | `destinations`, `discover_collections` | Discover editorial | read |
 | `dining_bookings`, `spa_bookings`, `excursion_bookings` | Per-kind booking detail (table, pressure, meeting point) | read own party; crew manage |
 | `notifications` | Outbound communication history and schedule | read own; update `read_at` only |
+| `recovery_notices` | What the guest is told about a disruption (guest-safe) | party read; answer via `respond_to_recovery_notice()` |
+| `service_recovery_events`, `goodwill_proposals` | Recorded recoveries and goodwill proposals | none (crew only) |
 | `guest_occasions` (renamed) | Occasions; private ones hidden from crew | own |
 | view `voyage_guests` | The guests on each voyage, with the lead flagged | follows `reservation_guests` |
 | view `excursions` | Shore experiences | follows `experiences` |
@@ -219,6 +221,27 @@ Generated from the fictional dataset by `npm run seed:generate`, so do not edit 
   * disabled when Expo reports a dead token.
 * `activities` gains `previous_starts_at` and `changed_at` (and `activities_local` their local times), so a moved programme item becomes an itinerary change.
 * See [13](13-notifications.md).
+
+## Service recovery (`20261009000000_service_recovery.sql`)
+
+* **`service_recovery_events`**: one row per disruption (`disruption_key` unique). It holds:
+  * kind, source, severity, owner, escalation, follow-up time and status;
+  * the full disruption (internal reason and quotes included);
+  * the plan (steps, crew brief, alternatives offered).
+  
+  Crew assigned to the reservation read it; only the service role writes it.
+* **`recovery_notices`**: the guest-safe side of each event.
+  * The party and crew read it.
+  * A check refuses an internal reason, quotes or guest ids.
+  * Guests answer only through `respond_to_recovery_notice()`: one alternative, or a request for help. Either must be on the same reservation.
+* **`goodwill_rules`**: business rules for goodwill. Crew read, admins write. Checks:
+  * an approved rule names who authorised it, and when;
+  * a rule that moves money has a ceiling and an admin as approver.
+* **`goodwill_policy`**: one row; `financial_enabled` is false.
+* **`goodwill_proposals`**: crew read.
+  * They are decided only through `decide_goodwill_proposal()`, which checks the role, the policy, the rule as it stands now, and the limit.
+  * An approval records authority to act; it applies nothing.
+* See [14](14-service-recovery.md).
 
 ## Testing
 
