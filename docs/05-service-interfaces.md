@@ -63,6 +63,15 @@ Medical requests go to the `medical` team with `urgent` priority.
 ### PersonalizationService
 `getRecommendations(guestId, surface, opts)` and `recordFeedback(guestId, recommendationId, signal)`. Crew-audience opportunities are never returned to the guest app.
 
+### ScheduleService
+`getCalendar(reservationId): Promise<CalendarDay[]>` returns the party's chronological calendar. It merges:
+
+* the voyage programme (yacht events, port times and suggestions);
+* every booking (dining, spa, excursions, private experiences, transfers);
+* flights, including travel days before and after the voyage.
+
+`MockScheduleService` builds it from the fixtures. In production it's a BFF read model joining the shipboard PMS, shore ops and reservations.
+
 ### JourneyEventService
 `listAlerts`, `acknowledge`, and `subscribe(reservationId, listener, types?)` for real-time continuity events.
 

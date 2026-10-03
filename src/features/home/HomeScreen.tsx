@@ -45,7 +45,7 @@ export function HomeScreen() {
     );
   }
 
-  const toVoyage = () => router.push('/voyage');
+  const toVoyage = (section: 'overview' | 'embarkation' | 'calendar' | 'suite' = 'overview') => router.push({ pathname: '/voyage', params: { section } });
   const toConcierge = () => router.push('/concierge');
 
   return (
@@ -59,10 +59,10 @@ export function HomeScreen() {
         onDismiss={(a) => dismissAlert(a.id)}
         onRetry={reload}
       />
-      {model.nextIsArrival || !model.nextKnown ? null : <NextActivity activity={model.next} onOpen={toVoyage} />}
-      <ArrivalSection embarkation={model.embarkation} transfer={model.transfer} isNext={model.nextIsArrival} onOpen={toVoyage} />
-      <ArrangedSection items={model.arranged} error={model.errors.arranged} onOpen={toVoyage} onArrange={toConcierge} onRetry={reload} />
-      <VoyageSection yacht={model.yacht} suite={model.suite} onOpen={toVoyage} />
+      {model.nextIsArrival || !model.nextKnown ? null : <NextActivity activity={model.next} onOpen={() => toVoyage('calendar')} />}
+      <ArrivalSection embarkation={model.embarkation} transfer={model.transfer} isNext={model.nextIsArrival} onOpen={() => toVoyage('embarkation')} />
+      <ArrangedSection items={model.arranged} error={model.errors.arranged} onOpen={() => toVoyage('calendar')} onArrange={toConcierge} onRetry={reload} />
+      <VoyageSection yacht={model.yacht} suite={model.suite} onOpen={() => toVoyage('suite')} />
       <RecommendationRail items={model.recommendations} error={model.errors.recommendations} onRetry={reload} />
       <ConciergeInvitation ambassador={model.concierge.ambassador} prompt={model.concierge.prompt} onOpen={toConcierge} />
     </Screen>

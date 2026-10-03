@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { JourneyAlert } from '@/domain';
@@ -35,12 +36,48 @@ export function TextLink({ label, onPress }: { label: string; onPress: () => voi
 }
 
 export function SegmentedTabs<T extends string>({ options, value, onChange }: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
+  // Keep the selected tab in view (e.g. a deep link to a later section),
+  // scrolling only when it would otherwise sit beyond the visible edge.
+  const scrollRef = useRef<ScrollView>(null);
+  const layouts = useRef(new Map<string, { x: number; width: number }>());
+  const viewport = useRef(0);
+  const reveal = (key: string, animated: boolean) => {
+    const l = layouts.current.get(key);
+    if (!l || !viewport.current) return;
+    if (l.x + l.width + spacing.gutter > viewport.current) scrollRef.current?.scrollTo({ x: Math.max(0, l.x - spacing.gutter), animated });
+  };
+  useEffect(() => {
+    reveal(value, true);
+  }, [value]);
+
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.segments}>
+    <ScrollView
+      ref={scrollRef}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.segments}
+      accessibilityRole="tablist"
+      onLayout={(e) => {
+        viewport.current = e.nativeEvent.layout.width;
+        reveal(value, false);
+      }}
+    >
       {options.map((o) => {
         const active = o.value === value;
         return (
-          <Pressable key={o.value} onPress={() => onChange(o.value)} accessibilityRole="tab" accessibilityState={{ selected: active }} style={styles.segment}>
+          <Pressable
+            key={o.value}
+            onPress={() => onChange(o.value)}
+            onLayout={(e) => {
+              layouts.current.set(o.value, { x: e.nativeEvent.layout.x, width: e.nativeEvent.layout.width });
+              if (active) reveal(o.value, false);
+            }}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            aria-selected={active}
+            hitSlop={{ top: 8, bottom: 8 }}
+            style={styles.segment}
+          >
             <Eyebrow color={active ? colors.textPrimary : colors.textMuted}>{o.label}</Eyebrow>
             <View style={[styles.segmentRule, active && { backgroundColor: colors.accent }]} />
           </Pressable>

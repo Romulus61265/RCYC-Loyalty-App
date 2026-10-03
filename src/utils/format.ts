@@ -73,3 +73,18 @@ export function relativeDay(iso: string, now: Date): string {
   if (day === tomorrow) return 'Tomorrow';
   return formatLongDate(iso);
 }
+
+/** "UTC+2", "UTC−4", "UTC+5:30" from an ISO timestamp's offset. */
+export function utcOffsetLabel(iso: string): string {
+  const min = offsetMinutes(iso);
+  if (min === 0) return 'UTC';
+  const sign = min > 0 ? '+' : '−';
+  const h = Math.floor(Math.abs(min) / 60);
+  const m = Math.abs(min) % 60;
+  return `UTC${sign}${h}${m ? `:${String(m).padStart(2, '0')}` : ''}`;
+}
+
+/** Hours between two ISO offsets: "6 h ahead of Miami" style comparisons. */
+export function offsetDifferenceHours(iso: string, referenceIso: string): number {
+  return (offsetMinutes(iso) - offsetMinutes(referenceIso)) / 60;
+}

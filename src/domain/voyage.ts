@@ -73,6 +73,7 @@ export interface VoyageReservation {
   status: ReservationStatus;
   /** Name of the assigned Suite Ambassador (butler/concierge equivalent). */
   suiteAmbassador?: string;
+  suiteAmbassadorContact?: AmbassadorContact;
   source: SourceRef;
 }
 
@@ -88,7 +89,30 @@ export interface Embarkation {
   allAboard: ISODateTime;
   departure: ISODateTime;
   checkInStatus: 'not-started' | 'in-progress' | 'complete';
+  luggage?: LuggageArrangement;
   notes: string[];
+}
+
+/** How the guest reaches their Suite Ambassador. Never a personal phone number. */
+export interface AmbassadorContact {
+  name: string;
+  title: string;
+  /** e.g. "07:00 – 23:00, ship time; urgent matters at any hour". */
+  availability: string;
+  /** In-suite dialling, e.g. "Dial 9 from your suite telephone". */
+  suiteTelephone?: string;
+  languages: string[];
+  channels: ('chat' | 'suite-telephone' | 'in-person')[];
+}
+
+export interface LuggageArrangement {
+  method: 'airport-collection' | 'terminal-kerbside' | 'guest-carried';
+  summary: string;
+  /** When bags are expected in the suite. */
+  deliveredBy?: ISODateTime;
+  /** Luggage tags issued electronically or posted. */
+  tags: 'e-tags-issued' | 'posted' | 'at-terminal';
+  pieces?: number;
 }
 
 export type DocumentType = 'passport' | 'visa' | 'health-declaration' | 'guest-contract' | 'emergency-contact' | 'payment-folio';

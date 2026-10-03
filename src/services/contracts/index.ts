@@ -22,6 +22,7 @@ import type {
   ExperienceCategory,
   ConciergeMessage,
   GuestContext,
+  CalendarDay,
   GuestNotification,
   GuestPreferences,
   GuestPrivilege,
@@ -195,6 +196,17 @@ export interface PersonalizationService {
 
 // ─── Journey events / service continuity ───────────────────────────────────
 
+// ─── Schedule (combined guest calendar) ───────────────────────────────────
+
+export interface ScheduleService {
+  /**
+   * Chronological calendar for the party: yacht events, dining, spa,
+   * excursions, private experiences, transfers, port times and flights,
+   * including travel days before and after the voyage.
+   */
+  getCalendar(reservationId: ID): Promise<CalendarDay[]>;
+}
+
 export interface JourneyEventService {
   listAlerts(reservationId: ID): Promise<JourneyAlert[]>;
   /** Outbound communication history and schedule (push, e-mail, SMS, in-app), newest first. */
@@ -236,6 +248,7 @@ export interface Services {
   concierge: ConciergeService;
   personalization: PersonalizationService;
   journeyEvents: JourneyEventService;
+  schedule: ScheduleService;
   audit: AuditService;
   clock: ClockService;
 }

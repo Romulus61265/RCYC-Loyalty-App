@@ -11,7 +11,7 @@ export const communicationData: DevCommunicationData = {
       id: 'dev_alr_health', eventId: 'dev_evt_docs_due', severity: 'action',
       title: 'One small thing before you sail',
       body: 'Your health questionnaire is due by Thursday, 13 May. It takes about two minutes.',
-      action: { label: 'Complete now', route: '/voyage' },
+      action: { label: 'Complete now', route: '/voyage?section=documents' },
       createdAt: '2027-05-10T09:00:00-04:00', expiresAt: '2027-05-15T13:30:00+02:00', acknowledged: false,
     },
     {

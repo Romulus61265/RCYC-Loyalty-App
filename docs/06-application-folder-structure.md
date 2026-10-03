@@ -35,6 +35,12 @@ RCYC-Loyalty-App/
 │   │       ├── useHomeDashboard.ts  The only service access for Home; per-section failure isolation
 │   │       ├── HomeScreen.tsx    Composition and reading order
 │   │       └── components/       HomeHero, HomeSections, HomeSkeleton (presentational)
+│   │   ├── voyage/               Voyage area (9 sections, ?section= deep links)
+│   │   │   ├── voyageModel.ts    Pure view model for every section (tested by scripts/check-voyage.ts)
+│   │   │   ├── useVoyageArea.ts  Service access with per-source isolation
+│   │   │   ├── VoyageScreen.tsx  Section tabs bound to the URL
+│   │   │   └── components/       Overview, Itinerary/PortCard, Suite, Embarkation, Calendar, Category, Documents
+│   │   └── shared/status.ts      Settled<T>, settle(), Tone, bookingStatus()
 │   ├── domain/                   Pure TypeScript domain model — no React, no I/O
 │   ├── hooks/
 │   │   ├── useAsync.ts           Minimal data hook (swappable for TanStack Query)

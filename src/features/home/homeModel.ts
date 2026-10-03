@@ -22,7 +22,10 @@ import type {
   VoyageOverview,
 } from '@/domain';
 import type { AppError } from '@/core/errors';
+import { bookingStatus, type Settled, type Tone } from '@/features/shared/status';
 import { daysUntil, formatDateRange, formatLongDate, formatTime, greeting, relativeDay } from '@/utils/format';
+
+export { bookingStatus, type Settled, type Tone };
 
 // ─── Inputs ────────────────────────────────────────────────────────────────
 
@@ -33,8 +36,6 @@ export interface HomeCoreData {
   profile: GuestProfile;
 }
 
-/** Each optional source may fail on its own; Home degrades section by section. */
-export type Settled<T> = { ok: true; value: T } | { ok: false; error: AppError };
 
 export interface HomeOptionalData {
   bookings: Settled<ExperienceBooking[]>;
@@ -46,7 +47,6 @@ export interface HomeOptionalData {
 
 // ─── Output ────────────────────────────────────────────────────────────────
 
-export type Tone = 'calm' | 'pending' | 'attention';
 
 export interface JourneyStep {
   key: 'prepare' | 'travel' | 'embark' | 'sail' | 'home';
@@ -212,21 +212,6 @@ const PHASE_LABEL: Record<JourneyPhase, string> = {
   remember: 'Remembering your voyage',
   rebook: 'Your next horizon',
 };
-
-export function bookingStatus(b: ExperienceBooking): { label: string; tone: Tone } {
-  switch (b.status) {
-    case 'confirmed':
-    case 'completed':
-      return { label: 'Confirmed', tone: 'calm' };
-    case 'awaiting_guest':
-      return { label: 'Awaiting your choice', tone: 'attention' };
-    case 'declined':
-    case 'cancelled':
-      return { label: 'No longer available', tone: 'attention' };
-    default:
-      return { label: 'Being arranged', tone: 'pending' };
-  }
-}
 
 function flightStatus(f: FlightSegment): { status: string; tone: Tone } {
   switch (f.status) {

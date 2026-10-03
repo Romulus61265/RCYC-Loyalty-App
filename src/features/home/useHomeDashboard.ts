@@ -11,20 +11,10 @@ import { reportError, toAppError } from '@/core/errors';
 import { useAsync } from '@/hooks/useAsync';
 import { useJourney } from '@/hooks/useJourney';
 import { useServices } from '@/services/ServiceProvider';
-import { buildHomeViewModel, type HomeViewModel, type Settled } from './homeModel';
+import { settle as settleWith } from '@/features/shared/status';
+import { buildHomeViewModel, type HomeViewModel } from './homeModel';
 
-/**
- * Runs a service call and captures its outcome. Takes a thunk so that an
- * implementation which throws synchronously (instead of rejecting) is
- * contained too, rather than failing the whole dashboard.
- */
-async function settle<T>(call: () => Promise<T>): Promise<Settled<T>> {
-  try {
-    return { ok: true, value: await call() };
-  } catch (e) {
-    return { ok: false, error: toAppError(e) };
-  }
-}
+const settle = <T,>(call: () => Promise<T>) => settleWith(call, toAppError);
 
 export interface HomeDashboard {
   model: HomeViewModel | undefined;

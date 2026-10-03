@@ -132,6 +132,14 @@ export const voyageData: DevVoyageData = {
     partyGuestIds: [IDS.guest, IDS.companion],
     status: 'pending-documents',
     suiteAmbassador: 'Elena Moreau',
+    suiteAmbassadorContact: {
+      name: 'Elena Moreau',
+      title: 'Suite Ambassador',
+      availability: '07:00 – 23:00 ship time; urgent matters at any hour',
+      suiteTelephone: 'Dial 9 from your suite telephone',
+      languages: ['English', 'French', 'Italian'],
+      channels: ['chat', 'suite-telephone', 'in-person'],
+    },
     source: { system: 'mock' },
   },
 
@@ -146,6 +154,13 @@ export const voyageData: DevVoyageData = {
     allAboard: '2027-05-15T19:00:00+02:00',
     departure: '2027-05-15T20:00:00+02:00',
     checkInStatus: 'in-progress',
+    luggage: {
+      method: 'airport-collection',
+      summary: 'Collected by your driver at El Prat and taken straight to Grand Suite 612. You keep only what you need for the morning.',
+      deliveredBy: '2027-05-15T15:30:00+02:00',
+      tags: 'e-tags-issued',
+      pieces: 4,
+    },
     notes: [
       'Your luggage travels directly from the airport to Grand Suite 612 while you are at the Sagrada Família.',
       'Elena will meet you at the gangway; feather-free bedding and your welcome amenity will be in place.',

@@ -88,3 +88,36 @@ export interface Destination {
   standfirst: string;
   hero: MediaAsset;
 }
+
+/** Kinds shown in the guest's combined calendar. */
+export type CalendarEntryKind = 'yacht-event' | 'dining' | 'spa' | 'excursion' | 'private' | 'transport' | 'port' | 'flight';
+
+/**
+ * One line in the chronological guest calendar: a booking, a yacht event,
+ * a port time, a transfer or a flight. Times carry their local offset.
+ */
+export interface CalendarEntry {
+  id: ID;
+  kind: CalendarEntryKind;
+  start: ISODateTime;
+  end?: ISODateTime;
+  title: string;
+  location: string;
+  /** Present for reservations the party holds. */
+  bookingId?: ID;
+  status?: RequestStatus;
+  note?: string;
+  /** Suggested by the programme or personalization, not booked. */
+  suggestion: boolean;
+}
+
+export interface CalendarDay {
+  date: string;
+  /** Null for travel days before or after the voyage. */
+  dayNumber: number | null;
+  portCallId?: ID;
+  title: string;
+  dressCode?: string;
+  sunset?: ISODateTime;
+  entries: CalendarEntry[];
+}

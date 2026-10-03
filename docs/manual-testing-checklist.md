@@ -94,3 +94,15 @@ On web, append these to the URL. On native, set `EXPO_PUBLIC_MOCK_SCENARIO` or `
 - [ ] Rotate a tablet, or widen the browser past 700 px: yacht and suite sit side by side, and the column stays centred (max 720 px).
 - [ ] At 320 px wide, journey step labels stay on one line and nothing scrolls horizontally.
 - [ ] With "Reduce Motion" on, skeleton blocks don't pulse.
+
+## 10 · Voyage area
+
+- [ ] Nine section tabs: Overview · Itinerary · My Suite · Embarkation · Calendar · Dining · Spa · Experiences · Documents. The selected one is underlined and announced as selected.
+- [ ] `/voyage?section=documents` opens Documents directly, with its tab scrolled into view. Home's "Complete now" alert lands there too.
+- [ ] **Itinerary:** each port shows an image placeholder, arrival / all-aboard / departure, local time ("UTC+2 · 6 h ahead of Miami"), what's booked and personalised suggestions. The sea day suggests the bridge visit and wine masterclass; Monte Carlo day 6 departs "00:00 +1".
+- [ ] **My Suite:** Grand Suite · Deck 6 · Suite 612, amenities, preferences (feather-free, sparkling water, 21 °C), and Elena's availability, suite telephone, languages, plus "Message Elena", which opens Concierge.
+- [ ] **Embarkation:** Barcelona, Port Vell Yacht Terminal, 13:30 – 14:00, the transfer with AA 7412 tracked, luggage (4 pieces, digital tags, in suite by 15:30), documentation 5 of 6, and a check-in checklist with the health questionnaire outstanding.
+- [ ] **Calendar:** starts "Before you sail" with AA 7412 from Miami and ends with AA 7419 home. Filters (Yacht, Dining, Spa, Excursions, Private, Travel) narrow the list; suggestions are marked "Suggested for you".
+- [ ] **Dining / Spa / Experiences:** reservations grouped by day, plus "Also available to you" where something remains unbooked.
+- [ ] **Documents:** a summary line, and no document numbers anywhere.
+- [ ] States: `?scenario=slow` shows "Gathering your voyage…"; `?scenario=error` shows the calm full-screen message; `?scenario=partial-error&section=calendar` shows an inline error while My Suite still works; `?scenario=empty&section=dining` shows "No dining reservations yet".

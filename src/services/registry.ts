@@ -21,6 +21,7 @@ import {
   MockJourneyEventService,
   MockPersonalizationService,
 } from './mock/MockMiscServices';
+import { MockScheduleService } from './mock/MockScheduleService';
 import { MockVoyageService } from './mock/MockVoyageService';
 import { mockNow } from './mock/support';
 import { ApiClient } from './remote/apiClient';
@@ -38,6 +39,7 @@ function createMockServices(): Services {
     concierge: new MockConciergeService(),
     personalization: new MockPersonalizationService(),
     journeyEvents: new MockJourneyEventService(),
+    schedule: new MockScheduleService(),
     audit: new ConsoleAuditService(),
     clock: { now: mockNow },
   };

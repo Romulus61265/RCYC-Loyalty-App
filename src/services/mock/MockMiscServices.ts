@@ -79,7 +79,8 @@ export class MockPersonalizationService implements PersonalizationService {
     // Guest app must never receive crew-only opportunities.
     const list = recommendations
       .filter((r) => r.audience === 'guest')
-      .filter((r) => surface === 'discover' || r.surface === surface)
+      // Discover and Voyage draw on every guest recommendation; other surfaces on their own.
+      .filter((r) => surface === 'discover' || surface === 'voyage' || r.surface === surface)
       .sort((a, b) => b.score - a.score)
       .slice(0, opts?.limit ?? 3);
     return latency(list);
