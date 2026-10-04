@@ -74,14 +74,36 @@ export function isPrivilegedSupabaseKey(key: string): boolean {
 
 /** Issues containing this marker stop the app in every mode. */
 export const SECRET_IN_BUNDLE = 'SECRET_IN_BUNDLE';
+/** Issues containing this marker stop the app: a build that would run with demo sign-in where it must not. */
+export const UNSAFE_BUILD = 'UNSAFE_BUILD';
+
+/** How the bundle was built: a release build, and the values as written (before defaults). */
+export interface BuildInfo {
+  release: boolean;
+  appEnv: string | undefined;
+  serviceMode: string | undefined;
+}
+
+/** True in a release bundle (`__DEV__` is false); false in development and in Node scripts. */
+function isReleaseBuild(): boolean {
+  return typeof __DEV__ !== 'undefined' && !__DEV__;
+}
+
+const thisBuild: BuildInfo = { release: isReleaseBuild(), appEnv: raw.appEnv, serviceMode: raw.serviceMode };
 
 /**
  * Returns human-readable configuration problems. Mock mode needs nothing;
  * remote modes need their endpoints. Called once by the service registry.
  */
-export function validateEnv(e: Env = env): string[] {
+export function validateEnv(e: Env = env, build: BuildInfo = thisBuild): string[] {
   const issues: string[] = [];
-  if (raw.serviceMode && raw.serviceMode !== e.serviceMode) issues.push(`Unknown EXPO_PUBLIC_SERVICE_MODE "${raw.serviceMode}" — using "${e.serviceMode}".`);
+  if (build.serviceMode && build.serviceMode !== e.serviceMode) issues.push(`Unknown EXPO_PUBLIC_SERVICE_MODE "${build.serviceMode}" — using "${e.serviceMode}".`);
+  // A missing or misspelt value must never quietly become development + mock (demo sign-in, any code accepted).
+  if (build.release && build.appEnv !== e.appEnv) issues.push(`${UNSAFE_BUILD}: a release build needs EXPO_PUBLIC_APP_ENV set to development, staging or production.`);
+  if (build.release && build.serviceMode !== e.serviceMode) issues.push(`${UNSAFE_BUILD}: a release build needs EXPO_PUBLIC_SERVICE_MODE set to mock, supabase or enterprise.`);
+  // Mock and enterprise modes sign in with the demo account (enterprise's identity adapter is not built yet).
+  if (e.appEnv === 'production' && e.serviceMode !== 'supabase') issues.push(`${UNSAFE_BUILD}: production runs on Supabase only; "${e.serviceMode}" mode signs in with the demo account.`);
+  if (e.appEnv === 'staging' && e.serviceMode === 'enterprise') issues.push(`${UNSAFE_BUILD}: enterprise mode has no real sign-in yet; development only.`);
   // Checked in every mode: anything EXPO_PUBLIC_ is shipped inside the app.
   if (isPrivilegedSupabaseKey(e.supabaseAnonKey)) {
     issues.push(`${SECRET_IN_BUNDLE}: EXPO_PUBLIC_SUPABASE_ANON_KEY holds a service-role or secret key. Use the anon (publishable) key; keep secrets in Edge Function secrets.`);
@@ -92,6 +114,5 @@ export function validateEnv(e: Env = env): string[] {
     if (!e.supabaseAnonKey) issues.push('EXPO_PUBLIC_SUPABASE_ANON_KEY is required in supabase mode.');
   }
   if (e.demoNow && Number.isNaN(Date.parse(e.demoNow))) issues.push('EXPO_PUBLIC_DEMO_NOW is not a valid ISO date-time.');
-  if (e.appEnv === 'production' && e.serviceMode === 'mock') issues.push('Production build is running on mock services.');
   return issues;
 }

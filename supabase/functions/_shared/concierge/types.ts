@@ -117,6 +117,8 @@ export interface RawMessage {
 
 export interface RawContext {
   conversationId: string;
+  /** False once crew have taken the conversation over: no model replies, no offers. */
+  aiEnabled: boolean;
   reservationId: string;
   guestId: string;
   preferredName: string;
@@ -203,17 +205,6 @@ export interface Caller {
   roles: string[];
 }
 
-export interface TransactionResult {
-  ok: boolean;
-  /** Status reported by the booking service after the write. */
-  status?: 'received' | 'in_progress' | 'confirmed';
-  bookingId?: string;
-  requestId?: string;
-  title?: string;
-  start?: string;
-  partySize?: number;
-  error?: string;
-}
 
 export interface PersistedReply {
   messages: unknown[];
@@ -222,17 +213,20 @@ export interface PersistedReply {
 export interface ConciergePorts {
   now(): Date;
   /** Messages the caller sent in the last `windowSeconds`. */
-  recentMessageCount(caller: Caller, windowSeconds: number): Promise<number>;
+  /** Takes one turn from the caller's allowance (atomic); false when it is used up. */
+  takeSlot(caller: Caller, limit: { max: number; windowSeconds: number; perDay: number }): Promise<boolean>;
   /** A stored result for this requestId (idempotent retries). */
-  findRun(requestId: string): Promise<PersistedReply | null>;
+  /** A stored turn of this caller's only. */
+  findRun(caller: Caller, requestId: string): Promise<PersistedReply | null>;
   /** Loads everything about the conversation the caller is allowed to see; null if not theirs. */
   loadContext(caller: Caller, conversationId: string): Promise<RawContext | null>;
   /** Carries out an action the guest consented to, through the booking services (RLS). */
-  execute(caller: Caller, ctx: RawContext, action: OfferedAction): Promise<TransactionResult>;
   /** Hands the conversation to a person: a service request plus team assignment. */
   escalate(caller: Caller, ctx: RawContext, to: EscalationTarget, reason: string, summary: string): Promise<{ requestId: string; team: ServiceTeam; agentName: string; minutes: number }>;
   /** Stores the guest message and the reply (service role for AI-authored rows). */
   persist(caller: Caller, ctx: RawContext, run: RunRecord, guestText: string, reply: ReplyMessage): Promise<PersistedReply>;
+  /** The guest's words only, for a person to answer (the conversation is in human hands). */
+  persistGuestOnly(caller: Caller, ctx: RawContext, guestText: string): Promise<void>;
   audit(entry: AuditEntry): Promise<void>;
 }
 
@@ -291,7 +285,7 @@ export interface RunRecord {
   safetyFlags: string[];
   guardFindings: string[];
   escalated: EscalationTarget | null;
-  transaction: { type: string; status: 'offered' | 'executed' | 'failed' | 'none' };
+  transaction: { type: string; status: 'offered' | 'awaiting_tap' | 'executed' | 'failed' | 'none' };
   degraded: boolean;
   latencyMs: number;
   attempts: number;
@@ -311,5 +305,5 @@ export interface AuditEntry {
 
 export interface PipelineResult {
   status: number;
-  body: { messages?: unknown[]; classification?: Classification; escalated?: boolean; degraded?: boolean; error?: string; replayed?: boolean };
+  body: { messages?: unknown[]; classification?: Classification; escalated?: boolean; degraded?: boolean; error?: string; replayed?: boolean; humanOnly?: boolean };
 }

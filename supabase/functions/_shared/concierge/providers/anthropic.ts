@@ -25,7 +25,9 @@ export class AnthropicProvider implements LLMProvider {
       const response = await this.client.beta.messages.create(
         {
           model: this.model,
-          max_tokens: 16000,
+          // The reply is capped at 1,800 characters (safety.ts) and the structured fields are short:
+          // a tight ceiling bounds the cost of any one call, however it is prompted.
+          max_tokens: 2048,
           betas: ['server-side-fallback-2026-07-01'],
           fallbacks: 'default',
           system: [{ type: 'text', text: req.system, cache_control: { type: 'ephemeral' } }],

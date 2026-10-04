@@ -7,9 +7,10 @@
  *   enterprise  mocks plus enterprise adapters (Bonvoy via the BFF), phased in
  * Screens never know which is in use.
  */
-import { env, SECRET_IN_BUNDLE, validateEnv, type ServiceMode } from '@/config/env';
+import { env, SECRET_IN_BUNDLE, UNSAFE_BUILD, validateEnv, type ServiceMode } from '@/config/env';
 import { AppError } from '@/core/errors/AppError';
 import { logger } from '@/core/logging';
+import { DeviceData } from '@/security/deviceData';
 import { secureStorage } from '@/security/secureStorage';
 import type { Services } from './contracts';
 import { instrumentServices } from './instrument';
@@ -64,12 +65,43 @@ const APP_VERSION = '0.1.0';
  * Where edited preferences persist outside Supabase mode: device storage.
  * (Supabase mode uses SupabasePreferencesRepository — see services/supabase.)
  */
-function preferencesRepository(): PreferencesRepository {
-  const store = resilientStore(asyncStorageStore, new MemoryKeyValueStore(), (e) =>
+function preferencesRepository(device: DeviceData): PreferencesRepository {
+  const fallback = new MemoryKeyValueStore();
+  const store = resilientStore(asyncStorageStore, fallback, (e) =>
     logger.child('storage').warn('Device storage unavailable; preferences kept for this session only', { reason: e instanceof Error ? e.message : 'unknown' }),
   );
+  // Dietary and accessibility groups: memory only, never device storage.
+  const sensitive = new MemoryKeyValueStore();
+  device.onWipe(() => {
+    fallback.clear();
+    sensitive.clear();
+  });
   // Real clock for "saved at", even when the demo clock is pinned.
-  return new LocalPreferencesRepository(store);
+  return new LocalPreferencesRepository(store, undefined, sensitive);
+}
+
+/**
+ * Signing out also wipes what this app kept on the device (security/deviceData),
+ * so the next person to use it finds nothing of the guest, even if the sign-out
+ * call itself fails.
+ */
+function wipingOnSignOut(auth: Services['auth'], device: DeviceData): Services['auth'] {
+  return {
+    getSession: () => auth.getSession(),
+    signInWithOtp: (email) => auth.signInWithOtp(email),
+    verifyOtp: (challengeId, code) => auth.verifyOtp(challengeId, code),
+    signInWithBonvoy: () => auth.signInWithBonvoy(),
+    onSessionChange: (listener) => auth.onSessionChange(listener),
+    async signOut() {
+      try {
+        await auth.signOut();
+      } finally {
+        const { failed } = await device.wipe();
+        await secureStorage.removeItem(ACCESS_TOKEN_KEY).catch(() => undefined);
+        if (failed) log.warn('Some device data could not be removed at sign-out', { failed });
+      }
+    },
+  };
 }
 
 /**
@@ -80,8 +112,8 @@ function devicePush() {
   return new UnsupportedPushRegistrar(Platform.OS === 'ios' || Platform.OS === 'android' ? Platform.OS : 'web');
 }
 
-function createMockServices(): Services {
-  const profile = new RepositoryGuestProfileService(new MockGuestRecordSource(), preferencesRepository());
+function createMockServices(device: DeviceData): Services {
+  const profile = new RepositoryGuestProfileService(new MockGuestRecordSource(), preferencesRepository(device));
   const loyalty = new MockLoyaltyService();
   const voyage = new MockVoyageService();
   const experience = new MockExperienceService();
@@ -170,13 +202,19 @@ export function createServices(mode: ServiceMode = env.serviceMode): Services {
   if (issues.some((i) => i.startsWith(SECRET_IN_BUNDLE))) {
     throw new AppError('config', 'A secret key is configured in the app bundle', { severity: 'fatal' });
   }
+  // Fail closed: a release that would fall back to demo sign-in does not start.
+  if (issues.some((i) => i.startsWith(UNSAFE_BUILD))) {
+    throw new AppError('config', 'This build is not configured for its environment', { severity: 'fatal' });
+  }
   // Remote modes cannot run without their endpoints, and never with a secret
   // key — fail loudly; the root ErrorBoundary shows calm copy.
   if (mode !== 'mock' && issues.some((i) => /API_BASE_URL|SUPABASE_URL|ANON_KEY/.test(i))) {
     throw new AppError('config', `Service mode "${mode}" is missing configuration`, { severity: 'fatal' });
   }
   log.info('services ready', { mode, appEnv: env.appEnv });
-  const services = compose(mode);
+  const device = new DeviceData([asyncStorageStore]);
+  const composed = compose(mode, device);
+  const services = { ...composed, auth: wipingOnSignOut(composed.auth, device) };
   // Product analytics: a vendor adapter replaces the provider; until one is chosen, production sends nothing.
   const analytics = new PrivacyAnalyticsService(env.appEnv === 'production' ? new NoopAnalyticsProvider() : new ConsoleAnalyticsProvider(logger.child('analytics')), {
     clock: services.clock,
@@ -185,9 +223,9 @@ export function createServices(mode: ServiceMode = env.serviceMode): Services {
   return instrumentServices(withAnalytics(services, analytics), log);
 }
 
-function compose(mode: ServiceMode): Services {
+function compose(mode: ServiceMode, device: DeviceData): Services {
   if (mode === 'supabase') return createSupabaseServices(getSupabaseClient, { now: () => new Date() }, devicePush());
-  const mocks = createMockServices();
+  const mocks = createMockServices(device);
   if (mode === 'mock') return mocks;
 
   const api = new ApiClient(() => secureStorage.getItem(ACCESS_TOKEN_KEY));

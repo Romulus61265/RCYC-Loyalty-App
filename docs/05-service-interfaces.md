@@ -119,9 +119,9 @@ The UI renders these. It writes no answer text itself.
 * `escalate`: hand over to a person;
 * `open`: in-app navigation, handled by the app (routes must start with `/`).
 
-A guest can also confirm in words ("21:00, please"). The provider returns `perform`, and the service carries it out.
+A guest who accepts in words ("21:00, please") is offered that action back as a button. Nothing a provider says performs an action; only the guest's tap does (docs/22, H3).
 
-**Separation.** `ConciergeAIProvider.respond()` only decides. It returns `{ messages, confidence, shouldEscalate, escalateTo, escalationReason, perform }`. The orchestrating service acts: it books, records requests and hands over, through the same Voyage and Experience services the app uses. A table moved in Concierge is therefore moved on the Voyage and Home tabs too.
+**Separation.** `ConciergeAIProvider.respond()` only decides. It returns `{ messages, confidence, shouldEscalate, escalateTo, escalationReason }`. The orchestrating service hands over, and books or records requests when the guest taps an action, through the same Voyage and Experience services the app uses. A table moved in Concierge is therefore moved on the Voyage and Home tabs too.
 
 **Grounding (mock).** `MockConciergeAI` answers from a snapshot that `MockConciergeService` loads through the other services:
 

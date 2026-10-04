@@ -133,9 +133,15 @@ async function main() {
     check('dinner: offers the free times that evening', moves.map((a) => a.label).join() === 'Move to 19:30,Move to 21:00', moves);
     const r2 = await ask(w, '21:00, please');
     allReplies.push(...r2.replies);
+    const untouched = (await w.experience.listBookings(R)).find((b) => b.id === 'dev_bkg_dinner_1');
+    check('"21:00, please" changes nothing by itself (only a tap acts)', untouched?.start === '2027-05-15T20:30:00+02:00', untouched);
+    const offered = actionsOf(r2.att).filter((a) => a.kind === 'change-booking');
+    check('… it offers that one time back, as a button', offered.length === 1 && offered[0]!.kind === 'change-booking' && offered[0]!.start === '2027-05-15T21:00:00+02:00' && /Tap “Move to 21:00”/.test(r2.text), r2.att);
+    const done = await w.concierge.performAction(r2.replies[0]!.conversationId, offered[0]!);
+    allReplies.push(...done);
     const moved = (await w.experience.listBookings(R)).find((b) => b.id === 'dev_bkg_dinner_1');
-    check('"21:00, please" moves the booking in the Experience service', moved?.start === '2027-05-15T21:00:00+02:00' && moved.status === 'confirmed', moved);
-    check('… and confirms it with a reservation card', cards(r2.att, 'confirmation').some((a) => a.kind === 'confirmation' && a.status === 'confirmed' && a.bookingId === 'dev_bkg_dinner_1' && Boolean(a.reference)), r2.att);
+    check('the tap moves the booking in the Experience service', moved?.start === '2027-05-15T21:00:00+02:00' && moved.status === 'confirmed', moved);
+    check('… and confirms it with a reservation card', cards(done.flatMap((m) => m.attachments ?? []), 'confirmation').some((a) => a.kind === 'confirmation' && a.status === 'confirmed' && a.bookingId === 'dev_bkg_dinner_1' && Boolean(a.reference)), done);
     const requests = await w.concierge.listServiceRequests(R);
     check('… and records it as a confirmed request', requests.some((q) => q.bookingId === 'dev_bkg_dinner_1' && q.status === 'confirmed' && q.type === 'dining-change'));
     const r3 = await ask(w, 'Move my dinner on 20 May');

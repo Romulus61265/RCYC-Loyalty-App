@@ -43,7 +43,6 @@ export class MockConciergeAI implements ConciergeAIProvider {
       shouldEscalate: Boolean(a.escalate),
       escalateTo: a.escalate?.to,
       escalationReason: a.escalate?.reason,
-      perform: a.perform,
     };
   }
 

@@ -192,7 +192,7 @@ Prerequisites:
 - [ ] **Move dinner.** The reply names Mediterraneo, 20:30 and the window table, with **Move to 19:30 / Move to 21:00**.
   - Tap 21:00. You see "Done…", a **Confirmed** card with a reference, and the buttons resolve (✓ on 21:00).
   - In Voyage › Dining the dinner is at 21:00.
-  - Typing "21:00, please" instead does the same.
+  - Typing "21:00, please" instead changes nothing yet: the reply offers **Move to 21:00** back as a button, and the tap moves it.
 - [ ] **Private dinner.** "Move my dinner on 20 May" offers **Ask Elena** rather than times.
 - [ ] **Monte Carlo.** You see what's private and unbooked (the atelier), with times, and what's already arranged (Oceanographic, Villa Ephrussi).
 - [ ] **Transportation.** You see your transfers, AA 7412 being tracked, and that the helicopter request has been received (not offered again). There are car cards for Saint-Tropez and Portofino carrying your note ("sedan, no music").

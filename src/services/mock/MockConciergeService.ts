@@ -182,8 +182,6 @@ export class MockConciergeService implements ConciergeService {
       const last = out[out.length - 1];
       if (last) last.attachments = [...(last.attachments ?? []), handoffCard(result.escalateTo, handoff, handoff.handoffId)];
     }
-    // "21:00, please": the guest confirmed an action offered a moment ago.
-    if (result.perform) out.push(...(await this.performAction(conversationId, result.perform)));
     return latency(out, 700);
   }
 

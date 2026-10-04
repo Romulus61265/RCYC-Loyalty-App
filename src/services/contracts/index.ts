@@ -230,8 +230,9 @@ export interface ConciergeService {
 
 /**
  * Pluggable reasoning backend behind ConciergeService (mock → enterprise AI).
- * The provider only decides; the orchestrating service acts (`escalateTo`,
- * `perform`) and persists.
+ * The provider only decides; the orchestrating service escalates (`escalateTo`)
+ * and persists. Nothing it says performs an action: only the guest's tap does
+ * (ConciergeService.performAction).
  */
 export interface ConciergeAIProvider {
   respond(input: { conversationId: ID; body: string; context: GuestContext; history: ConciergeMessage[] }): Promise<{
@@ -241,8 +242,6 @@ export interface ConciergeAIProvider {
     /** Who to hand over to when escalating, and why. */
     escalateTo?: EscalationTarget;
     escalationReason?: EscalationRequest['reason'];
-    /** The guest confirmed an action offered earlier (e.g. "21:00, please"). */
-    perform?: ConciergeAction;
   }>;
 }
 

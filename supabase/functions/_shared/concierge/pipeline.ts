@@ -19,7 +19,6 @@ import {
   type RawContext,
   type ReplyMessage,
   type RunRecord,
-  type TransactionResult,
 } from './types.ts';
 
 export interface PipelineConfig {
@@ -30,21 +29,15 @@ export interface PipelineConfig {
   providerTimeoutMs: number;
   /** Below this, offer a person rather than trust the answer. */
   minConfidence: number;
-  rateLimit: { max: number; windowSeconds: number };
+  /** Guest turns that reach the model: per window and per day, counted atomically before the call. */
+  rateLimit: { max: number; windowSeconds: number; perDay: number };
 }
 
 export const DEFAULT_CONFIG: Omit<PipelineConfig, 'provider'> = {
   deadlineMs: 15_000,
   providerTimeoutMs: 9_000,
   minConfidence: 0.55,
-  rateLimit: { max: 12, windowSeconds: 300 },
-};
-
-const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const longDate = (iso: string) => {
-  const d = new Date(`${iso.slice(0, 10)}T12:00:00Z`);
-  return `${DAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+  rateLimit: { max: 12, windowSeconds: 300, perDay: 150 },
 };
 
 function intentFor(classification: Classification, topics: Topic[], escalated: EscalationTarget | null): string {
@@ -66,14 +59,10 @@ const COPY = {
       ? 'I am connecting you with our Medical Centre now. If this is an emergency, please call your local emergency number first.'
       : 'I am connecting you with our Medical Centre now. If this is an emergency, press the red key on any suite telephone and stay where you are.';
   },
-  executed(r: TransactionResult) {
-    const when = r.start ? ` on ${longDate(r.start)} at ${r.start.slice(11, 16)}` : '';
-    if (r.status === 'confirmed') return `Done: ${r.title ?? 'your booking'} is confirmed${when}.`;
-    return `I have passed this on: ${r.title ?? 'your request'}${when}. You will see it confirmed here as soon as it is.`;
-  },
-  failed: (ctx: RawContext) => `I could not complete that just now, so I have asked ${ctx.ambassador.firstName} to take care of it personally.`,
+
   unsure: (ctx: RawContext) => `I want to be sure I give you the right answer, so I have asked ${ctx.ambassador.firstName} to look into this for you.`,
   unavailable: (ctx: RawContext) => `I am taking a little longer than usual, so I have asked ${ctx.ambassador.firstName} to reply to you personally.`,
+  confirmBelow: (label: string) => `Of course. Tap “${label.replace(/[“”"]/g, '')}” below and I will send it straight away.`,
   offer: (summary: string) => `I can arrange that: ${summary.replace(/\.$/, '')}. Please confirm below and I will send it to the team.`,
   joining: (agent: string) => `I have asked ${agent.split(',')[0]} to join us.`,
 };
@@ -101,9 +90,11 @@ export async function handleConcierge(rawBody: string, caller: Caller, ports: Co
   const req = v.value;
 
   // 2 · Rate limit and idempotency.
-  if ((await ports.recentMessageCount(caller, config.rateLimit.windowSeconds)) >= config.rateLimit.max) return fail(429, 'rate_limited', req.requestId);
-  const previous = await ports.findRun(req.requestId);
+  // A retry of a stored turn costs nothing; anything else takes a slot first. The slot is taken
+  // atomically in the database, so parallel requests cannot all pass a count made before any is stored.
+  const previous = await ports.findRun(caller, req.requestId);
   if (previous) return { status: 200, body: { messages: previous.messages, replayed: true } };
+  if (!(await ports.takeSlot(caller, config.rateLimit))) return fail(429, 'rate_limited', req.requestId);
 
   // 3 · Context, under the caller's RLS. Not theirs = not found.
   const ctx = await ports.loadContext(caller, req.conversationId);
@@ -112,6 +103,14 @@ export async function handleConcierge(rawBody: string, caller: Caller, ports: Co
 
   // 4 · Input safety.
   const screen = screenInput(req.body);
+
+  // Crew have taken this conversation over: the guest's words go to them, and no model is
+  // called (no reply, no offer, no cost). Enforced here, not only in the app.
+  if (!ctx.aiEnabled) {
+    await ports.persistGuestOnly(caller, ctx, screen.text);
+    await ports.audit({ actorId: caller.userId, actorRoles: caller.roles, action: 'concierge.respond', resource: 'concierge_conversation', resourceId: ctx.conversationId, outcome: 'success', requestId: req.requestId, metadata: { humanOnly: true } }).catch(() => undefined);
+    return { status: 200, body: { messages: [], humanOnly: true } };
+  }
   const run: RunRecord = {
     requestId: req.requestId,
     provider: config.provider.name,
@@ -235,7 +234,7 @@ export async function handleConcierge(rawBody: string, caller: Caller, ports: Co
   run.guardFindings.push(...checked.findings);
   const out = checked.output;
   let reply = out.reply;
-  let classification = out.classification;
+  const classification = out.classification;
   let confidence = out.confidence;
 
   // Anything the repair didn't fix is replaced by server-written words.
@@ -261,20 +260,14 @@ export async function handleConcierge(rawBody: string, caller: Caller, ports: Co
   } else reply = safe.text;
   if (medicalTopic && out.needs_human.team !== 'medical') out.needs_human = { required: true, team: 'medical', reason: 'health question' };
 
-  // 9 · Transactions: only the booking service can say it happened.
+  // 9 · Transactions. Nothing is executed on the model's word that the guest agreed: the model
+  // reads text others wrote (catalogue copy, crew notes, earlier messages) and can be steered.
+  // An offer the guest accepted in words is presented again as a button; the tap (performAction,
+  // under the guest's own RLS) is the only way it happens.
   if (checked.confirmed) {
-    const result = await ports.execute(caller, ctx, checked.confirmed).catch((e: unknown) => ({ ok: false, error: e instanceof Error ? e.message : 'error' }) as TransactionResult);
-    if (result.ok) {
-      run.transaction = { type: checked.confirmed.kind, status: 'executed' };
-      reply = COPY.executed(result);
-      classification = 'transactional';
-      attachments.push({ kind: 'confirmation', status: result.status ?? 'received', title: result.title ?? checked.confirmed.label, detail: result.start ? `${longDate(result.start)} · ${result.start.slice(11, 16)}${result.partySize ? ` · party of ${result.partySize}` : ''}` : 'Request received', bookingId: result.bookingId, requestId: result.requestId });
-    } else {
-      run.transaction = { type: checked.confirmed.kind, status: 'failed' };
-      run.guardFindings.push(`transaction.failed:${result.error ?? 'unknown'}`);
-      reply = COPY.failed(ctx);
-      out.needs_human = { required: true, team: 'suite-ambassador', reason: 'transaction failed' };
-    }
+    run.transaction = { type: checked.confirmed.kind, status: 'awaiting_tap' };
+    reply = COPY.confirmBelow(checked.confirmed.label);
+    attachments.push({ kind: 'actions', title: checked.confirmed.label, detail: 'Tap to confirm', subject: {}, actions: [checked.confirmed] as OfferedAction[] });
   } else if (checked.offer) {
     run.transaction = { type: checked.offer.action.kind, status: 'offered' };
     attachments.push({ kind: 'actions', title: checked.offer.title, detail: checked.offer.detail, subject: checked.offer.subject, actions: [checked.offer.action] as OfferedAction[] });

@@ -6,9 +6,10 @@ The concierge can be connected to a large language model without changing the ap
 app ──(guest JWT; {conversationId, body, requestId})──▶ concierge-respond (Edge Function)
   1  validate            shape, sizes, UUIDs, unknown fields, guestId must be the caller's
   2  authorize           guest record + guest/travel_companion role (from the JWT, never the body)
-  3  rate limit          12 guest messages / 5 min
-  4  idempotency         requestId seen → the stored reply, nothing re-run
-  5  load context        under the caller's RLS; the conversation must be their own
+  3  idempotency         this caller's requestId seen → the stored reply, nothing re-run
+  4  allowance           atomic: 12 turns / 5 min and 150 / day per guest, taken before the model
+  5  load context        under the caller's RLS; the conversation must be their own;
+                         crew took it over (ai_enabled off) → store the words, no model call
   6  input safety        redact card/e-mail/phone/passport; flag injection;
                          emergencies → people at once, no model call
   7  minimise            topic-relevant slices only, handles instead of IDs
@@ -17,7 +18,7 @@ app ──(guest JWT; {conversationId, body, requestId})──▶ concierge-resp
  10  structured output   JSON Schema, parsed and validated again
  11  guard               grounding, claims, classification, transactions
  12  output safety       links, handles, IDs, contact details, prompt leaks, medical advice
- 13  transaction         only an offered action the guest accepted, via the booking services
+ 13  transaction         none: words that accept an offer get it back as a button; only the tap acts
  14  escalation          needs_human, health topics, failures; low confidence offers a person
  15  persist + audit     messages, run record, audit entry without message text
 ```
@@ -111,12 +112,8 @@ The guard makes the classification consistent:
 
 1. **Claim detector.** `claimsChange` catches phrases such as "I've booked or moved", "has been changed", "is now confirmed", a sentence-initial "Done.", "your booking is set" and "confirmation number is". A claim is sent back for one repair. If it survives, the server replaces it with its own offer text.
 2. **Offers are validated.** `change_booking` needs a real booking and a real, open slot at that time, re-checked against inventory. Otherwise the guest is offered "Ask for another time", a request to a person. `request_experience` is handled the same way. `cancel_booking` always becomes a request to a person.
-3. **Execution needs consent.** `guest_confirmed` is honoured only when it matches an action offered in the previous reply, by the same record and the same time (a service request is matched by its handle). The slot is re-checked at that moment.
-4. **The service decides.** `execute` calls the booking services under the guest's RLS: the `request_experience_booking_change` RPC, then a re-read checks that the start was applied; or the experience-booking / service-request insert. The reply then comes from `COPY.executed(result)`, never from the model:
-   * "confirmed" only when the service reports `confirmed`;
-   * otherwise "I have passed this on…".
-
-   A failed service call is stated plainly and handed to the Suite Ambassador.
+3. **Words never act; only a tap does** (docs/22, H3). When `guest_confirmed` matches an action offered in the previous reply (same record, same time, slot re-checked), the server offers that one action back as a button: "Tap 'Move to 21:00' below…". The transaction is recorded as `awaiting_tap`. The pipeline has no port that writes a booking or request, so a steered or mistaken model cannot change anything.
+4. **The tap is the consent.** The app's `performAction` carries it out as the guest, through the same booking functions and RLS as the rest of the app. The confirmation card comes from the service result, never from the model.
 
 ## Other hallucination checks
 
@@ -173,7 +170,7 @@ The reply carries a `handoff` card.
 * **`concierge_ai_runs`.** One row per answered request, written by the function only. It holds:
   * provider and model, prompt version, classification;
   * context slices, safety flags, guard findings;
-  * escalation, transaction (`offered`, `executed`, `failed` or `none`);
+  * escalation, transaction (`offered`, `awaiting_tap` or `none`);
   * degraded, attempts, latency, token usage;
   * the message IDs.
 

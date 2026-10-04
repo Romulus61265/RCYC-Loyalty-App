@@ -46,4 +46,8 @@ export class MemoryKeyValueStore implements KeyValueStore {
   async removeItem(key: string) {
     this.map.delete(key);
   }
+  /** Forgets everything (sign-out). */
+  clear() {
+    this.map.clear();
+  }
 }

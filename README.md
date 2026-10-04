@@ -67,6 +67,7 @@ In **Concierge**, try:
 | 19 | [Product analytics](docs/19-analytics.md) |
 | 20 | [Accessibility](docs/20-accessibility.md) |
 | 21 | [Performance](docs/21-performance.md) |
+| 22 | [Security audit](docs/22-security-audit.md) |
 
 ### Replacing mocks with enterprise APIs
 

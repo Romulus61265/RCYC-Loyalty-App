@@ -7,7 +7,7 @@
 //
 // The client type is structural, so this file runs under Deno (Edge
 // Function) and Node (scripts/supabase/integration.ts) alike.
-import type { Caller, ConciergePorts, EscalationTarget, OfferedAction, RawContext, RawMessage, ServiceTeam, TransactionResult } from './types.ts';
+import type { Caller, ConciergePorts, EscalationTarget, OfferedAction, RawContext, RawMessage, ServiceTeam } from './types.ts';
 
 // deno-lint-ignore no-explicit-any
 type Query = any;
@@ -41,15 +41,15 @@ export function supabasePorts(user: Db, service: Db, clock: () => Date = () => n
   return {
     now: clock,
 
-    async recentMessageCount(caller, windowSeconds) {
-      const since = new Date(clock().getTime() - windowSeconds * 1000).toISOString();
-      const { count, error } = await user.from('concierge_messages').select('id', { count: 'exact', head: true }).eq('author', 'guest').eq('author_user_id', caller.userId).gte('created_at', since);
-      if (error) throw new Error(error.message);
-      return count ?? 0;
+    async takeSlot(caller, limit) {
+      const { data, error } = await service.rpc('concierge_take_slot', { p_user: caller.userId, p_window_seconds: limit.windowSeconds, p_max: limit.max, p_per_day: limit.perDay });
+      if (error) throw new Error('rate limit unavailable');
+      return data === true;
     },
 
-    async findRun(requestId) {
-      const run = await row<{ message_ids: string[] }>(service.from('concierge_ai_runs').select('message_ids').eq('request_id', requestId).maybeSingle());
+    async findRun(caller, requestId) {
+      // Bound to the caller: a request id alone never returns someone else's reply.
+      const run = await row<{ message_ids: string[] }>(service.from('concierge_ai_runs').select('message_ids').eq('request_id', requestId).eq('actor_user_id', caller.userId).maybeSingle());
       if (!run) return null;
       const messages = await rows(service.from('concierge_messages').select('id, conversation_id, author, author_name, body, intent, attachments, suggestions, created_at, classification').in('id', run.message_ids));
       return { messages };
@@ -57,7 +57,7 @@ export function supabasePorts(user: Db, service: Db, clock: () => Date = () => n
 
     async loadContext(caller, conversationId) {
       // Conversations are per guest: a party member cannot speak in someone else's.
-      const convo = await row<{ id: string; reservation_id: string; guest_id: string }>(user.from('concierge_conversations').select('id, reservation_id, guest_id').eq('id', conversationId).maybeSingle());
+      const convo = await row<{ id: string; reservation_id: string; guest_id: string; ai_enabled: boolean }>(user.from('concierge_conversations').select('id, reservation_id, guest_id, ai_enabled').eq('id', conversationId).maybeSingle());
       if (!convo || convo.guest_id !== caller.guestId) return null;
       const res = await row<{
         id: string;
@@ -105,6 +105,7 @@ export function supabasePorts(user: Db, service: Db, clock: () => Date = () => n
       const p = (prefs ?? {}) as Record<string, any>;
       return {
         conversationId: convo.id,
+        aiEnabled: convo.ai_enabled !== false,
         reservationId: res.id,
         guestId,
         preferredName: guest?.preferred_name ?? guest?.first_name ?? 'Guest',
@@ -143,41 +144,6 @@ export function supabasePorts(user: Db, service: Db, clock: () => Date = () => n
       } satisfies RawContext;
     },
 
-    async execute(caller, ctx, action): Promise<TransactionResult> {
-      // Defence in depth: the action must refer to this guest's own records (RLS checks again).
-      if (action.kind === 'change-booking') {
-        const b = ctx.bookings.find((x) => x.id === action.bookingId);
-        if (!b) return { ok: false, error: 'unknown_booking' };
-        const { error } = await user.rpc('request_experience_booking_change', { p_booking: action.bookingId, p_starts_at: action.start, p_party_size: null, p_note: null });
-        if (error) return { ok: false, error: error.code ?? 'rpc' };
-        const after = await row<{ status: string; start_local: string; party_size: number; title: string }>(user.from('experience_bookings_local').select('status, start_local, party_size, title').eq('id', action.bookingId).maybeSingle());
-        if (!after || after.start_local.slice(0, 16) !== action.start.slice(0, 16)) return { ok: false, error: 'not_applied' };
-        return { ok: true, status: after.status === 'confirmed' ? 'confirmed' : 'in_progress', bookingId: action.bookingId, title: after.title, start: after.start_local, partySize: after.party_size };
-      }
-      if (action.kind === 'request-experience') {
-        const e = ctx.catalogue.find((x) => x.id === action.experienceId);
-        if (!e) return { ok: false, error: 'unknown_experience' };
-        const { data, error } = await user
-          .from('experience_bookings')
-          .insert({ reservation_id: ctx.reservationId, experience_id: e.id, starts_at: action.start, party_size: action.partySize, venue: e.destination ?? `Aboard ${ctx.voyage.yacht}`, status: 'received' })
-          .select('id')
-          .maybeSingle();
-        if (error || !data) return { ok: false, error: error?.code ?? 'insert' };
-        const after = await row<{ status: string; start_local: string; party_size: number; title: string }>(user.from('experience_bookings_local').select('status, start_local, party_size, title').eq('id', data.id).maybeSingle());
-        return { ok: Boolean(after), status: after?.status === 'confirmed' ? 'confirmed' : 'received', bookingId: data.id, title: after?.title ?? e.title, start: after?.start_local, partySize: after?.party_size };
-      }
-      if (action.kind === 'service-request') {
-        const { data, error } = await user
-          .from('service_requests')
-          .insert({ reservation_id: ctx.reservationId, conversation_id: ctx.conversationId, type: action.type, summary: action.summary.slice(0, 200), details: action.details ?? null, status: 'received', priority: 'routine' })
-          .select('id')
-          .maybeSingle();
-        if (error || !data) return { ok: false, error: error?.code ?? 'insert' };
-        return { ok: true, status: 'received', requestId: data.id, title: action.summary };
-      }
-      void caller;
-      return { ok: false, error: 'unsupported' };
-    },
 
     async escalate(caller, ctx, to: EscalationTarget, reason, summary) {
       const team: ServiceTeam = to === 'medical' ? 'medical' : to === 'suite-ambassador' ? 'suite-ambassador' : 'shoreside-concierge';
@@ -200,6 +166,11 @@ export function supabasePorts(user: Db, service: Db, clock: () => Date = () => n
       void caller;
       const agentName = to === 'medical' ? 'The Medical Centre' : to === 'concierge-team' ? 'The concierge team' : `${ctx.ambassador.firstName}, ${ctx.ambassador.title}`;
       return { requestId: data.id, team, agentName, minutes: to === 'medical' ? 1 : to === 'concierge-team' ? 3 : 5 };
+    },
+
+    async persistGuestOnly(caller, ctx, guestText) {
+      const { error } = await user.from('concierge_messages').insert({ conversation_id: ctx.conversationId, author: 'guest', author_user_id: caller.userId, body: guestText });
+      if (error) throw new Error('message not stored');
     },
 
     async persist(caller, ctx, run, guestText, reply) {

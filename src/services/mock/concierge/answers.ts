@@ -5,11 +5,11 @@
  * every behaviour is testable (scripts/check-concierge.ts).
  *
  * Answers never act. They offer actions (as cards the guest can tap), or ask
- * the orchestrating service to escalate or to perform an action the guest has
- * just confirmed in words.
+ * the orchestrating service to escalate. Words that accept an offer ("21:00,
+ * please") get that offer back as a button: only the guest's tap acts, as on
+ * the server (docs/22, H3).
  */
 import type {
-  ConciergeAction,
   ConciergeAttachment,
   ConciergeIntent,
   ConciergeMessage,
@@ -45,8 +45,6 @@ export interface Answer {
   suggestions?: string[];
   confidence: number;
   escalate?: { to: EscalationTarget; reason: EscalationRequest['reason'] };
-  /** The guest confirmed an offered action in words; the service performs it. */
-  perform?: ConciergeAction;
 }
 
 // ─── Small helpers ─────────────────────────────────────────────────────────
@@ -776,7 +774,13 @@ export function answer(s: ConciergeSnapshot, body: string, history: ConciergeMes
       const pending = pendingActions(history);
       const time = timeIn(body);
       const action = (time && pending.find((a) => 'start' in a && a.start.slice(11, 16) === time)) || pending[0];
-      return { intent: 'general', body: '', confidence: 0.9, perform: action };
+      if (!action) return { intent: 'general', body: 'Of course. Which would you like?', confidence: 0.6 };
+      return {
+        intent: 'service.request',
+        body: `Of course. Tap “${action.label}” below and I will send it straight away.`,
+        attachments: [{ kind: 'actions', title: action.label, detail: 'Tap to confirm', actions: [action] }],
+        confidence: 0.9,
+      };
     }
     case 'dining.modify':
       return diningAnswer(s, body);

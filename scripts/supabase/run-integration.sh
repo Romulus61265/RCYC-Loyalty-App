@@ -69,13 +69,22 @@ grant anon, authenticated, service_role to authenticator;
 insert into auth.users (id, email, email_confirmed_at) values ('b0000000-0000-0000-0000-0000000000b2', 'other.guest@example.com', now());
 insert into public.guests (id, auth_user_id, salutation, first_name, last_name, email_masked, source_system)
   values ('c0000000-0000-0000-0000-0000000000b2', 'b0000000-0000-0000-0000-0000000000b2', 'Ms', 'Other', 'Guest', 'o•••@example.com', 'mock');
--- Crew: a Suite Ambassador and a shore operations agent (fleet-wide roles).
+-- Crew: a Suite Ambassador (the guest's yacht) and a shore operations agent (fleet-wide).
 insert into auth.users (id, email, email_confirmed_at) values
   ('b0000000-0000-0000-0000-0000000000c3', 'ambassador.crew@example.com', now()),
   ('b0000000-0000-0000-0000-0000000000d4', 'shore.crew@example.com', now());
-insert into public.user_roles (user_id, role) values
-  ('b0000000-0000-0000-0000-0000000000c3', 'suite_ambassador'),
-  ('b0000000-0000-0000-0000-0000000000d4', 'shore_ops');
+-- The guest's spouse, on the same reservation, signs in too (linked by the trigger).
+insert into auth.users (id, email, email_confirmed_at) values ('b0000000-0000-0000-0000-0000000000e5', 'camille.laurent@example.com', now());
+-- A Suite Ambassador on a yacht the guest has never sailed (the seed's two are both in their history): must see nothing of this guest.
+insert into public.yachts (id, name, tagline) values ('f0000000-0000-0000-0000-0000000000f6', 'Luminara', 'Another yacht in the fleet.');
+insert into auth.users (id, email, email_confirmed_at) values ('b0000000-0000-0000-0000-0000000000f6', 'other.yacht.crew@example.com', now());
+insert into public.user_roles (user_id, role, yacht_id) values
+  ('b0000000-0000-0000-0000-0000000000f6', 'suite_ambassador', 'f0000000-0000-0000-0000-0000000000f6');
+-- Onboard crew are scoped to a yacht (the guest's); shore operations are fleet-wide.
+insert into public.user_roles (user_id, role, yacht_id) values
+  ('b0000000-0000-0000-0000-0000000000c3', 'suite_ambassador',
+   (select v.yacht_id from public.reservations r join public.voyages v on v.id = r.voyage_id join public.guests g on g.id = r.lead_guest_id where g.first_name = 'Alexander' limit 1)),
+  ('b0000000-0000-0000-0000-0000000000d4', 'shore_ops', null);
 SQL
 
 cat > "$WORK/rest.conf" <<CONF
@@ -95,6 +104,7 @@ GUEST=$(pgrun "$PSQL -d app -At -c \"select auth_user_id from public.guests wher
 cd "$ROOT"
 PGRST_URL="http://127.0.0.1:$REST_PORT" JWT_SECRET="$JWT_SECRET" GUEST_USER_ID="$GUEST" OTHER_USER_ID="b0000000-0000-0000-0000-0000000000b2" \
   CREW_USER_ID="b0000000-0000-0000-0000-0000000000c3" SHORE_USER_ID="b0000000-0000-0000-0000-0000000000d4" \
+  COMPANION_USER_ID="b0000000-0000-0000-0000-0000000000e5" OTHER_YACHT_CREW_USER_ID="b0000000-0000-0000-0000-0000000000f6" \
   npx tsx "${INTEGRATION_SCRIPT:-scripts/supabase/integration.ts}"
 
 echo "── Requests per screen"

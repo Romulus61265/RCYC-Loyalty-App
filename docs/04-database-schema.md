@@ -275,6 +275,15 @@ Generated from the fictional dataset by `npm run seed:generate`, so do not edit 
 * The app's reads always filter by the guest, reservation or conversation. A read that leaves RLS to filter checks every row of the table: 1 s for the guest's reservations at 20k others, against 1 ms filtered. `request-profile.ts` fails on such a read.
 * See [21](21-performance.md).
 
+## Security (`20261014000000_security.sql`)
+
+See [22](22-security-audit.md).
+
+* **Crew scope.** `crew_for_reservation()` lets a role with no yacht be fleet-wide only for `shore_ops` and `admin`. A check constraint (`NOT VALID`) refuses new onboard roles with no yacht. Guest relationships, recommendations and personalization signals are read by `crew_for_guest(guest_id)`, not by any crew member.
+* **Concierge threads.** Conversations and messages are "own or crew". A guest's insert must be `author = 'guest'`, their own `auth.uid()`, a 1–2000 character body, in their own conversation, with every structural field empty.
+* **Special-assistance requests** are read by the guest concerned, whoever raised them, and crew. Other requests stay party-visible.
+* **Concierge allowance.** `concierge_rate_limits` has RLS with no policies. `concierge_take_slot(user, window, max, per_day)` is atomic and executable by the service role only.
+
 ## Testing
 
 | Command | Needs | Covers |

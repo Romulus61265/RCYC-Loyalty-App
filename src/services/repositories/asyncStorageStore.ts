@@ -1,15 +1,19 @@
 /**
  * Device-backed KeyValueStore: AsyncStorage on iOS/Android, localStorage on web.
  *
- * Used only for MVP mock persistence. In production, preferences live in
- * Supabase (RLS-protected) and this store is not used for them; tokens never
- * go here (they use secure storage).
+ * Neither is encrypted, so it holds nothing secret or special-category:
+ * tokens use secure storage, and dietary and accessibility preferences stay
+ * in memory (LocalPreferencesRepository). Used only for mock persistence; in
+ * Supabase mode preferences live in Postgres behind RLS. Wiped at sign-out
+ * (security/deviceData).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { KeyValueStore } from './KeyValueStore';
+import type { ListableStore } from '@/security/deviceData';
 
-export const asyncStorageStore: KeyValueStore = {
+export const asyncStorageStore: ListableStore = {
   getItem: (key) => AsyncStorage.getItem(key),
   setItem: (key, value) => AsyncStorage.setItem(key, value),
   removeItem: (key) => AsyncStorage.removeItem(key),
+  keys: () => AsyncStorage.getAllKeys(),
+  removeMany: (keys) => AsyncStorage.multiRemove(keys),
 };
