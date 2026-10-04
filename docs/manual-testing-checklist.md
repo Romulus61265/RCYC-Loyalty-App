@@ -249,3 +249,27 @@ Prerequisites:
 
   You should see "Thank you." and a link to the request; the recap now shows your favourite moments and "Sent".
 - [ ] **Save and finish later.** On a fresh load, choose one moment, then **Save and finish later**. The recap shows "1 of 5 begun, saved as you go."
+
+## Voyage history
+
+- [ ] **The list.** Go to **Profile → Voyage History → Your voyage history**. The page reads "Where you have sailed with us", then "Three voyages, 24 nights, aboard Ilma and Evrima.", with the Cyclades first.
+- [ ] **A voyage.** Open **Dalmatian Coast & Venice**. You should see:
+  - Evrima · 31 August – 7 September 2024 · Grand Suite 612;
+  - Dubrovnik, Hvar and Venice;
+  - three experiences in order, then the Chef's Counter;
+  - saved preferences marked **Kept**;
+  - memories, starting "Taking the helm of a classic yacht off Hvar";
+  - the photographs placeholder, with no photographs.
+- [ ] **What they told us.** **Cyclades in Early Summer** shows the Owner's Suite 701 aboard Ilma, and "You told us it felt crowded…".
+- [ ] **Kept and Noted.** In **Preferences → Spa**, change the pressure, then reopen the Cyclades. "Firm pressure, unscented oil" now reads **Noted**.
+
+## Analytics (web build, development: open the browser console)
+
+- [ ] **Off by default.** Browse Home, Discover and the Concierge. No `app.analytics:` lines appear, because the fictional guest has analytics off.
+- [ ] **On.** In **Profile → Privacy**, switch on **Anonymous app analytics** and save. Then save an experience on Discover, open the Concierge and visit a past voyage. Within 15 seconds you should see:
+  - `experience_saved`;
+  - `concierge_opened`;
+  - `screen_viewed` with `/history/[id]`.
+
+  No names, ids of the guest or reservation, or message text appear.
+- [ ] **Concierge text.** Send a concierge message containing a card number. The event reads `concierge_request_submitted {kind: "message"}` and nothing more.

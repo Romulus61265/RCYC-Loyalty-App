@@ -13,6 +13,7 @@ import {
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { ServiceProvider } from '@/services/ServiceProvider';
 import { JourneyProvider } from '@/hooks/useJourney';
+import { AnalyticsTracker } from '@/features/analytics/AnalyticsTracker';
 import { SignInScreen } from '@/features/auth/SignInScreen';
 import { LoadingState } from '@/components';
 import { installGlobalErrorHandlers } from '@/core/errors';
@@ -54,6 +55,7 @@ export default function RootLayout() {
           }
         >
           <StatusBar style="dark" />
+          <AnalyticsTracker />
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="+not-found" options={{ presentation: 'modal' }} />

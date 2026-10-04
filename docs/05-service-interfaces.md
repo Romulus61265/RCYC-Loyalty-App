@@ -217,6 +217,19 @@ The recap holds the welcome, memories by day, destinations, favourites, a Bonvoy
 
 `ComposedPostVoyageService` implements it in both modes, with a `PostVoyageStore`. See [17](17-post-voyage.md).
 
+### VoyageHistoryService
+`listVoyages` (newest first) and `getVoyage` (not_found if not the guest's). Each entry has the yacht, dates, destinations, suite, experiences, dining highlights, saved preferences (kept or noted against today's preferences), memories and a photographs placeholder.
+
+`ComposedVoyageHistoryService` implements it in both modes, with a `VoyageHistoryStore`. The same records feed the personalization engine's history. See [18](18-voyage-history.md).
+
+### AnalyticsService and AnalyticsProvider
+`AnalyticsService` has `track`, `screen`, `setConsent` and `flush`. It records ten declared product events, screened by an allow-list and a privacy filter. It waits for the guest's consent and never throws.
+
+* `AnalyticsProvider.send(batch)` is the vendor seam: Noop, Console, Memory and FanOut today.
+* `withAnalytics` taps the experience, requests, concierge and profile services.
+
+See [19](19-analytics.md).
+
 ### EventService, EventHandler and TransferService
 `EventService` is the internal event bus: twelve event types in one snake_case envelope. Its methods are `publish`, `register`, `get`, `list`, `runs` and `subscribe`.
 

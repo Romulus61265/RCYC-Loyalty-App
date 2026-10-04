@@ -214,8 +214,15 @@ export function HistorySection({ model }: { model: ProfileModel['history'] }) {
       </Section>
       <Section eyebrow="Remembered">
         {model.past.map((v) => (
-          <VoyageRow key={v.id} line={v} />
+          <Pressable key={v.id} onPress={() => router.push(`/history/${v.id}`)} accessibilityRole="link" accessibilityLabel={`${v.name}, ${v.detail}. Open the voyage`}>
+            <VoyageRow line={v} chevron />
+          </Pressable>
         ))}
+        {model.past.length ? (
+          <Pressable onPress={() => router.push('/history')} accessibilityRole="link" style={{ marginTop: spacing.sm }}>
+            <Eyebrow color={colors.accent}>Your voyage history</Eyebrow>
+          </Pressable>
+        ) : null}
         <View style={{ marginTop: spacing.md }}>
           <FactRow facts={model.totals} />
         </View>
@@ -224,7 +231,7 @@ export function HistorySection({ model }: { model: ProfileModel['history'] }) {
   );
 }
 
-function VoyageRow({ line }: { line: { name: string; detail: string; media: ProfileModel['history']['past'][number]['media'] } }) {
+function VoyageRow({ line, chevron }: { line: { name: string; detail: string; media: ProfileModel['history']['past'][number]['media'] }; chevron?: boolean }) {
   return (
     <View style={styles.voyage}>
       <MediaFrame media={line.media} height={64} style={{ width: 64 }} />
@@ -232,6 +239,7 @@ function VoyageRow({ line }: { line: { name: string; detail: string; media: Prof
         <Text variant="bodyStrong">{line.name}</Text>
         <Caption>{line.detail}</Caption>
       </View>
+      {chevron ? <Ionicons name="chevron-forward" size={16} color={colors.textMuted} /> : null}
     </View>
   );
 }

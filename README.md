@@ -63,6 +63,8 @@ In **Concierge**, try:
 | 15 | [Shoreside-to-yacht continuity](docs/15-shoreside-continuity.md) |
 | 16 | [Internal event model](docs/16-internal-events.md) |
 | 17 | [After the voyage: Welcome home](docs/17-post-voyage.md) |
+| 18 | [Voyage history](docs/18-voyage-history.md) |
+| 19 | [Product analytics](docs/19-analytics.md) |
 
 ### Replacing mocks with enterprise APIs
 
@@ -106,4 +108,5 @@ Tests: `npm run check:supabase` runs in `verify` and needs nothing. `npm run tes
 * Only `EXPO_PUBLIC_*` values are bundled into the app. These are the Supabase URL and anon key, both protected by RLS. A service-role key there stops the app at start-up.
 * Service-role, Bonvoy, AI (`ANTHROPIC_API_KEY`), push (`EXPO_ACCESS_TOKEN`, `NOTIFICATIONS_CRON_SECRET`) and webhook secrets live only in Edge Function secrets. Push tokens are stored server-side and never readable back by the app.
 * Tokens are stored in the Keychain or Keystore.
+* Product analytics never carry passport, payment, medical or authentication data, private concierge text, or a guest id, and are sent only with the guest's consent ([docs/19](docs/19-analytics.md)).
 * All data is fictional.

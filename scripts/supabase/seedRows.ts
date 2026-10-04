@@ -352,6 +352,12 @@ export function buildSeedRows(): TableRows[] {
     authorized_by: r.authorizedBy ?? null, authorized_at: r.authorizedAt ?? null, effective_from: r.effectiveFrom ?? null, effective_to: r.effectiveTo ?? null,
   })));
 
+  // Voyage history: past voyages as recorded (moments with a weight are the engine's history).
+  add('public.voyage_history', d.voyageHistory.records.map((r) => ({
+    guest_id: uuidFor(r.guestId), voyage_id: uuidFor(r.voyageId), yacht_name: r.yachtName, suite_label: r.suite,
+    destinations: json(r.destinations), moments: json(r.moments), saved_preferences: json(r.savedPreferences), photos: json(r.photos),
+  })));
+
   // After the voyage: fictional voyages to inspire the next one.
   add('public.voyage_inspirations', d.postVoyage.voyageInspirations.map((v) => ({
     id: uuidFor(v.id), name: v.name, region: v.region, yacht_name: v.yachtName, start_date: v.startDate, end_date: v.endDate,

@@ -14,6 +14,7 @@ import { guestData } from './guest';
 import { personalizationData } from './personalization';
 import { recoveryData } from './recovery';
 import { postVoyageData } from './postVoyage';
+import { voyageHistoryData } from './voyageHistory';
 import { voyageData } from './voyage';
 
 export const devDataset: DevDataset = {
@@ -35,6 +36,7 @@ export const devDataset: DevDataset = {
   personalization: personalizationData,
   recovery: recoveryData,
   postVoyage: postVoyageData,
+  voyageHistory: voyageHistoryData,
 };
 
 export type { DevDataset } from './types';

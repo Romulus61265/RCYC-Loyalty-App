@@ -141,6 +141,8 @@ export interface ExperienceCardModel {
   description: string;
   destination: string;
   categoryLabel: string;
+  /** The catalogue category, for analytics. */
+  category: string;
   categories: DiscoverCategoryKey[];
   durationLabel: string;
   availability: StatusModel & { detail?: string; nextTimes: string[]; status: AvailabilityStatus | 'unknown' };
@@ -149,7 +151,7 @@ export interface ExperienceCardModel {
   includes: string[];
   formatLabel: string;
   isPrivate: boolean;
-  recommendation?: { reason: string; score: number };
+  recommendation?: { id: string; reason: string; score: number };
   media: MediaAsset;
   reservation: StatusModel & { detail?: string; reserved: boolean };
   /** For filtering. */
@@ -277,6 +279,7 @@ export function buildDiscoverModel(core: DiscoverCoreData, optional: DiscoverOpt
       description: e.description,
       destination: e.destination ?? port?.portName ?? `Aboard ${yacht.name}`,
       categoryLabel: CATEGORY_LABEL[e.category],
+      category: e.category,
       categories: categoriesOf(e),
       durationLabel: durationLabel(e),
       availability: {
@@ -290,7 +293,7 @@ export function buildDiscoverModel(core: DiscoverCoreData, optional: DiscoverOpt
       includes: e.includes ?? [],
       formatLabel: formatLabel(e),
       isPrivate: e.format === 'private' || e.format === 'private-or-group',
-      recommendation: rec ? { reason: rec.rationale, score: rec.score } : undefined,
+      recommendation: rec ? { id: rec.id, reason: rec.rationale, score: rec.score } : undefined,
       media: e.hero,
       reservation,
       portKey: port?.portName ?? 'aboard',

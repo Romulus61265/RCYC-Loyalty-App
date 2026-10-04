@@ -9,8 +9,22 @@ import type { ExperienceCardModel } from '../discoverModel';
  * One marketplace experience. Shows every decision-relevant fact at a
  * glance; the full description and inclusions expand on request.
  */
-export function ExperienceCard({ card, onRequest }: { card: ExperienceCardModel; onRequest: (card: ExperienceCardModel) => void }) {
+export function ExperienceCard({
+  card,
+  onRequest,
+  saved = false,
+  onSave,
+  onView,
+}: {
+  card: ExperienceCardModel;
+  onRequest: (card: ExperienceCardModel) => void;
+  saved?: boolean;
+  onSave?: (card: ExperienceCardModel) => void;
+  /** The details were opened (once per card). */
+  onView?: (card: ExperienceCardModel) => void;
+}) {
   const [open, setOpen] = useState(false);
+  const [seen, setSeen] = useState(false);
   return (
     <Card style={{ padding: 0, overflow: 'hidden' }}>
       <MediaFrame media={card.media} height={150} rounded={false}>
@@ -74,9 +88,26 @@ export function ExperienceCard({ card, onRequest }: { card: ExperienceCardModel;
         ) : null}
 
         <View style={styles.actions}>
-          <Pressable onPress={() => setOpen((v) => !v)} accessibilityRole="button" aria-expanded={open} accessibilityState={{ expanded: open }} hitSlop={10}>
+          <Pressable
+            onPress={() => {
+              setOpen((v) => !v);
+              if (!seen) {
+                setSeen(true);
+                onView?.(card);
+              }
+            }}
+            accessibilityRole="button"
+            aria-expanded={open}
+            accessibilityState={{ expanded: open }}
+            hitSlop={10}
+          >
             <Eyebrow color={colors.textPrimary}>{open ? 'Fewer details' : 'Details'}</Eyebrow>
           </Pressable>
+          {onSave ? (
+            <Pressable onPress={() => onSave(card)} accessibilityRole="button" aria-pressed={saved} accessibilityState={{ selected: saved }} accessibilityLabel={saved ? `Saved: ${card.title}` : `Save ${card.title}`} hitSlop={10}>
+              <Eyebrow color={saved ? colors.accent : colors.textPrimary}>{saved ? 'Saved' : 'Save'}</Eyebrow>
+            </Pressable>
+          ) : null}
           {!card.reservation.reserved ? (
             <Pressable onPress={() => onRequest(card)} accessibilityRole="button" accessibilityLabel={`Ask the concierge about ${card.title}`} hitSlop={10}>
               <Eyebrow color={colors.accent}>{card.availability.status === 'unavailable' ? 'Ask the concierge' : 'Request'}</Eyebrow>

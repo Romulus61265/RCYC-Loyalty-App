@@ -10,6 +10,7 @@ import { Caption, ErrorState, LoadingState, SegmentedTabs, StatusLine, TextLink 
 import { colors, spacing } from '@/theme';
 import { Composer, Header, PeoplePanel, QuickReplies, RequestsList } from './components/Chrome';
 import { ThreadView } from './components/Thread';
+import { useServices } from '@/services/ServiceProvider';
 import { useConcierge } from './useConcierge';
 
 type View_ = 'conversation' | 'requests';
@@ -22,6 +23,10 @@ export function ConciergeScreen() {
   const [peopleOpen, setPeopleOpen] = useState(false);
   const c = useConcierge();
   const count = c.model?.thread.length ?? 0;
+  const services = useServices();
+  useEffect(() => {
+    services.analytics.track('concierge_opened', { entry: view });
+  }, [services, view]);
 
   useEffect(() => {
     if (view !== 'conversation') return;

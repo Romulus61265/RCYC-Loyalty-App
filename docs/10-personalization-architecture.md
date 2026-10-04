@@ -10,6 +10,7 @@ Determine the **next-best experience** and the **next-best service gesture** for
 |---|---|---|
 | Bonvoy status | Bonvoy | Privilege eligibility, priority spa scheduling |
 | Historical voyages | Reservations | "Welcome back"; avoid repeating an itinerary |
+| Voyage history (what the guest did on each voyage) | `voyage_history` ([18](18-voyage-history.md)) | The engine's `history`: dining, spa and excursion moments with their weights, ratings and tags |
 | Suite preferences | CRM / shipboard PMS | Turndown and amenity preparation |
 | Dining history | Shipboard POS | Chef's Counter for guests who enjoyed tasting menus |
 | Spa history | Spa system | Repeat a favourite therapist or treatment |
@@ -89,8 +90,8 @@ It has no imports beyond its own types, so the same file runs in Deno (the funct
 | Previous voyages | Past reservations | The voyage and year in "Recommended because you enjoyed…"; first visits |
 | Current itinerary | `port_calls` | The date and destination, sea days, port days |
 | Dining preferences | Preferences (cuisines, table, time, wine) | Restaurants on a free evening near the preferred time; wine ashore |
-| Spa preferences | Preferences and spa history | Treatments on a sea day, at the preferred time of day |
-| Excursion history | Shore-ops and survey signals | Loved moments; −0.3 for group formats after a crowded tour; private style |
+| Spa preferences | Preferences, and spa history from `voyage_history` | Treatments on a sea day, at the preferred time of day |
+| Excursion and dining history | `voyage_history` moments (`historyFromVoyages`), then any history signal not already among them (`mergeHistory`) | Loved moments; −0.3 for group formats after a crowded tour; private style |
 | Destination interests | Activity interests, preferred destinations | "Because … is one of your passions"; Riviera and Balearic port matches |
 | Travel companion | Companions (and their interests) | "Camille loves gardens and art"; couples formats; minors exclude wine |
 | Special occasion | Occasions during the voyage (not `private`) | The day itself, in that port |

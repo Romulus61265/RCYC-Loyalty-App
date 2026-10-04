@@ -13,3 +13,5 @@ export * from './recovery';
 export * from './continuity';
 export * from './internalEvents';
 export * from './postVoyage';
+export * from './voyageHistory';
+export * from './analytics';

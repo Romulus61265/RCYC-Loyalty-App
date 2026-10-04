@@ -5,6 +5,7 @@
 // been authorised for this guest and reservation under their own RLS (see
 // personalization-next-best). The client type is structural, so this runs
 // in Deno (the function) and in Node (scripts/supabase/integration.ts).
+import { historyFromVoyages, mergeHistory, type VoyageRecordLike } from './history.ts';
 import type { HistoryItem, PersonalizationInput } from './types.ts';
 
 // deno-lint-ignore no-explicit-any
@@ -42,7 +43,7 @@ export async function loadPersonalizationInput(db: Db, guestId: string, reservat
   if (!res?.voyage) return null;
   const voyageId = res.voyage.id;
 
-  const [membership, relationship, past, ports, catalogue, bookings, prefs, companions, occasions, signals] = await Promise.all([
+  const [membership, relationship, past, ports, catalogue, bookings, prefs, companions, occasions, signals, records] = await Promise.all([
     row<{ tier: string }>(db.from('loyalty_memberships').select('tier').eq('guest_id', guestId).maybeSingle()),
     row<{ value_segment: string | null }>(db.from('guest_relationships').select('value_segment').eq('guest_id', guestId).maybeSingle()),
     rows<{ reservation: { id: string; status: string; voyage: { id: string; name: string; region: string | null; start_date: string; end_date: string } | null } | null }>(
@@ -62,6 +63,8 @@ export async function loadPersonalizationInput(db: Db, guestId: string, reservat
     rows<{ kind: string; weight: number; value: { ref?: string; summary?: string; memory?: string; category?: string; voyageId?: string; rating?: number; tags?: string[] } }>(
       db.from('personalization_signals').select('kind, weight, value').eq('guest_id', guestId),
     ),
+    // What the guest did on past voyages: the engine's history.
+    rows<{ voyage_id: string; moments: VoyageRecordLike['moments']; voyage: { start_date: string } | null }>(db.from('voyage_history').select('voyage_id, moments, voyage:voyages(start_date)').eq('guest_id', guestId)),
   ]);
 
   const ids = catalogue.map((e) => e.id);
@@ -80,11 +83,15 @@ export async function loadPersonalizationInput(db: Db, guestId: string, reservat
   return {
     bonvoy: membership ? { tier: membership.tier as NonNullable<PersonalizationInput['bonvoy']>['tier'] } : null,
     previousVoyages: previous.map((r) => ({ id: r.voyage!.id, name: r.voyage!.name, region: r.voyage!.region ?? '', startDate: r.voyage!.start_date })),
-    history: signals.flatMap((s, i) => {
-      const kind = HISTORY[s.kind];
-      if (!kind) return [];
-      return [{ id: s.value.ref ?? `sig_${i}`, kind, memory: s.value.memory, category: s.value.category, voyageId: s.value.voyageId, rating: s.value.rating, weight: Number(s.weight), tags: s.value.tags ?? [] }];
-    }),
+    history: mergeHistory(
+      // Oldest voyage first, as the app reads them.
+      historyFromVoyages([...records].sort((x, y) => (x.voyage?.start_date ?? '').localeCompare(y.voyage?.start_date ?? '')).map((r) => ({ voyageId: r.voyage_id, moments: r.moments ?? [] }))),
+      signals.flatMap((s, i): HistoryItem[] => {
+        const kind = HISTORY[s.kind];
+        if (!kind) return [];
+        return [{ id: s.value.ref ?? `sig_${i}`, kind, memory: s.value.memory, category: s.value.category, voyageId: s.value.voyageId, rating: s.value.rating, weight: Number(s.weight), tags: s.value.tags ?? [] }];
+      }),
+    ),
     destinationsVisited: signals.filter((s) => s.kind === 'destinations-visited').flatMap((s) => (s.value.summary ?? '').split(',')).map((x) => x.trim().toLowerCase()).filter(Boolean),
     voyage: { id: voyageId, yachtName: res.voyage.yacht?.name ?? 'the yacht', startDate: res.voyage.start_date, endDate: res.voyage.end_date },
     itinerary: ports.map((x) => ({ id: x.id, day: x.day, date: x.call_date, type: x.type, portName: x.port_name, country: x.country })),

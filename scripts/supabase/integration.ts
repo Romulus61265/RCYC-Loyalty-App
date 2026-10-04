@@ -39,6 +39,8 @@ import { handleNextBest } from '../../supabase/functions/_shared/personalization
 import { dispatch, DryRunPushSender } from '../../supabase/functions/_shared/notifications/dispatch.ts';
 import { supabaseDispatchPorts } from '../../supabase/functions/_shared/notifications/supabaseDispatch.ts';
 import { ComposedNotificationService } from '@/services/notifications/ComposedNotificationService';
+import { ComposedVoyageHistoryService, MemoryVoyageHistoryStore } from '@/services/history/ComposedVoyageHistoryService';
+import type { VoyageHistoryEntry } from '@/domain';
 import { MemoryNotificationState } from '@/services/notifications/state';
 import { SupabaseRecoveryOperations } from '@/services/supabase/SupabaseRecovery';
 import { processDisruption, scanReservation } from '../../supabase/functions/_shared/recovery/handler.ts';
@@ -715,6 +717,21 @@ async function main() {
     check('reflections: the request carries their words', req?.category === 'concierge' && req.priority === 'priority' && JSON.stringify(req).includes('tender in Portofino'), req);
     check('reflections: sent is read-only (RLS)', (await rejects(after.postVoyage.saveFeedback(g, r, { words: ['Restful'] }), 'conflict')) && ((await guestDb.from('voyage_feedback').update({ status: 'draft' }).eq('guest_id', g).select('guest_id')).data ?? []).length === 0);
     check('inspirations: read-only for guests', !!(await guestDb.from('voyage_inspirations').insert({ name: 'x', region: 'x', yacht_name: 'x', start_date: '2029-01-01', end_date: '2029-01-08', nights: 7, standfirst: 'x', highlight: 'x' })).error);
+  }
+
+  // ── Voyage history: past voyages from voyage_history, under RLS ──
+  {
+    const mockHistory = new ComposedVoyageHistoryService({ voyage: mock.voyage, profile: mock.profile }, new MemoryVoyageHistoryStore(d.voyageHistory.records));
+    const shape = (list: VoyageHistoryEntry[]) =>
+      list.map((e) => ({ name: e.name, yacht: e.yachtName, dates: e.dates, suite: e.suite, places: e.destinations.map((x) => x.name), experiences: e.experiences.map((m) => m.title), dining: e.dining.map((m) => m.title), saved: e.savedPreferences.map((p) => p.label), memories: e.memories, photos: e.photos.count }));
+    const list = await sb.history.listVoyages(g);
+    same('history: past voyages from the database', shape(list), shape(await mockHistory.listVoyages(G)));
+    const adriatic = await sb.history.getVoyage(g, uuidFor(IDS.pastVoyages.adriatic));
+    check('history: one voyage, in full', adriatic.yachtName === 'Evrima' && adriatic.suite === 'Grand Suite 612' && adriatic.experiences.length === 3 && adriatic.photos.count === 0, adriatic.name);
+    check('history: another guest reads nothing', (await other.history.listVoyages(g)).every((e) => e.experiences.length === 0 && e.suite === '') && ((await otherDb.from('voyage_history').select('voyage_id')).data ?? []).length === 0);
+    const crewDb = clientFor(gw.url, CREW_USER_ID);
+    check('history: crew of the reservation read it', ((await crewDb.from('voyage_history').select('voyage_id').eq('guest_id', g)).data ?? []).length === 3);
+    check('history: guests cannot write it', !!(await guestDb.from('voyage_history').insert({ guest_id: g, voyage_id: v, yacht_name: 'x', suite_label: 'x' })).error && ((await guestDb.from('voyage_history').update({ suite_label: 'x' }).eq('guest_id', g).select('voyage_id')).data ?? []).length === 0);
   }
 
   // ── Notification preferences (saved last: earlier checks count preference versions) ──

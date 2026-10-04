@@ -317,7 +317,7 @@ export function VoyageSection({ yacht, suite, onOpen }: { yacht: YachtModel; sui
 
 // ─── Chosen for you ────────────────────────────────────────────────────────
 
-export function RecommendationRail({ items, error, onRetry }: { items: RecommendationModel[]; error?: unknown; onRetry: () => void }) {
+export function RecommendationRail({ items, error, onRetry, onOpen }: { items: RecommendationModel[]; error?: unknown; onRetry: () => void; onOpen?: (item: RecommendationModel, position: number) => void }) {
   const { width } = useWindowDimensions();
   const tileWidth = Math.min(280, Math.max(220, width * 0.68));
   return (
@@ -333,8 +333,10 @@ export function RecommendationRail({ items, error, onRetry }: { items: Recommend
           style={{ marginHorizontal: -spacing.gutter }}
           contentContainerStyle={{ paddingHorizontal: spacing.gutter, gap: spacing.md }}
         >
-          {items.map((r) => (
-            <MediaTile key={r.id} media={r.media} eyebrow={r.eyebrow} title={r.title} caption={r.rationale} width={tileWidth} height={Math.round(tileWidth * 1.2)} />
+          {items.map((r, i) => (
+            <Pressable key={r.id} onPress={onOpen ? () => onOpen(r, i) : undefined} disabled={!onOpen} accessibilityRole={onOpen ? 'link' : undefined} accessibilityLabel={`${r.title}. ${r.rationale}`}>
+              <MediaTile media={r.media} eyebrow={r.eyebrow} title={r.title} caption={r.rationale} width={tileWidth} height={Math.round(tileWidth * 1.2)} />
+            </Pressable>
           ))}
         </ScrollView>
       )}

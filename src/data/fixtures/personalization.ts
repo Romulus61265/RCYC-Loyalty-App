@@ -1,6 +1,8 @@
 /**
- * FICTIONAL personalization inputs (signals from three past voyages) and the
+ * FICTIONAL personalization inputs (signals about the guest) and the
  * resulting recommendations. Crew-audience items never reach the guest app.
+ * What the guest did on past voyages lives in voyageHistory.ts and reaches
+ * the engine as history from there.
  */
 import type { DevPersonalizationData } from './types';
 import { IDS } from './ids';
@@ -12,14 +14,6 @@ export const personalizationData: DevPersonalizationData = {
   signals: [
     { id: 'dev_sig_01', guestId: G, kind: 'bonvoy-status', summary: 'Marriott Bonvoy Titanium Elite; Lifetime Platinum', weight: 0.6, observedAt: '2027-05-01T00:00:00Z', source: 'bonvoy', tags: ['titanium'] },
     { id: 'dev_sig_02', guestId: G, kind: 'voyage-history', summary: 'Three voyages, 24 nights, since December 2023', weight: 0.7, observedAt: '2025-06-24T12:00:00Z', source: 'reservations', tags: ['returning'] },
-    { id: 'dev_sig_03', guestId: G, memory: 'the Chef’s Counter and its wine pairing aboard Evrima', kind: 'dining-history', summary: "Chef's Counter tasting with wine pairing — Evrima, Adriatic", category: 'dining', voyageId: V.adriatic, rating: 5, weight: 0.9, observedAt: '2024-09-03T22:30:00Z', source: 'shipboard-pos', tags: ['tasting', 'chef', 'wine'] },
-    { id: 'dev_sig_04', guestId: G, memory: 'your window table each evening', kind: 'dining-history', summary: 'Requested a window table every evening — Evrima, Caribbean', category: 'dining', voyageId: V.caribbean, weight: 0.8, observedAt: '2023-12-08T20:00:00Z', source: 'crm', tags: ['window'] },
-    { id: 'dev_sig_05', guestId: G, memory: 'the Barolo vertical tasting with our sommelier', kind: 'dining-history', summary: 'Barolo vertical tasting with the sommelier — Evrima, Caribbean', category: 'wine', voyageId: V.caribbean, rating: 5, weight: 0.85, observedAt: '2023-12-05T18:00:00Z', source: 'shipboard-pos', tags: ['wine', 'red-wine'] },
-    { id: 'dev_sig_06', guestId: G, memory: 'taking the helm of a classic yacht off Hvar', kind: 'excursion-history', summary: 'Private sail aboard a classic yacht, took the helm — Hvar', category: 'private', voyageId: V.adriatic, rating: 5, weight: 0.95, observedAt: '2024-09-02T13:00:00Z', source: 'shore-ops', tags: ['yachting', 'sailing', 'private'] },
-    { id: 'dev_sig_07', guestId: G, kind: 'excursion-history', summary: 'Small-group Santorini tour — "felt crowded"', category: 'excursion', voyageId: V.greekIsles, rating: 2, weight: 0.7, observedAt: '2025-06-17T15:00:00Z', source: 'survey', tags: ['small-group', 'avoid'] },
-    { id: 'dev_sig_08', guestId: G, memory: 'your early, private morning in the Doge’s Palace', kind: 'excursion-history', summary: 'Private early entry to the Doge’s Palace — Venice', category: 'culture', voyageId: V.adriatic, rating: 5, weight: 0.85, observedAt: '2024-09-07T08:00:00Z', source: 'shore-ops', tags: ['private', 'culture', 'early-access'] },
-    { id: 'dev_sig_18', guestId: G, memory: 'a private vineyard lunch on Hvar', kind: 'excursion-history', summary: 'Private vineyard visit and lunch with the winemaker — Hvar', category: 'wine', voyageId: V.adriatic, rating: 5, weight: 0.9, observedAt: '2024-09-02T12:00:00Z', source: 'shore-ops', tags: ['wine', 'red-wine', 'private', 'culinary', 'vineyard'] },
-    { id: 'dev_sig_09', guestId: G, memory: 'your deep-tissue massage aboard Ilma', kind: 'spa-history', summary: 'Deep-tissue massage, firm pressure — Ilma, Cyclades', category: 'spa', voyageId: V.greekIsles, rating: 5, weight: 0.8, observedAt: '2025-06-16T10:00:00Z', source: 'spa-system', tags: ['massage', 'firm'] },
     { id: 'dev_sig_10', guestId: G, kind: 'suite-preference', summary: 'Feather-free pillows requested on all three voyages', weight: 0.9, observedAt: '2025-06-14T15:00:00Z', source: 'crm', tags: ['bedding', 'feather-free'] },
     { id: 'dev_sig_11', guestId: G, kind: 'destinations-visited', summary: 'Grenadines, St Barths, Dubrovnik, Hvar, Venice, Mykonos, Santorini, Milos', weight: 0.5, observedAt: '2025-06-24T12:00:00Z', source: 'reservations', tags: ['caribbean', 'adriatic', 'aegean'] },
     { id: 'dev_sig_12', guestId: G, kind: 'future-itinerary', summary: 'First visit to Palma, Saint-Tropez, Monaco and Portofino', voyageId: IDS.voyage, weight: 0.7, observedAt: '2027-02-10T12:00:00Z', source: 'reservations', tags: ['first-visit', 'riviera'] },

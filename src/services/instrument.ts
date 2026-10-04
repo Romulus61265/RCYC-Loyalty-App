@@ -11,7 +11,8 @@ const SLOW_MS = 1500;
  * the rejection and decide how to present it.
  */
 export function instrumentServices(services: Services, log: Logger): Services {
-  const entries = Object.entries(services).map(([name, impl]) => [name, instrument(name, impl as object, log.child(name))]);
+  // Analytics never throws and flushes on a timer: timing it is only noise.
+  const entries = Object.entries(services).map(([name, impl]) => [name, name === 'analytics' ? impl : instrument(name, impl as object, log.child(name))]);
   return Object.fromEntries(entries) as Services;
 }
 

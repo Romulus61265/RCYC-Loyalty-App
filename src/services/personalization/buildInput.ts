@@ -13,9 +13,11 @@ import type {
   GuestRelationship,
   LoyaltyMembership,
   PersonalizationInput,
+  PastVoyageRecord,
   PersonalizationSignal,
   Voyage,
 } from '@/domain';
+import { historyFromVoyages, mergeHistory } from '../../../supabase/functions/_shared/personalization/history';
 
 export interface PersonalizationSources {
   profile: GuestProfile;
@@ -27,8 +29,10 @@ export interface PersonalizationSources {
   catalogue: Experience[];
   availability: ExperienceAvailability[];
   bookings: ExperienceBooking[];
-  /** Observed history (server-side data in production). */
+  /** Observed signals (server-side data in production). */
   signals: PersonalizationSignal[];
+  /** What the guest did on past voyages: the engine's history. */
+  voyageHistory: PastVoyageRecord[];
 }
 
 const HISTORY: Partial<Record<PersonalizationSignal['kind'], 'dining' | 'spa' | 'excursion'>> = {
@@ -52,11 +56,15 @@ export function buildPersonalizationInput(src: PersonalizationSources): Personal
   return {
     bonvoy: src.membership ? { tier: src.membership.tier } : null,
     previousVoyages: src.pastVoyages.map((v) => ({ id: v.id, name: v.name, region: v.region, startDate: v.startDate })),
-    history: src.signals.flatMap((s) => {
-      const kind = HISTORY[s.kind];
-      if (!kind) return [];
-      return [{ id: s.id, kind, memory: s.memory, category: s.category, voyageId: s.voyageId, rating: s.rating, weight: s.weight, tags: s.tags }];
-    }),
+    // Previous behaviour: past voyages first, then any history signal not already among them.
+    history: mergeHistory(
+      historyFromVoyages(src.voyageHistory),
+      src.signals.flatMap((s) => {
+        const kind = HISTORY[s.kind];
+        if (!kind) return [];
+        return [{ id: s.id, kind, memory: s.memory, category: s.category, voyageId: s.voyageId, rating: s.rating, weight: s.weight, tags: s.tags }];
+      }),
+    ),
     destinationsVisited: visited,
     voyage: { id: src.voyage.id, yachtName: src.yachtName, startDate: src.voyage.startDate, endDate: src.voyage.endDate },
     itinerary: src.voyage.itinerary.map((d) => ({ id: d.id, day: d.day, date: d.date, type: d.type, portName: d.portName, country: d.country })),

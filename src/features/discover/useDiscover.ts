@@ -3,13 +3,14 @@
  * Catalogue, destinations, voyage and profile are required; availability,
  * bookings and recommendations each degrade on their own.
  */
+import { useCallback, useState } from 'react';
 import { toAppError } from '@/core/errors';
 import { settle } from '@/features/shared/status';
 import { useAsync } from '@/hooks/useAsync';
 import { useJourney } from '@/hooks/useJourney';
 import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus';
 import { useServices } from '@/services/ServiceProvider';
-import { buildDiscoverModel } from './discoverModel';
+import { buildDiscoverModel, type ExperienceCardModel } from './discoverModel';
 
 export function useDiscover() {
   const services = useServices();
@@ -33,5 +34,29 @@ export function useDiscover() {
     return buildDiscoverModel({ overview, profile, catalogue, destinations }, { availability, bookings, recommendations }, now);
   }, [guestId, reservationId, voyageId]);
   useRefreshOnFocus(state.reload);
-  return state;
+
+  // Saved for later, this session. Saving tells personalization the guest is interested.
+  const [saved, setSaved] = useState<ReadonlySet<string>>(new Set());
+  const toggleSave = useCallback(
+    (card: ExperienceCardModel) => {
+      const on = !saved.has(card.id);
+      setSaved((s) => {
+        const next = new Set(s);
+        if (on) next.add(card.id);
+        else next.delete(card.id);
+        return next;
+      });
+      services.analytics.track('experience_saved', { experience_id: card.id, category: card.category, saved: on ? 'yes' : 'no' });
+      if (on) void services.personalization.recordFeedback(guestId, card.id, 'saved').catch(() => undefined);
+    },
+    [saved, services, guestId],
+  );
+  const viewed = useCallback((card: ExperienceCardModel) => services.analytics.track('experience_viewed', { experience_id: card.id, category: card.category, surface: 'discover' }), [services]);
+  const requested = useCallback(
+    (card: ExperienceCardModel) => {
+      if (card.recommendation) services.analytics.track('recommendation_accepted', { recommendation_id: card.recommendation.id, surface: 'discover', action: 'request' });
+    },
+    [services],
+  );
+  return { ...state, saved, toggleSave, viewed, requested };
 }

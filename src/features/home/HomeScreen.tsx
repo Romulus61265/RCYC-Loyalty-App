@@ -15,7 +15,9 @@
  *
  * Data comes only from `useHomeDashboard`; components are presentational.
  */
+import { useEffect, useRef } from 'react';
 import { View } from 'react-native';
+import { useServices } from '@/services/ServiceProvider';
 import { router, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ErrorState, Screen } from '@/components';
@@ -54,6 +56,17 @@ export function HomeScreen() {
   const recovery = useOpenRecovery();
   const arrival = useArrivalCard();
   const welcomeHome = useWelcomeHomeCard();
+  const services = useServices();
+  // Each recommendation counts as viewed once per session, where it appeared.
+  const viewedRecs = useRef(new Set<string>());
+  const recs = model?.recommendations;
+  useEffect(() => {
+    recs?.forEach((r, position) => {
+      if (viewedRecs.current.has(r.id)) return;
+      viewedRecs.current.add(r.id);
+      services.analytics.track('recommendation_viewed', { recommendation_id: r.id, surface: 'home', position });
+    });
+  }, [recs, services]);
 
   if (loading && !model) return <HomeSkeleton topInset={insets.top} />;
   if (error || !model) {
@@ -86,7 +99,15 @@ export function HomeScreen() {
       <ArrivalSection embarkation={model.embarkation} transfer={model.transfer} isNext={model.nextIsArrival} onOpen={() => toVoyage('embarkation')} />
       <ArrangedSection items={model.arranged} error={model.errors.arranged} onOpen={() => toVoyage('calendar')} onArrange={toConcierge} onRetry={reload} />
       <VoyageSection yacht={model.yacht} suite={model.suite} onOpen={() => toVoyage('suite')} />
-      <RecommendationRail items={model.recommendations} error={model.errors.recommendations} onRetry={reload} />
+      <RecommendationRail
+        items={model.recommendations}
+        error={model.errors.recommendations}
+        onRetry={reload}
+        onOpen={(r) => {
+          services.analytics.track('recommendation_accepted', { recommendation_id: r.id, surface: 'home', action: 'open' });
+          router.push('/discover');
+        }}
+      />
       <ConciergeInvitation ambassador={model.concierge.ambassador} prompt={model.concierge.prompt} onOpen={toConcierge} />
       <RequestsLine onNew={() => router.push('/requests/new')} onAll={() => router.push('/requests')} />
     </Screen>

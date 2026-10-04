@@ -38,6 +38,8 @@ function inputWith(change: { dropBookings?: string[]; dropSignals?: string[]; ed
     availability: d.experiences.availability,
     bookings: d.experiences.bookings.filter((b) => !change.dropBookings?.includes(b.id)),
     signals: d.personalization.signals.filter((s) => !change.dropSignals?.includes(s.id)),
+    // Past voyages' moments carry the history ids (dev_sig_03…); dropping one drops it here.
+    voyageHistory: d.voyageHistory.records.map((r) => ({ ...r, moments: r.moments.filter((m) => !change.dropSignals?.includes(m.id)) })),
   });
   change.edit?.(input);
   return input;

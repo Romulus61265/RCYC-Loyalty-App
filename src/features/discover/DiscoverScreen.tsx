@@ -31,7 +31,7 @@ export function DiscoverScreen() {
   const category = parseCategory(params.category);
   const [refine, setRefine] = useState<Omit<DiscoverFilters, 'category'>>(DEFAULT_FILTERS);
   const [panelOpen, setPanelOpen] = useState(false);
-  const { data: model, loading, error, reload } = useDiscover();
+  const { data: model, loading, error, reload, saved, toggleSave, viewed, requested } = useDiscover();
 
   if (loading && !model) return <LoadingState label="Curating your experiences…" />;
   if (error || !model) {
@@ -51,7 +51,10 @@ export function DiscoverScreen() {
     if (c !== category) setCategory(c);
   };
   const clear = () => setRefine(DEFAULT_FILTERS);
-  const request = () => router.push('/concierge');
+  const request = (card?: { recommendation?: unknown } & Parameters<typeof requested>[0]) => {
+    if (card) requested(card);
+    router.push('/concierge');
+  };
   const results = applyDiscoverFilters(model.cards, filters);
   const heading = DISCOVER_CATEGORIES.find((c) => c.key === category)?.label ?? 'All';
 
@@ -83,7 +86,7 @@ export function DiscoverScreen() {
           }}
         />
       ) : (
-        <ExperienceResults cards={results} heading={category === 'all' ? (count ? 'Your selection' : 'Every experience') : heading} onRequest={request} onClear={clear} />
+        <ExperienceResults cards={results} heading={category === 'all' ? (count ? 'Your selection' : 'Every experience') : heading} onRequest={request} onClear={clear} saved={saved} onSave={toggleSave} onView={viewed} />
       )}
     </Screen>
   );

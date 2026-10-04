@@ -98,6 +98,7 @@ export function scoreFixtures(): PersonalizedRecommendation[] {
     availability: data.experiences.availability,
     bookings: data.experiences.bookings,
     signals,
+    voyageHistory: data.voyageHistory.records,
   });
   return toGuestSafe(personalize(input, { limit: 1000, includeBooked: true, maxPerCategory: 1000, now: new Date(data.meta.referenceNow).toISOString() }));
 }
@@ -140,7 +141,7 @@ export class MockPersonalizationService implements PersonalizationService {
       experience.listAvailability(overview.voyage.id).catch(() => []),
       experience.listBookings(reservationId),
     ]);
-    const input = buildPersonalizationInput({ profile: p, membership, relationship, pastVoyages, voyage: overview.voyage, yachtName: overview.yacht.name, catalogue, availability, bookings, signals });
+    const input = buildPersonalizationInput({ profile: p, membership, relationship, pastVoyages, voyage: overview.voyage, yachtName: overview.yacht.name, catalogue, availability, bookings, signals, voyageHistory: data.voyageHistory.records.filter((r) => r.guestId === guestId) });
     return toGuestSafe(personalize(input, { ...opts, now: mockNow().toISOString() }));
   }
 

@@ -60,6 +60,10 @@ import type {
   RecoveryNotice,
   RecoveryRecord,
   ArrivalUpdate,
+  AnalyticsEnvelope,
+  AnalyticsEventName,
+  AnalyticsEventProps,
+  VoyageHistoryEntry,
   FeedbackPatch,
   VoyageFeedback,
   VoyageRecap,
@@ -354,6 +358,20 @@ export interface ServiceRecoveryOperations {
   decideProposal(proposalId: ID, decision: { approve: boolean; note?: string }): Promise<GoodwillProposal>;
 }
 
+// ─── Voyage history ────────────────────────────────────────────────────────
+
+/**
+ * The guest's past voyages: yacht, dates, destinations, suite, what they did
+ * ashore and at the table, the preferences learned (and whether each still
+ * stands), memories, and a place for photographs. The same records are the
+ * personalization engine's history.
+ */
+export interface VoyageHistoryService {
+  /** Newest first. */
+  listVoyages(guestId: ID): Promise<VoyageHistoryEntry[]>;
+  getVoyage(guestId: ID, voyageId: ID): Promise<VoyageHistoryEntry>;
+}
+
 // ─── After the voyage ──────────────────────────────────────────────────────
 
 /**
@@ -482,6 +500,29 @@ export interface JourneyEventService {
   subscribe(reservationId: ID, listener: (event: JourneyEvent, alert?: JourneyAlert) => void, types?: JourneyEventType[]): Unsubscribe;
 }
 
+// ─── Analytics ─────────────────────────────────────────────────────────────
+
+/**
+ * Privacy-conscious product analytics. Only declared events with declared
+ * properties leave the device, screened for anything that must never be
+ * logged; nothing is sent without the guest's analytics consent; no guest
+ * or reservation id is attached. Never throws: analytics must not break a screen.
+ */
+export interface AnalyticsService {
+  track<E extends AnalyticsEventName>(event: E, props: AnalyticsEventProps[E]): void;
+  /** A screen, as its route pattern (/history/[id]), never with real ids. */
+  screen(path: string): void;
+  /** From the guest's privacy preference. Until known, events wait; when off, they are discarded. */
+  setConsent(granted: boolean): void;
+  flush(): Promise<void>;
+}
+
+/** Where analytics go. Replace the vendor by writing one of these. */
+export interface AnalyticsProvider {
+  readonly name: string;
+  send(batch: AnalyticsEnvelope[]): Promise<void>;
+}
+
 // ─── Audit ─────────────────────────────────────────────────────────────────
 
 export interface AuditEntry {
@@ -520,6 +561,8 @@ export interface Services {
   recovery: ServiceRecoveryService;
   continuity: ContinuityService;
   postVoyage: PostVoyageService;
+  history: VoyageHistoryService;
+  analytics: AnalyticsService;
   /** The device side of push (token and permission). */
   push: PushRegistrar;
   journeyEvents: JourneyEventService;

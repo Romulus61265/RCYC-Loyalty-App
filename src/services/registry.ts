@@ -43,8 +43,12 @@ import { MemoryRecoveryStore } from './recovery/store';
 import { MockContinuityService } from './mock/MockContinuityService';
 import { MockTravelDisruptionService } from './mock/MockTravelDisruptionService';
 import { MockTransferService } from './mock/MockTransferService';
+import { ConsoleAnalyticsProvider, NoopAnalyticsProvider, silentAnalytics } from './analytics/providers';
+import { PrivacyAnalyticsService } from './analytics/PrivacyAnalyticsService';
+import { withAnalytics } from './analytics/withAnalytics';
 import { ComposedPostVoyageService } from './postVoyage/ComposedPostVoyageService';
 import { MemoryPostVoyageStore } from './postVoyage/store';
+import { ComposedVoyageHistoryService, MemoryVoyageHistoryStore } from './history/ComposedVoyageHistoryService';
 import { InMemoryEventService } from './events/InMemoryEventService';
 import { flightDelayedEvent, registerFlightDelayHandlers } from './events/flightDelay';
 import { ApiClient } from './remote/apiClient';
@@ -52,6 +56,9 @@ import { MarriottBonvoyService } from './remote/MarriottBonvoyService';
 import { createSupabaseServices } from './supabase';
 
 export const ACCESS_TOKEN_KEY = 'rcyc.session.access';
+
+/** Reported with analytics (no build metadata beyond this). */
+const APP_VERSION = '0.1.0';
 
 /**
  * Where edited preferences persist outside Supabase mode: device storage.
@@ -143,6 +150,8 @@ function createMockServices(): Services {
     occasions: new ComposedOccasionService({ profile, loyalty, voyage, experience, requests, clock: { now: mockNow } }),
     notifications: new ComposedNotificationService({ profile, voyage, experience, requests, journeyEvents, personalization, clock: { now: mockNow } }, new MemoryNotificationState({ [data.guest.profile.guest.id]: data.communication.readNotificationKeys })),
     continuity,
+    analytics: silentAnalytics,
+    history: new ComposedVoyageHistoryService({ voyage, profile }, new MemoryVoyageHistoryStore(data.voyageHistory.records)),
     postVoyage: new ComposedPostVoyageService({ profile, loyalty, voyage, experience, requests, clock }, new MemoryPostVoyageStore(data.postVoyage.voyageInspirations)),
     recovery: new ComposedRecoveryService({ profile, loyalty, voyage, experience, requests, clock }, recoveryStore),
     journeyEvents,
@@ -167,7 +176,13 @@ export function createServices(mode: ServiceMode = env.serviceMode): Services {
     throw new AppError('config', `Service mode "${mode}" is missing configuration`, { severity: 'fatal' });
   }
   log.info('services ready', { mode, appEnv: env.appEnv });
-  return instrumentServices(compose(mode), log);
+  const services = compose(mode);
+  // Product analytics: a vendor adapter replaces the provider; until one is chosen, production sends nothing.
+  const analytics = new PrivacyAnalyticsService(env.appEnv === 'production' ? new NoopAnalyticsProvider() : new ConsoleAnalyticsProvider(logger.child('analytics')), {
+    clock: services.clock,
+    app: { version: APP_VERSION, platform: Platform.OS, mode },
+  });
+  return instrumentServices(withAnalytics(services, analytics), log);
 }
 
 function compose(mode: ServiceMode): Services {

@@ -89,7 +89,23 @@ function FilterRow({ label, children }: { label: string; children: React.ReactNo
 
 // ─── Results ───────────────────────────────────────────────────────────────
 
-export function ExperienceResults({ cards, heading, onRequest, onClear }: { cards: ExperienceCardModel[]; heading: string; onRequest: (c: ExperienceCardModel) => void; onClear: () => void }) {
+export function ExperienceResults({
+  cards,
+  heading,
+  onRequest,
+  onClear,
+  saved,
+  onSave,
+  onView,
+}: {
+  cards: ExperienceCardModel[];
+  heading: string;
+  onRequest: (c: ExperienceCardModel) => void;
+  onClear: () => void;
+  saved?: ReadonlySet<string>;
+  onSave?: (c: ExperienceCardModel) => void;
+  onView?: (c: ExperienceCardModel) => void;
+}) {
   const { width } = useWindowDimensions();
   const columns = width >= 760 ? 2 : 1;
   if (cards.length === 0) {
@@ -104,7 +120,7 @@ export function ExperienceResults({ cards, heading, onRequest, onClear }: { card
       <View style={[styles.grid, columns === 2 && styles.gridTwo]}>
         {cards.map((c) => (
           <View key={c.id} style={columns === 2 ? styles.cellTwo : undefined}>
-            <ExperienceCard card={c} onRequest={onRequest} />
+            <ExperienceCard card={c} onRequest={onRequest} saved={saved?.has(c.id) ?? false} onSave={onSave} onView={onView} />
           </View>
         ))}
       </View>

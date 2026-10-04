@@ -260,6 +260,14 @@ Generated from the fictional dataset by `npm run seed:generate`, so do not edit 
 * `voyage_inspirations` holds future voyages to inspire the next one. Signed-in guests read them; they are fictional in development.
 * See [17](17-post-voyage.md).
 
+## Voyage history (`20261012000000_voyage_history.sql`)
+
+* `voyage_history` (guest × voyage) holds what the guest did on a past voyage: yacht name, suite label, destinations, moments (with an optional engine weight), saved preferences and photos (JSON).
+  * The guest reads their own; crew assigned to the guest's reservation read it.
+  * No guest writes: records come from reservations, POS, spa and shore systems through the service role.
+  * `personalization-next-best` reads it as the engine's history.
+* See [18](18-voyage-history.md).
+
 ## Testing
 
 | Command | Needs | Covers |
