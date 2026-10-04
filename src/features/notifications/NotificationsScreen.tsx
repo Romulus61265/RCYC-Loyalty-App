@@ -6,7 +6,8 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { router, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Caption, Chip, EmptyNote, ErrorState, Eyebrow, LoadingState, PageHeader, Screen, Section, Text, TextLink } from '@/components';
+import { readAs } from '@/hooks/useAnnounce';
+import { Caption, Chip, ChipGroup, EmptyNote, ErrorState, Eyebrow, LoadingState, PageHeader, Screen, Section, Text, TextLink } from '@/components';
 import type { NotificationType } from '@/domain';
 import { BackBar } from '@/features/requests/components/RequestParts';
 import { colors, radii, spacing } from '@/theme';
@@ -37,20 +38,22 @@ export function NotificationsScreen() {
       <BackBar onBack={back} />
       <PageHeader eyebrow="Notifications" title="For you" subtitle={model.unread ? `${model.unread} unread` : 'All read.'} />
       <View style={styles.links}>
-        {model.unread ? <TextLink label="Mark all as read" onPress={() => void markAllRead()} /> : null}
+        {model.unread ? <TextLink label="Mark all as read" role="button" onPress={() => void markAllRead()} /> : null}
         <TextLink label="Settings" onPress={() => router.push('/notifications/settings')} />
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters} accessibilityLabel="Filter notifications">
-        {model.types.map((t) => (
-          <Chip key={t.value} label={t.label} selected={filter === t.value} onPress={() => setFilter(t.value)} />
-        ))}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+        <ChipGroup label="Show" kind="radio" style={{ flexWrap: 'nowrap' }}>
+          {model.types.map((t) => (
+            <Chip key={t.value} kind="radio" label={t.label} selected={filter === t.value} onPress={() => setFilter(t.value)} />
+          ))}
+        </ChipGroup>
       </ScrollView>
 
       {model.upcoming.length && filter === 'all' ? (
         <Section eyebrow="Coming up">
           <View style={{ gap: spacing.xs }}>
             {model.upcoming.map((u) => (
-              <View key={u.key} accessibilityLabel={`${u.title} ${u.when}`}>
+              <View key={u.key} {...readAs(`${u.title}, ${u.when}`)}>
                 <Text>{u.title}</Text>
                 <Caption>{u.when}</Caption>
               </View>
@@ -81,8 +84,8 @@ export function NotificationsScreen() {
 function Item({ item, onOpen }: { item: InboxItemModel; onOpen: () => void }) {
   const urgent = item.type === 'urgent';
   return (
-    <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={item.accessibilityLabel} style={({ pressed }) => [styles.item, urgent && styles.urgent, pressed && { opacity: 0.8 }]}>
-      <Ionicons name={item.icon as never} size={18} color={urgent ? colors.attention : colors.accent} style={{ marginTop: 2 }} />
+    <Pressable onPress={onOpen} accessibilityRole="link" accessibilityLabel={item.accessibilityLabel} style={({ pressed }) => [styles.item, urgent && styles.urgent, pressed && { opacity: 0.8 }]}>
+      <Ionicons name={item.icon as never} size={18} color={urgent ? colors.attention : colors.accentText} style={{ marginTop: 2 }} />
       <View style={{ flex: 1, marginLeft: spacing.sm }}>
         <View style={styles.row}>
           <Eyebrow color={urgent ? colors.attention : colors.textMuted}>{item.typeLabel}</Eyebrow>

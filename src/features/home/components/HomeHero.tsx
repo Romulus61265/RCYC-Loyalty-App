@@ -11,11 +11,11 @@ import type { HeroModel, JourneyStep } from '../homeModel';
  */
 export function HomeHero({ hero, topInset, accessory }: { hero: HeroModel; topInset: number; accessory?: ReactNode }) {
   return (
-    <MediaFrame media={hero.media} height={460 + topInset} rounded={false}>
+    <MediaFrame media={hero.media} height={460 + topInset} rounded={false} scrim="both">
       <View style={[styles.content, { paddingTop: topInset + spacing.lg }]}>
         <View style={styles.column}>
           <View style={styles.top}>
-            <Eyebrow color={colors.textInverseMuted} style={{ flex: 1 }}>
+            <Eyebrow color={colors.textOnImageMuted} style={{ flex: 1 }}>
               {hero.greeting}
             </Eyebrow>
             {accessory}
@@ -24,10 +24,10 @@ export function HomeHero({ hero, topInset, accessory }: { hero: HeroModel; topIn
           <Text variant="subtitle" color={colors.accentSoft}>
             {hero.phaseLabel}
           </Text>
-          <Text variant="hero" color={colors.textInverse} accessibilityRole="header" style={{ marginTop: spacing.xxs }}>
+          <Text variant="hero" color={colors.textInverse} accessibilityRole="header" aria-level={1} style={{ marginTop: spacing.xxs }}>
             {hero.headline}
           </Text>
-          <Text variant="caption" color={colors.textInverseMuted} style={{ marginTop: spacing.xs }}>
+          <Text variant="caption" color={colors.textOnImageMuted} style={{ marginTop: spacing.xs }}>
             {hero.subline}
           </Text>
           <JourneySteps steps={hero.steps} />
@@ -39,26 +39,34 @@ export function HomeHero({ hero, topInset, accessory }: { hero: HeroModel; topIn
 
 export function JourneySteps({ steps }: { steps: JourneyStep[] }) {
   const current = steps.find((s) => s.state === 'current');
+  const at = steps.findIndex((s) => s.state === 'current') + 1;
+  const text = `${current?.label ?? ''}, stage ${at} of ${steps.length}`;
   return (
     <View
       style={styles.steps}
       accessible
-      accessibilityRole="progressbar"
-      accessibilityLabel={`Journey stage: ${current?.label ?? ''}, ${steps.findIndex((s) => s.state === 'current') + 1} of ${steps.length}`}
+      role="progressbar"
+      aria-label="Your journey"
+      accessibilityLabel="Your journey"
+      accessibilityValue={{ min: 1, max: steps.length, now: at, text }}
+      aria-valuemin={1}
+      aria-valuemax={steps.length}
+      aria-valuenow={at}
+      aria-valuetext={text}
     >
       {steps.map((s) => (
         <View key={s.key} style={styles.step}>
           <View
             style={[
               styles.rule,
-              s.state === 'done' && { backgroundColor: colors.textInverseMuted },
+              s.state === 'done' && { backgroundColor: colors.textOnImageMuted },
               s.state === 'current' && { backgroundColor: colors.accent },
             ]}
           />
           <Eyebrow
-            color={s.state === 'current' ? colors.textInverse : colors.textInverseMuted}
+            color={s.state === 'current' ? colors.textInverse : colors.textOnImageMuted}
             numberOfLines={1}
-            style={{ marginTop: 6, fontSize: 10, letterSpacing: 0.6 }}
+            style={{ marginTop: 6, fontSize: 11, letterSpacing: 0.6 }}
           >
             {s.label}
           </Eyebrow>

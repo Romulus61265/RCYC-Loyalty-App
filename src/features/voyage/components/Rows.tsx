@@ -1,12 +1,13 @@
 /** Row-level building blocks shared by the Voyage sections. Presentational only. */
 import { StyleSheet, View } from 'react-native';
+import { readAs } from '@/hooks/useAnnounce';
 import { Caption, Eyebrow, StatusLine, Text } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 import type { BookingLine, Fact, SuggestionLine } from '../voyageModel';
 
 export function BookingRow({ booking, showWhen = true }: { booking: BookingLine; showWhen?: boolean }) {
   return (
-    <View style={styles.row} accessible accessibilityLabel={`${booking.title}, ${booking.whenLabel}, ${booking.status.label}`}>
+    <View style={styles.row} {...readAs(`${booking.title}, ${booking.whenLabel}, ${booking.venue}, ${booking.partyLabel}${booking.note ? `. ${booking.note}` : ''}. ${booking.status.label}`)}>
       {showWhen ? <Caption>{booking.whenLabel}</Caption> : null}
       <Text variant="bodyStrong" style={{ marginTop: showWhen ? 2 : 0 }}>
         {booking.title}
@@ -27,7 +28,7 @@ export function BookingRow({ booking, showWhen = true }: { booking: BookingLine;
 export function SuggestionRow({ item }: { item: SuggestionLine }) {
   return (
     <View style={styles.suggestion}>
-      <Eyebrow color={colors.accent}>{item.where}</Eyebrow>
+      <Eyebrow color={colors.accentText}>{item.where}</Eyebrow>
       <Text variant="bodyStrong" style={{ marginTop: 2 }}>
         {item.title}
       </Text>

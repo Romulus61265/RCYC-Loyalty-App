@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Caption, Chip, EmptyNote, Eyebrow, InlineError, MediaFrame, MediaTile, Section, Text } from '@/components';
+import { Caption, Chip, ChipGroup, EmptyNote, Eyebrow, InlineError, MediaFrame, MediaTile, Section, Text } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 import type { DestinationCardModel, DiscoverFilters, DiscoverModel, ExperienceCardModel, InterestKey } from '../discoverModel';
 import { ExperienceCard } from './ExperienceCard';
@@ -17,7 +17,8 @@ export function RecommendedRail({ items, error, onRetry }: { items: ExperienceCa
       ) : items.length === 0 ? (
         <EmptyNote body="As we get to know you better, we’ll suggest moments we think you’ll love." />
       ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -spacing.gutter }} contentContainerStyle={{ paddingHorizontal: spacing.gutter, gap: spacing.md }}>
+        // Focusable as a whole on the web, so a keyboard can scroll tiles that are not themselves controls.
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} tabIndex={0} role="region" aria-label="Recommended for you" style={{ marginHorizontal: -spacing.gutter }} contentContainerStyle={{ paddingHorizontal: spacing.gutter, gap: spacing.md }}>
           {items.map((c) => (
             <MediaTile key={c.id} media={c.media} eyebrow={c.destination} title={c.title} caption={c.recommendation?.reason} width={tile} height={Math.round(tile * 1.15)} />
           ))}
@@ -32,7 +33,7 @@ export function RecommendedRail({ items, error, onRetry }: { items: ExperienceCa
 export function RefineBar({ count, open, privateOnly, onToggle, onPrivate, onClear }: { count: number; open: boolean; privateOnly: boolean; onToggle: () => void; onPrivate: () => void; onClear: () => void }) {
   return (
     <View style={styles.refineBar}>
-      <Pressable onPress={onToggle} accessibilityRole="button" aria-expanded={open} accessibilityState={{ expanded: open }} style={styles.refineButton}>
+      <Pressable onPress={onToggle} accessibilityRole="button" accessibilityLabel={count ? `Refine, ${count} ${count === 1 ? 'filter' : 'filters'} on` : 'Refine'} aria-expanded={open} accessibilityState={{ expanded: open }} style={styles.refineButton}>
         <Ionicons name="options-outline" size={16} color={colors.textPrimary} />
         <Eyebrow color={colors.textPrimary} style={{ marginLeft: 6 }}>
           Refine{count ? ` · ${count}` : ''}
@@ -40,8 +41,8 @@ export function RefineBar({ count, open, privateOnly, onToggle, onPrivate, onCle
       </Pressable>
       <Chip label="Private only" selected={privateOnly} onPress={onPrivate} />
       {count > 0 ? (
-        <Pressable onPress={onClear} accessibilityRole="button" hitSlop={10} style={{ marginLeft: 'auto' }}>
-          <Eyebrow color={colors.accent}>Clear</Eyebrow>
+        <Pressable onPress={onClear} accessibilityRole="button" accessibilityLabel="Clear filters" hitSlop={14} style={{ marginLeft: 'auto' }}>
+          <Eyebrow color={colors.accentText}>Clear</Eyebrow>
         </Pressable>
       ) : null}
     </View>
@@ -53,35 +54,37 @@ export function FilterPanel({ model, filters, onChange }: { model: DiscoverModel
   const toggleInterest = (k: InterestKey) => set({ interests: filters.interests.includes(k) ? filters.interests.filter((i) => i !== k) : [...filters.interests, k] });
   return (
     <View style={styles.panel}>
-      <FilterRow label="Port">
+      <FilterRow label="Port" kind="radio">
         {model.options.ports.map((o) => (
-          <Chip key={o.value} label={o.label} hint={o.hint} selected={filters.port === o.value} onPress={() => set({ port: o.value })} />
+          <Chip key={o.value} label={o.label} hint={o.hint} kind="radio" selected={filters.port === o.value} onPress={() => set({ port: o.value })} />
         ))}
       </FilterRow>
-      <FilterRow label="Date">
+      <FilterRow label="Date" kind="radio">
         {model.options.dates.map((o) => (
-          <Chip key={o.value} label={o.label} hint={o.hint} selected={filters.date === o.value} onPress={() => set({ date: o.value })} />
+          <Chip key={o.value} label={o.label} hint={o.hint} kind="radio" selected={filters.date === o.value} onPress={() => set({ date: o.value })} />
         ))}
       </FilterRow>
-      <FilterRow label="Interests">
+      <FilterRow label="Interests" kind="checkbox">
         {model.options.interests.map((o) => (
-          <Chip key={o.value} label={o.label} hint={o.yours ? 'Yours' : undefined} selected={filters.interests.includes(o.value)} onPress={() => toggleInterest(o.value)} />
+          <Chip key={o.value} label={o.label} hint={o.yours ? 'Yours' : undefined} kind="checkbox" selected={filters.interests.includes(o.value)} onPress={() => toggleInterest(o.value)} />
         ))}
       </FilterRow>
-      <FilterRow label="Availability">
-        <Chip label="Everything" selected={filters.availability === 'any'} onPress={() => set({ availability: 'any' })} />
-        <Chip label="Bookable now" selected={filters.availability === 'open'} onPress={() => set({ availability: 'open' })} />
+      <FilterRow label="Availability" kind="radio">
+        <Chip kind="radio" label="Everything" selected={filters.availability === 'any'} onPress={() => set({ availability: 'any' })} />
+        <Chip kind="radio" label="Bookable now" selected={filters.availability === 'open'} onPress={() => set({ availability: 'open' })} />
       </FilterRow>
     </View>
   );
 }
 
-function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
+function FilterRow({ label, kind, children }: { label: string; kind: 'radio' | 'checkbox'; children: React.ReactNode }) {
   return (
     <View style={{ marginTop: spacing.md }}>
       <Eyebrow style={{ paddingHorizontal: spacing.gutter, marginBottom: spacing.xs }}>{label}</Eyebrow>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.gutter, gap: spacing.xs }}>
-        {children}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.gutter }}>
+        <ChipGroup label={label} kind={kind} style={{ flexWrap: 'nowrap' }}>
+          {children}
+        </ChipGroup>
       </ScrollView>
     </View>
   );
@@ -134,10 +137,10 @@ export function DestinationList({ items, onOpen }: { items: DestinationCardModel
   return (
     <Section eyebrow="Where you’ll be">
       {items.map((d) => (
-        <Pressable key={d.id} onPress={() => onOpen(d)} accessibilityRole="button" accessibilityLabel={`${d.name}: ${d.experienceCount} experiences`} style={{ marginBottom: spacing.md }}>
+        <Pressable key={d.id} onPress={() => onOpen(d)} accessibilityRole="button" accessibilityLabel={`${d.name}, ${d.country}, ${d.dateLabel}. ${d.standfirst} ${d.experienceCount} experiences${d.reservedCount ? `, ${d.reservedCount} reserved for you` : ''}`} style={{ marginBottom: spacing.md }}>
           <MediaFrame media={d.media} height={190}>
             <View style={styles.destCaption}>
-              <Eyebrow color={colors.textInverseMuted}>
+              <Eyebrow color={colors.textOnImageMuted}>
                 {d.country} · {d.dateLabel}
               </Eyebrow>
               <Text variant="display" color={colors.textInverse}>

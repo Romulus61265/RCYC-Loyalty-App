@@ -7,6 +7,7 @@
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { readAs } from '@/hooks/useAnnounce';
 import { Button, Caption, Card, EmptyNote, ErrorState, Eyebrow, LoadingState, MediaFrame, Screen, Section, StatusLine, Text, TextLink } from '@/components';
 import type { RecapMemory, VoyageRecommendation } from '@/domain';
 import { BackBar } from '@/features/requests/components/RequestParts';
@@ -32,7 +33,7 @@ export function WelcomeHomeScreen() {
     return (
       <Screen>
         <BackBar onBack={back} />
-        <Section eyebrow="After your voyage">
+        <Section eyebrow="After your voyage" level={1}>
           <EmptyNote body="When your voyage is over, you will find it remembered here: the days, the places and the moments you loved." actionLabel="Back to Home" onAction={back} />
         </Section>
       </Screen>
@@ -65,7 +66,7 @@ export function WelcomeHomeScreen() {
               {d.memories.length ? (
                 d.memories.map((m) => (
                   <View key={m.id} style={styles.memory}>
-                    <Ionicons name={ICON[m.kind]} size={16} color={colors.accent} style={{ marginTop: 3 }} />
+                    <Ionicons name={ICON[m.kind]} size={16} color={colors.accentText} style={{ marginTop: 3 }} />
                     <View style={{ flex: 1, marginLeft: spacing.sm }}>
                       <Text variant={m.kind === 'occasion' ? 'bodyStrong' : 'body'}>{m.title}</Text>
                       <Caption>{m.line}</Caption>
@@ -83,7 +84,7 @@ export function WelcomeHomeScreen() {
       <Section eyebrow="Destinations visited">
         <View style={{ gap: spacing.sm }}>
           {recap.destinations.map((d) => (
-            <View key={d.portName} style={styles.place} accessibilityLabel={`${d.portName}, ${d.country}, ${d.when}. ${d.standfirst ?? ''}`}>
+            <View key={d.portName} style={styles.place} {...readAs(`${d.portName}, ${d.country}, ${d.when}. ${d.standfirst ?? ''}`)}>
               <View style={styles.placeHead}>
                 <Text variant="bodyStrong" style={{ flex: 1 }}>
                   {d.portName}
@@ -102,7 +103,7 @@ export function WelcomeHomeScreen() {
           {!recap.favourites.chosen ? <Caption style={{ marginBottom: spacing.sm }}>Perhaps these? Tell us your own in your reflections.</Caption> : null}
           {recap.favourites.memories.map((m) => (
             <View key={m.id} style={styles.memory}>
-              <Ionicons name="heart-outline" size={16} color={colors.accent} style={{ marginTop: 3 }} />
+              <Ionicons name="heart-outline" size={16} color={colors.accentText} style={{ marginTop: 3 }} />
               <View style={{ flex: 1, marginLeft: spacing.sm }}>
                 <Text>{m.title}</Text>
                 <Caption>{m.line}</Caption>
@@ -113,7 +114,7 @@ export function WelcomeHomeScreen() {
       </Section>
 
       <Section eyebrow="Marriott Bonvoy">
-        <Card style={styles.card} accessibilityLabel={`Marriott Bonvoy. ${recap.bonvoy.tierLabel ?? ''}. ${recap.bonvoy.note}`}>
+        <Card style={styles.card}>
           {recap.bonvoy.tierLabel ? <Text variant="bodyStrong">{recap.bonvoy.tierLabel}</Text> : null}
           {recap.bonvoy.lifetimeStatus ? <Caption>{recap.bonvoy.lifetimeStatus}</Caption> : null}
           <Text color={colors.textSecondary} style={{ marginTop: spacing.sm }}>
@@ -173,7 +174,7 @@ export function WelcomeHomeScreen() {
 
       {recap.inspiration ? (
         <Section eyebrow={recap.inspiration.eyebrow}>
-          <Card style={{ overflow: 'hidden' }} accessibilityLabel={`${recap.inspiration.title}. ${recap.inspiration.standfirst}`}>
+          <Card style={{ overflow: 'hidden' }}>
             <MediaFrame media={recap.inspiration.voyage.hero} height={180} rounded={false} />
             <View style={styles.card}>
               <Text variant="title">{recap.inspiration.title}</Text>
@@ -204,7 +205,7 @@ export function WelcomeHomeScreen() {
 
 function Recommendation({ r }: { r: VoyageRecommendation }) {
   return (
-    <Card style={styles.card} accessibilityLabel={`${r.name}. ${r.when}. ${r.reason}`}>
+    <Card style={styles.card}>
       <Text variant="bodyStrong">{r.name}</Text>
       <Caption style={{ marginTop: 2 }}>{r.when}</Caption>
       <Text style={{ marginTop: spacing.sm }}>{r.reason}</Text>

@@ -3,7 +3,9 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { GuestPreferences } from '@/domain';
 import { router } from 'expo-router';
-import { Button, Caption, Card, DetailRow, Divider, EmptyNote, Eyebrow, FactRow, MediaFrame, Section, StatusLine, Text, TextLink } from '@/components';
+import { liveRegion, readAs } from '@/hooks/useAnnounce';
+import { useFocusOnChange } from '@/hooks/useFocusOnChange';
+import { Button, Caption, Card, DetailRow, Divider, EmptyNote, Eyebrow, FactRow, MediaFrame, Section, StatusLine, Text, TextLink, meaningfulIcon } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 import type { GroupSummary, ProfileModel } from '../profileModel';
 import { groupByKey, type FormValues, type GroupKey } from '../preferenceSchema';
@@ -27,8 +29,8 @@ export function PersonalSection({ model, onConcierge, onSignOut }: { model: Prof
           ))}
         </Card>
         <Caption style={{ marginTop: spacing.md }}>{model.note}</Caption>
-        <Pressable onPress={onConcierge} accessibilityRole="button" style={{ marginTop: spacing.sm }}>
-          <Eyebrow color={colors.accent}>Ask the concierge</Eyebrow>
+        <Pressable onPress={onConcierge} accessibilityRole="button" hitSlop={14} style={{ marginTop: spacing.sm }}>
+          <Eyebrow color={colors.accentText}>Ask the concierge</Eyebrow>
         </Pressable>
       </Section>
       <Section eyebrow="This device">
@@ -45,7 +47,7 @@ export function BonvoySection({ model }: { model: ProfileModel['bonvoy'] }) {
   return (
     <>
       <Section>
-        <View style={styles.memberCard} accessible accessibilityLabel={`Marriott Bonvoy ${model.tierLabel}, member since ${model.since}`}>
+        <View style={styles.memberCard} {...readAs(`Marriott Bonvoy ${model.tierLabel}${model.lifetimeStatus ? `, ${model.lifetimeStatus}` : ''}. Member ${model.memberNumber}, since ${model.since}${model.points ? `, ${model.points} points` : ''}`)}>
           <Eyebrow color={colors.textInverseMuted}>Marriott Bonvoy</Eyebrow>
           <Text variant="display" color={colors.textInverse} style={{ marginTop: spacing.xs }}>
             {model.tierLabel}
@@ -105,6 +107,8 @@ export interface EditingProps {
 }
 
 export function GroupCard({ summary, editing, preferences, onEdit, onSave }: { summary: GroupSummary } & EditingProps) {
+  // Closing the editor (saved or cancelled) returns to this group's Edit button.
+  const editRef = useFocusOnChange<View>(editing === summary.key);
   if (editing === summary.key) {
     return <PreferenceEditor group={groupByKey(summary.key)} preferences={preferences} onSave={(v) => onSave(summary.key, v)} onClose={() => onEdit(null)} />;
   }
@@ -114,7 +118,7 @@ export function GroupCard({ summary, editing, preferences, onEdit, onSave }: { s
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text variant="bodyStrong">{summary.label}</Text>
-            {summary.sensitive ? <Ionicons name="lock-closed-outline" size={12} color={colors.textMuted} accessibilityLabel="Sensitive" /> : null}
+            {summary.sensitive ? <Ionicons name="lock-closed-outline" size={12} color={colors.textMuted} {...meaningfulIcon('Sensitive')} /> : null}
           </View>
           {summary.lines.map((l) => (
             <Caption key={l} color={colors.textPrimary} style={{ marginTop: 2 }}>
@@ -123,8 +127,8 @@ export function GroupCard({ summary, editing, preferences, onEdit, onSave }: { s
           ))}
           <Caption style={{ marginTop: spacing.xxs }}>{summary.usedBy}</Caption>
         </View>
-        <Pressable onPress={() => onEdit(summary.key)} accessibilityRole="button" accessibilityLabel={`Edit ${summary.label}`} hitSlop={10} disabled={editing !== null}>
-          <Eyebrow color={editing !== null ? colors.textMuted : colors.accent}>Edit</Eyebrow>
+        <Pressable ref={editRef} onPress={() => onEdit(summary.key)} accessibilityRole="button" accessibilityLabel={`Edit ${summary.label}`} hitSlop={14} disabled={editing !== null}>
+          <Eyebrow color={editing !== null ? colors.textMuted : colors.accentText}>Edit</Eyebrow>
         </Pressable>
       </View>
     </Card>
@@ -197,8 +201,8 @@ export function OccasionsSection({ items, shared, onPrivacy }: { items: ProfileM
       <Caption style={{ marginTop: spacing.md }}>
         {shared ? 'Your crew may quietly prepare for these occasions.' : 'Your crew won’t be told about these occasions.'}
       </Caption>
-      <Pressable onPress={onPrivacy} accessibilityRole="button" style={{ marginTop: spacing.xs }}>
-        <Eyebrow color={colors.accent}>Change in Privacy</Eyebrow>
+      <Pressable onPress={onPrivacy} accessibilityRole="button" hitSlop={14} style={{ marginTop: spacing.xs }}>
+        <Eyebrow color={colors.accentText}>Change in Privacy</Eyebrow>
       </Pressable>
     </Section>
   );
@@ -219,8 +223,8 @@ export function HistorySection({ model }: { model: ProfileModel['history'] }) {
           </Pressable>
         ))}
         {model.past.length ? (
-          <Pressable onPress={() => router.push('/history')} accessibilityRole="link" style={{ marginTop: spacing.sm }}>
-            <Eyebrow color={colors.accent}>Your voyage history</Eyebrow>
+          <Pressable onPress={() => router.push('/history')} accessibilityRole="link" hitSlop={14} style={{ marginTop: spacing.sm }}>
+            <Eyebrow color={colors.accentText}>Your voyage history</Eyebrow>
           </Pressable>
         ) : null}
         <View style={{ marginTop: spacing.md }}>
@@ -275,13 +279,17 @@ export function PrivacySection({ summary, saved, onRequest, ...editing }: { summ
             <Button label="Request a copy of my data" variant="quiet" onPress={() => void request('copy')} />
             <Button label="Ask us to delete my data" variant="quiet" onPress={() => void request('erasure')} />
           </View>
-          {sent ? (
-            <StatusLine
-              label={sent === 'failed' ? 'We couldn’t send that just now. Please try again.' : 'Sent to our privacy team. We’ll confirm by e-mail.'}
-              tone={sent === 'failed' ? 'attention' : 'calm'}
-              style={{ marginTop: spacing.md }}
-            />
-          ) : null}
+          {/* Always present, so the outcome is read when it arrives. */}
+          <View {...liveRegion('polite')}>
+            {sent ? (
+              <StatusLine
+                label={sent === 'failed' ? 'We couldn’t send that just now. Please try again.' : 'Sent to our privacy team. We’ll confirm by e-mail.'}
+                tone={sent === 'failed' ? 'attention' : 'calm'}
+                live
+                style={{ marginTop: spacing.md }}
+              />
+            ) : null}
+          </View>
         </Card>
       </Section>
     </>

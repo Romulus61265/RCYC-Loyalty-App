@@ -20,7 +20,7 @@ export function SuiteSection({ model, onContact }: { model: SuiteSectionModel; o
         <Card>
           {model.amenities.map((a, i) => (
             <View key={a} style={[styles.amenity, i > 0 && { marginTop: spacing.sm }]}>
-              <Ionicons name="checkmark" size={14} color={colors.accent} style={{ marginTop: 4 }} />
+              <Ionicons name="checkmark" size={14} color={colors.accentText} style={{ marginTop: 4 }} />
               <Text style={{ flex: 1, marginLeft: spacing.sm }}>{a}</Text>
             </View>
           ))}
@@ -109,7 +109,7 @@ export function EmbarkationSection({ model, onDocuments }: { model: EmbarkationS
       ) : null}
 
       <Section eyebrow="Documentation">
-        <Card onPress={onDocuments} accessibilityLabel="Open documents">
+        <Card onPress={onDocuments} accessibilityRole="link">
           <View style={styles.between}>
             <Text variant="bodyStrong">
               {model.documents.complete} of {model.documents.total} complete
@@ -130,7 +130,7 @@ export function EmbarkationSection({ model, onDocuments }: { model: EmbarkationS
           <View style={{ marginTop: spacing.sm }}>
             {model.checkIn.steps.map((s) => (
               <View key={s.label} style={styles.step} accessible accessibilityLabel={`${s.label}: ${s.done ? 'done' : 'to do'}`}>
-                <Ionicons name={s.done ? 'checkmark-circle' : 'ellipse-outline'} size={16} color={s.done ? colors.calm : colors.accent} />
+                <Ionicons name={s.done ? 'checkmark-circle' : 'ellipse-outline'} size={16} color={s.done ? colors.calm : colors.accentText} />
                 <Text style={{ marginLeft: spacing.sm, flex: 1 }} color={s.done ? colors.textSecondary : colors.textPrimary}>
                   {s.label}
                 </Text>

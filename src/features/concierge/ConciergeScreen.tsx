@@ -3,9 +3,11 @@
  * a tap away, and the status of every request (`/concierge?view=requests`).
  */
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { liveRegion, useAnnounce } from '@/hooks/useAnnounce';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { Caption, ErrorState, LoadingState, SegmentedTabs, StatusLine, TextLink } from '@/components';
 import { colors, spacing } from '@/theme';
 import { Composer, Header, PeoplePanel, QuickReplies, RequestsList } from './components/Chrome';
@@ -24,15 +26,31 @@ export function ConciergeScreen() {
   const c = useConcierge();
   const count = c.model?.thread.length ?? 0;
   const services = useServices();
+  const reduceMotion = useReducedMotion();
   useEffect(() => {
     services.analytics.track('concierge_opened', { entry: view });
   }, [services, view]);
 
   useEffect(() => {
     if (view !== 'conversation') return;
-    const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
+    const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: !reduceMotion }), 60);
     return () => clearTimeout(t);
-  }, [count, c.sending, view]);
+  }, [count, c.sending, view, reduceMotion]);
+
+  useAnnounce(c.notice);
+  // A reply that arrives is read out (the first, already-present thread is not).
+  const latest = [...(c.model?.thread ?? [])].reverse().find((i) => i.kind === 'message' && i.side !== 'guest');
+  const latestKey = latest?.key;
+  const seenReply = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!latest || latest.kind !== 'message') return;
+    const first = seenReply.current === undefined;
+    seenReply.current = latest.key;
+    if (first || Platform.OS === 'web') return; // The web reads the thread's live region.
+    const words = latest.paragraphs.map((p) => (p.type === 'text' ? p.text : [p.heading, ...p.items.map((x) => x.text)].filter(Boolean).join('. '))).join(' ');
+    AccessibilityInfo.announceForAccessibility(`${latest.name}: ${words}`.slice(0, 600));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- announce once per new reply
+  }, [latestKey]);
 
   if (c.loading) return <LoadingState label="Your concierge is joining…" />;
   if (c.error || !c.model) {
@@ -64,7 +82,7 @@ export function ConciergeScreen() {
         <SegmentedTabs
           options={[
             { value: 'conversation', label: 'Conversation' },
-            { value: 'requests', label: `Requests${openCount ? ` · ${openCount}` : ''}` },
+            { value: 'requests', label: `Requests${openCount ? ` · ${openCount}` : ''}`, accessibilityLabel: openCount ? `Requests, ${openCount} open` : 'Requests' },
           ]}
           value={view}
           onChange={setView}
@@ -74,9 +92,14 @@ export function ConciergeScreen() {
       {view === 'conversation' ? (
         <>
           <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.thread} keyboardShouldPersistTaps="handled">
-            <ThreadView items={model.thread} onAction={(a) => void c.perform(a)} />
-            {c.sending ? <Caption style={styles.typing}>The concierge is writing…</Caption> : null}
-            {c.notice ? <StatusLine label={c.notice} tone="attention" style={styles.typing} /> : null}
+            <View aria-live="polite">
+              <ThreadView items={model.thread} onAction={(a) => void c.perform(a)} />
+            </View>
+            {/* Always present, so its changes are read (a live region that appears with its words often is not). */}
+            <View {...liveRegion('polite')}>
+              {c.sending ? <Caption style={styles.typing}>The concierge is writing…</Caption> : null}
+              {c.notice ? <StatusLine label={c.notice} tone="attention" style={styles.typing} /> : null}
+            </View>
           </ScrollView>
           <QuickReplies replies={model.quickReplies} onPick={(r) => void c.send(r)} />
           <Composer onSend={c.send} sending={c.sending} bottomInset={0} />

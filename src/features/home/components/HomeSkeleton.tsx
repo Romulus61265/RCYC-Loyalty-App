@@ -6,7 +6,7 @@ import { colors, radii, spacing } from '@/theme';
 /** Loading layout that mirrors Home, so content settles in place without jumps. */
 export function HomeSkeleton({ topInset }: { topInset: number }) {
   return (
-    <View style={styles.root} accessibilityLabel="Preparing your dashboard" accessibilityRole="progressbar" accessibilityState={{ busy: true }}>
+    <View style={styles.root} accessible accessibilityLabel="Preparing your dashboard" accessibilityRole="progressbar" accessibilityState={{ busy: true }} aria-busy>
       <View style={[styles.hero, { height: 460 + topInset, paddingTop: topInset + spacing.lg }]}>
         <View style={styles.column}>
           <SkeletonBlock height={12} width={180} style={styles.onDark} />

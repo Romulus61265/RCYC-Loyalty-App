@@ -15,7 +15,7 @@ export function ArrivalCard({ card, onOpen, onConcierge }: { card: ArrivalCardMo
         <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
           {card.lines.map((l) => (
             <View key={l.label} style={styles.line}>
-              <Ionicons name={l.icon} size={18} color={l.pending ? colors.textSecondary : colors.accent} />
+              <Ionicons name={l.icon} size={18} color={l.pending ? colors.textSecondary : colors.accentText} />
               <Text style={{ flex: 1, marginLeft: spacing.sm }}>{l.label}</Text>
               {l.value ? <Text variant="bodyStrong">{l.value}</Text> : null}
             </View>

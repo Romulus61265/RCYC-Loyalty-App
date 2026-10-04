@@ -10,6 +10,7 @@ Tick each item and note the device or OS.
 - [ ] `npm run typecheck` prints no errors.
 - [ ] `npm run lint` prints no errors or warnings.
 - [ ] `npm run doctor`: all checks pass. Two checks need internet access to expo.dev and reactnative.directory, so they fail behind a restricted proxy.
+- [ ] `npm run verify` includes `check:a11y`: contrast from the tokens, font-scale caps and accessibility patterns.
 - [ ] `npm run verify` includes `check:supabase`: seed freshness, key validation, sign-in logic and security scans.
 - [ ] With PostgreSQL and PostgREST available: `PG_BIN=… POSTGREST=… npm run test:supabase` reports every SQL assertion and service check passed.
 
@@ -71,8 +72,20 @@ On every screen, check for:
 ## 7 · Accessibility
 
 - [ ] VoiceOver / TalkBack announces each tab with its name and whether it's selected.
-- [ ] Hero images announce their alt text, for example "Monte Carlo harbour at golden hour".
-- [ ] At the largest Dynamic Type size, text wraps without clipping.
+- [ ] Hero images announce their alt text, for example "Monte Carlo harbour at golden hour". The headline over the image is a separate heading after it.
+- [ ] **Headings.** With the rotor (iOS) or headings navigation (Android), Home reads its headline, then each section: For your attention, Arranged for you, Your voyage, and so on.
+- [ ] **Icons are silent.** Swiping through a Discover card never stops on an icon on its own.
+- [ ] **Chips.** In Discover → Refine, a port is read as "radio button, 1 of N, selected"; interests as checkboxes; Private only as a toggle.
+- [ ] **Focus moves.**
+  - Reflections → Continue: the next question is read.
+  - Profile → Edit Dining: "Editing Dining"; Cancel returns to "Edit Dining, button".
+  - Sign-in: after "Send my code", the code instructions are read.
+- [ ] **Errors.** Make a request with nothing filled in. Each error is announced, the fields say "invalid" and are read with their errors, and both are named as required.
+- [ ] **Announcements.** A concierge reply is read when it arrives. Changing Discover's filters says how many experiences there are.
+- [ ] **Largest text size.** At the largest Dynamic Type size (iOS) or font size (Android), reading text is twice its size, headings grow less, and nothing is clipped. Tab labels stay the same size, and a long press shows them large (iOS).
+- [ ] **Reduce motion.** With it on, the Home skeleton holds still, screens appear without sliding, and photographs appear without fading.
+- [ ] **Voice Control.** "Tap Request" works on a Discover card; "Tap Elena" opens the people panel.
+- [ ] **Web.** Tab through Make a request; the order follows the page and every control shows a focus ring.
 
 ## 8 · Platforms
 

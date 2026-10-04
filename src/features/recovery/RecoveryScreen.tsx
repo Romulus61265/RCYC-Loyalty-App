@@ -5,8 +5,10 @@
  * be sent and confirms it (and, where there is a cost, acknowledges it).
  */
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type Text as RNText } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { focusTarget, useFocusOnChange } from '@/hooks/useFocusOnChange';
+import { useAnnounce } from '@/hooks/useAnnounce';
 import { Button, Caption, Card, ErrorState, Eyebrow, InlineError, LoadingState, Screen, Section, StatusLine, Text, TextField, TextLink, ToggleRow } from '@/components';
 import type { AppError } from '@/core/errors';
 import { BackBar } from '@/features/requests/components/RequestParts';
@@ -19,6 +21,8 @@ export function RecoveryScreen() {
   const id = decodeURIComponent(String(params.id ?? ''));
   const { data: model, loading, error, reload, accept, askForHelp, busy, errors, sent } = useRecovery(id);
   const back = () => (router.canGoBack() ? router.back() : router.replace('/'));
+  // The chosen alternative replaces the list: say what happened.
+  useAnnounce(sent && sent !== 'assist' ? model?.accepted?.line : undefined);
 
   if (loading && !model) return <LoadingState label="One moment…" />;
   if (error || !model) {
@@ -45,7 +49,7 @@ export function RecoveryScreen() {
           ))}
         </View>
         {model.explanation ? (
-          <View style={styles.reason} accessibilityLabel={`The reason: ${model.explanation}`}>
+          <View style={styles.reason}>
             <Eyebrow>The reason</Eyebrow>
             <Text color={colors.textSecondary} style={{ marginTop: spacing.xs }}>
               {model.explanation}
@@ -59,7 +63,7 @@ export function RecoveryScreen() {
 
       {model.accepted ? (
         <Section eyebrow="Your choice">
-          <Card style={styles.card} accessibilityLabel={`${model.accepted.title}. ${model.accepted.line}`}>
+          <Card style={styles.card}>
             <Text variant="bodyStrong">{model.accepted.title}</Text>
             <View style={styles.row}>
               <StatusLine label="Requested" tone="pending" />
@@ -99,9 +103,13 @@ function AlternativeCard({ alt, busy, error, onAccept }: { alt: RecoveryAlternat
   const [open, setOpen] = useState(false);
   const [ack, setAck] = useState(false);
   const [note, setNote] = useState('');
+  // Opening the approval goes to it; closing it returns to the alternative.
+  const focusRef = useFocusOnChange<RNText>(open);
   return (
-    <Card style={styles.card} accessibilityLabel={`${alt.title}. ${alt.meta ?? ''}`}>
-      <Text variant="bodyStrong">{alt.title}</Text>
+    <Card style={styles.card}>
+      <Text ref={open ? undefined : focusRef} {...focusTarget} variant="bodyStrong" accessibilityRole="header" aria-level={3}>
+        {alt.title}
+      </Text>
       {alt.meta ? <Caption style={{ marginTop: 2 }}>{alt.meta}</Caption> : null}
       <Text color={colors.textSecondary} style={{ marginTop: spacing.xs }}>
         {alt.detail}
@@ -112,8 +120,10 @@ function AlternativeCard({ alt, busy, error, onAccept }: { alt: RecoveryAlternat
           <Button label={alt.label} variant="quiet" onPress={() => setOpen(true)} />
         </View>
       ) : (
-        <View style={styles.approval} accessibilityLabel="Before we send it">
-          <Eyebrow>Before we send it</Eyebrow>
+        <View style={styles.approval}>
+          <Eyebrow ref={focusRef} {...focusTarget} accessibilityRole="header" aria-level={4}>
+            Before we send it
+          </Eyebrow>
           <Text style={{ marginTop: spacing.xs }}>{alt.summary}</Text>
           {alt.price ? <Caption style={{ marginTop: spacing.xs }}>{alt.price}</Caption> : null}
           {alt.acknowledgement ? <ToggleRow label={alt.acknowledgement} value={ack} onChange={setAck} /> : null}
@@ -123,6 +133,7 @@ function AlternativeCard({ alt, busy, error, onAccept }: { alt: RecoveryAlternat
             <Button
               label={busy ? 'Sending…' : alt.confirmLabel}
               disabled={busy || (alt.chargeable && !ack)}
+              hint={alt.chargeable && !ack ? 'Turn on the acknowledgement above to send' : undefined}
               onPress={() => {
                 void onAccept({ acknowledgedCharge: alt.chargeable ? ack : undefined, note: note.trim() || undefined }).then((ok) => ok && setOpen(false));
               }}
@@ -150,9 +161,13 @@ function AssistCard({
 }) {
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState('');
+  const focusRef = useFocusOnChange<RNText>(open);
+  useAnnounce(justSent && assistance.requested ? 'Sent. You will see each update in Your requests.' : undefined);
   return (
-    <Card style={styles.card} accessibilityLabel={assistance.line}>
-      <Text color={colors.textSecondary}>{assistance.line}</Text>
+    <Card style={styles.card}>
+      <Text ref={focusRef} {...focusTarget} color={colors.textSecondary}>
+        {assistance.line}
+      </Text>
       {assistance.requested ? (
         <View style={styles.row}>
           <StatusLine label="In hand" tone="calm" />

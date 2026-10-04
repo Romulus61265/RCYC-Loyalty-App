@@ -13,7 +13,7 @@ export function OverviewSection({ model, onOpen }: { model: OverviewModel; onOpe
       <Section>
         <MediaFrame media={model.media} height={200}>
           <View style={styles.mediaCaption}>
-            <Eyebrow color={colors.textInverseMuted}>{model.dateRange}</Eyebrow>
+            <Eyebrow color={colors.textOnImageMuted}>{model.dateRange}</Eyebrow>
             <Text variant="title" color={colors.textInverse} style={{ marginTop: 2 }}>
               {model.route}
             </Text>
@@ -71,10 +71,10 @@ export function PortCard({ port }: { port: PortModel }) {
       <Card style={{ padding: 0, overflow: 'hidden' }}>
         <MediaFrame media={port.media} height={170} rounded={false}>
           <View style={styles.mediaCaption}>
-            <Eyebrow color={colors.textInverseMuted}>
+            <Eyebrow color={colors.textOnImageMuted}>
               {port.country} · {port.typeLabel}
             </Eyebrow>
-            <Text variant="display" color={colors.textInverse} style={{ marginTop: 2 }}>
+            <Text variant="display" color={colors.textInverse} accessibilityRole="header" aria-level={3} style={{ marginTop: 2 }}>
               {port.name}
             </Text>
           </View>
@@ -89,7 +89,7 @@ export function PortCard({ port }: { port: PortModel }) {
           <Caption style={{ marginTop: spacing.sm }}>Local time {port.localTime}</Caption>
 
           <Divider />
-          <Eyebrow>Booked for you</Eyebrow>
+          <Eyebrow accessibilityRole="header" aria-level={4}>Booked for you</Eyebrow>
           {port.booked.length === 0 ? (
             <EmptyNote body="Nothing booked here yet. Your day is open." />
           ) : (
@@ -104,7 +104,7 @@ export function PortCard({ port }: { port: PortModel }) {
           {port.recommended.length > 0 ? (
             <>
               <Divider />
-              <Eyebrow>Chosen for you</Eyebrow>
+              <Eyebrow accessibilityRole="header" aria-level={4}>Chosen for you</Eyebrow>
               {port.recommended.map((r) => (
                 <SuggestionRow key={r.id} item={r} />
               ))}

@@ -3,11 +3,13 @@
  * Holds only the draft; validation and saving go through `onSave`.
  */
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View, type Text as RNText } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { announce } from '@/hooks/useAnnounce';
+import { focusTarget, useFocusOnChange } from '@/hooks/useFocusOnChange';
 import type { GuestPreferences } from '@/domain';
 import { guestMessage, type AppError } from '@/core/errors';
-import { Button, Caption, Card, Chip, ChoiceGroup, Divider, Eyebrow, MultiChoiceGroup, StatusLine, Stepper, Text, TextField, ToggleRow } from '@/components';
+import { Button, Caption, Card, Chip, ChipGroup, ChoiceGroup, Divider, Eyebrow, MultiChoiceGroup, StatusLine, Stepper, Text, TextField, ToggleRow, meaningfulIcon } from '@/components';
 import { colors, fonts, radii, spacing } from '@/theme';
 import type { SaveResult } from '../useProfileArea';
 import { isDirty, type Allergy, type Field, type FormValues, type PreferenceGroup } from '../preferenceSchema';
@@ -19,6 +21,8 @@ const SEVERITIES: { value: Allergy['severity']; label: string }[] = [
 ];
 
 export function PreferenceEditor({ group, preferences, onSave, onClose }: { group: PreferenceGroup; preferences: GuestPreferences; onSave: (v: FormValues) => Promise<SaveResult>; onClose: () => void }) {
+  // Opening the editor takes the screen reader to it.
+  const titleRef = useFocusOnChange<RNText>(group.key, { onMount: true });
   const [values, setValues] = useState<FormValues>(() => group.read(preferences));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState<AppError>();
@@ -34,7 +38,10 @@ export function PreferenceEditor({ group, preferences, onSave, onClose }: { grou
     setFailure(undefined);
     const r = await onSave(values);
     setSaving(false);
-    if (r.ok) return onClose();
+    if (r.ok) {
+      announce(`${group.label} saved`, { everywhere: true });
+      return onClose();
+    }
     if (r.fieldErrors) setErrors(r.fieldErrors);
     if (r.error) setFailure(r.error);
   };
@@ -43,11 +50,13 @@ export function PreferenceEditor({ group, preferences, onSave, onClose }: { grou
     <Card>
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Eyebrow color={colors.accent}>Editing</Eyebrow>
-          <Text variant="title">{group.label}</Text>
+          <Eyebrow color={colors.accentText}>Editing</Eyebrow>
+          <Text ref={titleRef} {...focusTarget} variant="title" accessibilityRole="header" accessibilityLabel={`Editing ${group.label}`}>
+            {group.label}
+          </Text>
           <Caption>{group.usedBy}</Caption>
         </View>
-        {group.sensitive ? <Ionicons name="lock-closed-outline" size={16} color={colors.textMuted} accessibilityLabel="Sensitive information" /> : null}
+        {group.sensitive ? <Ionicons name="lock-closed-outline" size={16} color={colors.textMuted} {...meaningfulIcon('Sensitive information')} /> : null}
       </View>
       <Divider />
       {group.fields(preferences).map((f) => (
@@ -64,11 +73,11 @@ export function PreferenceEditor({ group, preferences, onSave, onClose }: { grou
       ) : null}
 
       <View style={styles.actions}>
-        <Pressable onPress={onClose} accessibilityRole="button" hitSlop={10} disabled={saving}>
+        <Pressable onPress={onClose} accessibilityRole="button" hitSlop={14} disabled={saving}>
           <Eyebrow color={colors.textPrimary}>Cancel</Eyebrow>
         </Pressable>
         <View style={{ minWidth: 150 }}>
-          <Button label={saving ? 'Saving…' : 'Save'} onPress={submit} disabled={saving || !dirty} />
+          <Button label={saving ? 'Saving…' : 'Save'} onPress={submit} disabled={saving || !dirty} hint={!dirty && !saving ? 'No changes yet' : undefined} />
         </View>
       </View>
       {!dirty ? <StatusLine label="No changes yet" tone="pending" style={{ alignSelf: 'flex-end', marginTop: spacing.xs }} /> : null}
@@ -111,19 +120,19 @@ function AllergyList({ label, value, onChange, error }: { label: string; value: 
               accessibilityLabel={`Allergy ${i + 1}`}
               maxLength={60}
             />
-            <Pressable onPress={() => onChange(value.filter((_, j) => j !== i))} accessibilityRole="button" accessibilityLabel={`Remove ${a.allergen || 'allergy'}`} hitSlop={10}>
+            <Pressable onPress={() => onChange(value.filter((_, j) => j !== i))} accessibilityRole="button" accessibilityLabel={`Remove ${a.allergen || 'allergy'}`} hitSlop={13}>
               <Ionicons name="close" size={18} color={colors.textMuted} />
             </Pressable>
           </View>
-          <View style={styles.severity}>
+          <ChipGroup label={`How severe: ${a.allergen || `allergy ${i + 1}`}`} kind="radio" style={styles.severity}>
             {SEVERITIES.map((s) => (
-              <Chip key={s.value} label={s.label} selected={a.severity === s.value} onPress={() => update(i, { severity: s.value })} />
+              <Chip key={s.value} kind="radio" label={s.label} selected={a.severity === s.value} onPress={() => update(i, { severity: s.value })} />
             ))}
-          </View>
+          </ChipGroup>
         </View>
       ))}
-      <Pressable onPress={() => onChange([...value, { allergen: '', severity: 'allergy' }])} accessibilityRole="button" style={{ marginTop: spacing.sm }}>
-        <Eyebrow color={colors.accent}>Add an allergy</Eyebrow>
+      <Pressable onPress={() => onChange([...value, { allergen: '', severity: 'allergy' }])} accessibilityRole="button" hitSlop={14} style={{ marginTop: spacing.sm }}>
+        <Eyebrow color={colors.accentText}>Add an allergy</Eyebrow>
       </Pressable>
       {error ? (
         <Caption color={colors.attention} style={{ marginTop: spacing.xxs }} accessibilityRole="alert">
@@ -142,5 +151,5 @@ const styles = StyleSheet.create({
   allergyTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   severity: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
   // minWidth 0 lets the input shrink beside its remove button on narrow screens (web inputs have an intrinsic width).
-  input: { flex: 1, minWidth: 0, fontFamily: fonts.body, fontSize: 15, color: colors.textPrimary, paddingVertical: 8, paddingHorizontal: 12, borderRadius: radii.sm, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderStrong, backgroundColor: colors.surface },
+  input: { flex: 1, minWidth: 0, fontFamily: fonts.body, fontSize: 15, color: colors.textPrimary, paddingVertical: 8, paddingHorizontal: 12, borderRadius: radii.sm, borderWidth: 1, borderColor: colors.borderInput, backgroundColor: colors.surface },
 });

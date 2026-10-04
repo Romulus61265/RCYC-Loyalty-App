@@ -4,9 +4,10 @@
  * The moments to choose from are the guest's own; there are no ratings.
  */
 import { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type Text as RNText } from 'react-native';
 import { router } from 'expo-router';
-import { Button, Caption, Card, Chip, ErrorState, Eyebrow, InlineError, LoadingState, Screen, Text, TextField, TextLink, ToggleRow } from '@/components';
+import { focusTarget, useFocusOnChange } from '@/hooks/useFocusOnChange';
+import { Button, Caption, Card, Chip, ChipGroup, ErrorState, Eyebrow, InlineError, LoadingState, Screen, Text, TextField, TextLink, ToggleRow } from '@/components';
 import type { AppError } from '@/core/errors';
 import type { FeedbackPatch, VoyageFeedback, VoyageRecap } from '@/domain';
 import { BackBar } from '@/features/requests/components/RequestParts';
@@ -80,6 +81,8 @@ function ReflectionsFlow({
 }) {
   const steps = useMemo(() => reflectionSteps(recap), [recap]);
   const [index, setIndex] = useState(0);
+  // Each new question is read out from its heading, not left behind the Next button.
+  const headingRef = useFocusOnChange<RNText>(index);
   // The guest's answers while they write, starting from what was saved; saved on each step.
   const [favourites, setFavourites] = useState<string[]>(initial.favourites);
   const [words, setWords] = useState<string[]>(initial.words);
@@ -118,13 +121,20 @@ function ReflectionsFlow({
     <Screen>
       <BackBar onBack={close} />
       <View style={styles.page}>
-        <View style={styles.dots} accessibilityLabel={`Step ${index + 1} of ${steps.length}`}>
+        <View
+          style={styles.dots}
+          accessible
+          role="progressbar"
+          aria-label="Your reflections"
+          accessibilityValue={{ min: 1, max: steps.length, now: index + 1, text: `Step ${index + 1} of ${steps.length}` }}
+          aria-valuetext={`Step ${index + 1} of ${steps.length}`}
+        >
           {steps.map((s, i) => (
             <View key={s.key} style={[styles.dot, i <= index && styles.dotOn]} />
           ))}
         </View>
         <Eyebrow>{step.eyebrow}</Eyebrow>
-        <Text variant="display" accessibilityRole="header" style={{ marginTop: spacing.xs }}>
+        <Text ref={headingRef} {...focusTarget} variant="display" accessibilityRole="header" style={{ marginTop: spacing.xs }}>
           {step.title}
         </Text>
         <Text color={colors.textSecondary} style={{ marginTop: spacing.sm }}>
@@ -141,22 +151,22 @@ function ReflectionsFlow({
                     <Caption style={{ marginBottom: spacing.xs }}>
                       Day {d.dayNumber} · {d.place}
                     </Caption>
-                    <View style={styles.chips}>
+                    <ChipGroup label={`Day ${d.dayNumber}, ${d.place}`} kind="checkbox" style={styles.chips}>
                       {d.memories.map((m) => (
-                        <Chip key={m.id} label={m.title} accessibilityLabel={`${m.title}, day ${d.dayNumber}, ${d.place}`} selected={favourites.includes(m.id)} onPress={() => toggle(favourites, setFavourites, m.id, 5)} />
+                        <Chip key={m.id} kind="checkbox" label={m.title} accessibilityLabel={`${m.title}, day ${d.dayNumber}, ${d.place}`} selected={favourites.includes(m.id)} onPress={() => toggle(favourites, setFavourites, m.id, 5)} />
                       ))}
-                    </View>
+                    </ChipGroup>
                   </View>
                 ))}
             </View>
           ) : null}
 
           {step.key === 'words' ? (
-            <View style={styles.chips}>
+            <ChipGroup label="Words for the voyage" kind="checkbox" style={styles.chips}>
               {WORD_OPTIONS.map((w) => (
-                <Chip key={w} label={w} selected={words.includes(w)} onPress={() => toggle(words, setWords, w, 3)} />
+                <Chip key={w} kind="checkbox" label={w} selected={words.includes(w)} onPress={() => toggle(words, setWords, w, 3)} />
               ))}
-            </View>
+            </ChipGroup>
           ) : null}
 
           {step.key === 'thanks' ? (
@@ -172,7 +182,7 @@ function ReflectionsFlow({
                       </View>
                       <Chip
                         label={on ? 'Thanked' : 'Thank'}
-                        accessibilityLabel={`Thank ${c.name}`}
+                        accessibilityLabel={`${on ? 'Thanked' : 'Thank'} ${c.name}`}
                         selected={on}
                         onPress={() =>
                           setThanks((t) => {
@@ -231,6 +241,7 @@ function ReflectionsFlow({
         <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
           <TextLink
             label="Save and finish later"
+            role="button"
             onPress={() => {
               const patch = patchFor(step.key);
               void (patch ? save(patch) : Promise.resolve(true)).then((ok) => ok && close());

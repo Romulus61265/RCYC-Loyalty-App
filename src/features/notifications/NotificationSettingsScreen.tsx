@@ -1,7 +1,8 @@
 /** Notification settings: per type, how it reaches you; times; reminders; push on this device. */
 import { View } from 'react-native';
 import { router } from 'expo-router';
-import { Button, Caption, Chip, ChoiceGroup, ErrorState, InlineError, LoadingState, PageHeader, Screen, Section, Text, TextLink } from '@/components';
+import { announce } from '@/hooks/useAnnounce';
+import { Button, Caption, Chip, ChipGroup, ChoiceGroup, ErrorState, InlineError, LoadingState, PageHeader, Screen, Section, Text, TextLink } from '@/components';
 import { BackBar } from '@/features/requests/components/RequestParts';
 import { colors, spacing } from '@/theme';
 import { useNotificationSettings } from './useNotifications';
@@ -33,17 +34,17 @@ export function NotificationSettingsScreen() {
       <Section eyebrow="What reaches you">
         <View style={{ gap: spacing.md }}>
           {view.rows.map((r) => (
-            <View key={r.type} accessibilityLabel={`${r.label}: ${r.value}`}>
+            <View key={r.type}>
               <Text variant="bodyStrong">{r.label}</Text>
               <Caption style={{ marginBottom: spacing.xs }}>{r.description}</Caption>
               {r.locked ? (
-                <Caption color={colors.accent}>{r.locked}</Caption>
+                <Caption color={colors.accentText}>{r.locked}</Caption>
               ) : (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }} accessibilityRole="radiogroup" accessibilityLabel={`${r.label}: how`}>
+                <ChipGroup label={`${r.label}: how`} kind="radio">
                   {r.options.map((o) => (
-                    <Chip key={o.value} label={o.label} selected={r.value === o.value} onPress={() => !saving && r.value !== o.value && void update({ delivery: { ...p.delivery, [r.type]: o.value } })} />
+                    <Chip key={o.value} kind="radio" label={o.label} selected={r.value === o.value} onPress={() => !saving && r.value !== o.value && void update({ delivery: { ...p.delivery, [r.type]: o.value } })} />
                   ))}
-                </View>
+                </ChipGroup>
               )}
             </View>
           ))}
@@ -63,12 +64,20 @@ export function NotificationSettingsScreen() {
       <Section eyebrow="This device">
         {view.devices.length ? (
           <View style={{ gap: spacing.sm, marginBottom: spacing.md }}>
-            {view.devices.map((d) => (
-              <View key={d.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text>{d.name ?? (d.platform === 'ios' ? 'iPhone' : d.platform === 'android' ? 'Android phone' : 'Browser')}</Text>
-                <TextLink label="Remove" onPress={() => void removeDevice(d.id)} />
-              </View>
-            ))}
+            {view.devices.map((d) => {
+              const name = d.name ?? (d.platform === 'ios' ? 'iPhone' : d.platform === 'android' ? 'Android phone' : 'Browser');
+              return (
+                <View key={d.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text>{name}</Text>
+                  <TextLink
+                    label="Remove"
+                    role="button"
+                    accessibilityLabel={`Remove ${name}`}
+                    onPress={() => void removeDevice(d.id).then(() => announce(`${name} removed`, { everywhere: true }))}
+                  />
+                </View>
+              );
+            })}
           </View>
         ) : null}
         <Button label={view.supported ? 'Turn on push notifications' : 'About push notifications'} variant="quiet" onPress={() => void enablePush()} />

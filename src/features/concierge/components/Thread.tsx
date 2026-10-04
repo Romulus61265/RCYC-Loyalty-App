@@ -14,7 +14,7 @@ export function Avatar({ initials, tone = 'person', size = 28 }: { initials?: st
   const concierge = tone === 'concierge';
   return (
     <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }, concierge ? styles.avatarConcierge : styles.avatarPerson]} accessibilityElementsHidden importantForAccessibility="no">
-      {concierge ? <Ionicons name="sparkles-outline" size={size * 0.46} color={colors.accent} /> : <Text variant="caption" color={colors.textInverse} style={{ fontSize: size * 0.4, lineHeight: size * 0.5 }}>{initials}</Text>}
+      {concierge ? <Ionicons name="sparkles-outline" size={size * 0.46} color={colors.accentText} /> : <Text variant="caption" color={colors.textInverse} style={{ fontSize: size * 0.4, lineHeight: size * 0.5 }}>{initials}</Text>}
     </View>
   );
 }
@@ -34,11 +34,11 @@ function Body({ paragraphs, inverse }: { paragraphs: Paragraph[]; inverse?: bool
             {p.items.map((it, j) => (
               <View key={j} style={styles.listRow}>
                 {it.time ? (
-                  <Text variant="bodyStrong" color={inverse ? colors.accentSoft : colors.accent} style={styles.listTime}>
+                  <Text variant="bodyStrong" color={inverse ? colors.accentSoft : colors.accentText} style={styles.listTime}>
                     {it.time}
                   </Text>
                 ) : (
-                  <Text color={inverse ? colors.accentSoft : colors.accent} style={styles.listDot}>
+                  <Text color={inverse ? colors.accentSoft : colors.accentText} style={styles.listDot}>
                     ·
                   </Text>
                 )}
@@ -73,7 +73,7 @@ function Message({ item }: { item: Extract<ThreadItem, { kind: 'message' }> }) {
       <Avatar initials={item.initials} tone={person ? 'person' : 'concierge'} />
       <View style={{ flex: 1, marginLeft: spacing.sm }}>
         <View style={styles.byline}>
-          <Eyebrow color={person ? colors.accent : colors.textMuted}>{item.note ? `${item.name} · ${item.note}` : item.name}</Eyebrow>
+          <Eyebrow color={person ? colors.accentText : colors.textMuted}>{item.note ? `${item.name} · ${item.note}` : item.name}</Eyebrow>
           <Caption color={colors.textMuted}>{item.time}</Caption>
         </View>
         <View style={[styles.bubble, styles.theirBubble, person && { borderColor: colors.accent }]}>
@@ -98,6 +98,7 @@ function ActionButtons({ buttons, onAction }: { buttons: ActionButton[]; onActio
             key={b.key}
             onPress={() => onAction(b.action)}
             disabled={disabled}
+            hitSlop={5}
             accessibilityRole="button"
             accessibilityLabel={done ? `${b.label}, done` : b.label}
             accessibilityState={{ disabled, busy: b.state === 'busy' }}
@@ -113,9 +114,17 @@ function ActionButtons({ buttons, onAction }: { buttons: ActionButton[]; onActio
   );
 }
 
+function progressText(request: RequestCardModel): string {
+  const at = request.steps.findIndex((s) => s.state === 'current');
+  const done = request.steps.filter((s) => s.state === 'done').length;
+  const n = request.steps.length;
+  return at >= 0 ? `Progress: ${request.steps[at]!.label}, step ${at + 1} of ${n}` : `Progress: ${done} of ${n} steps done`;
+}
+
 export function RequestCard({ request, onAsk }: { request: RequestCardModel; onAsk?: () => void }) {
   return (
-    <View style={styles.card} accessible={!onAsk} accessibilityLabel={`${request.title}. ${request.status.label}.`}>
+    // Read in order: type, status, title, details, progress, who has it.
+    <View style={styles.card}>
       <View style={styles.between}>
         <Eyebrow>{request.typeLabel}</Eyebrow>
         <StatusLine label={request.status.label} tone={request.status.tone} />
@@ -124,7 +133,7 @@ export function RequestCard({ request, onAsk }: { request: RequestCardModel; onA
         {request.title}
       </Text>
       {request.details ? <Caption style={{ marginTop: 2 }}>{request.details}</Caption> : null}
-      <View style={styles.steps} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <View style={styles.steps} accessible role="img" aria-label={progressText(request)} accessibilityLabel={progressText(request)}>
         {request.steps.map((st, i) => (
           <View key={st.label} style={styles.step}>
             <View style={[styles.stepDot, st.state === 'done' && styles.stepDone, st.state === 'current' && { borderColor: request.status.tone === 'attention' ? colors.attention : colors.accent }]} />
@@ -139,8 +148,8 @@ export function RequestCard({ request, onAsk }: { request: RequestCardModel; onA
         {[request.owner, request.nextUpdate ?? request.opened].filter(Boolean).join(' · ')}
       </Caption>
       {onAsk && request.open ? (
-        <Pressable onPress={onAsk} accessibilityRole="button" accessibilityLabel={`Ask about ${request.title}`} style={{ marginTop: spacing.sm }}>
-          <Eyebrow color={colors.accent}>Ask about this</Eyebrow>
+        <Pressable onPress={onAsk} accessibilityRole="button" accessibilityLabel={`Ask about ${request.title}`} hitSlop={14} style={{ marginTop: spacing.sm }}>
+          <Eyebrow color={colors.accentText}>Ask about this</Eyebrow>
         </Pressable>
       ) : null}
     </View>
@@ -152,7 +161,7 @@ function CardView({ card, onAction }: { card: Card; onAction: (a: ConciergeActio
     case 'schedule':
       return (
         <View style={styles.card}>
-          <Eyebrow color={colors.accent}>{card.title}</Eyebrow>
+          <Eyebrow color={colors.accentText}>{card.title}</Eyebrow>
           <Caption style={{ marginTop: 2, marginBottom: spacing.sm }}>{card.subtitle}</Caption>
           {card.rows.map((r) => (
             <View key={r.key} style={styles.scheduleRow}>
@@ -194,8 +203,8 @@ function CardView({ card, onAction }: { card: Card; onAction: (a: ConciergeActio
         <View style={[styles.card, styles.confirmation]} accessible accessibilityLabel={`${card.statusLabel}: ${card.title}. ${card.detail}`}>
           <View style={styles.between}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name={card.tone === 'calm' ? 'checkmark-circle' : 'time-outline'} size={16} color={card.tone === 'calm' ? colors.calm : colors.accent} />
-              <Eyebrow color={card.tone === 'calm' ? colors.calm : colors.accent}>{card.statusLabel}</Eyebrow>
+              <Ionicons name={card.tone === 'calm' ? 'checkmark-circle' : 'time-outline'} size={16} color={card.tone === 'calm' ? colors.calm : colors.accentText} />
+              <Eyebrow color={card.tone === 'calm' ? colors.calm : colors.accentText}>{card.statusLabel}</Eyebrow>
             </View>
             {card.reference ? <Caption color={colors.textMuted}>{card.reference}</Caption> : null}
           </View>
@@ -210,7 +219,7 @@ function CardView({ card, onAction }: { card: Card; onAction: (a: ConciergeActio
         <View style={[styles.card, styles.handoff]} accessible accessibilityLabel={`${card.agentName} has been asked to join. ${card.line}.`}>
           <Avatar initials={card.initials} size={36} />
           <View style={{ flex: 1, marginLeft: spacing.sm }}>
-            <Eyebrow color={colors.accent}>{card.teamLabel}</Eyebrow>
+            <Eyebrow color={colors.accentText}>{card.teamLabel}</Eyebrow>
             <Text variant="bodyStrong">{card.agentName.split(',')[0]} has been asked to join</Text>
             <Caption>{card.line}</Caption>
           </View>
@@ -219,7 +228,7 @@ function CardView({ card, onAction }: { card: Card; onAction: (a: ConciergeActio
     case 'privileges':
       return (
         <View style={styles.card}>
-          <Eyebrow color={colors.accent}>Your privileges this voyage</Eyebrow>
+          <Eyebrow color={colors.accentText}>Your privileges this voyage</Eyebrow>
           {card.items.map((p) => (
             <View key={p.id} style={{ marginTop: spacing.sm }}>
               <Text variant="bodyStrong">{p.title}</Text>
@@ -240,9 +249,9 @@ export function ThreadView({ items, onAction }: { items: ThreadItem[]; onAction:
       {items.map((item) => {
         if (item.kind === 'divider') {
           return (
-            <View key={item.key} style={styles.divider} accessibilityRole="header">
+            <View key={item.key} style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Caption color={colors.textMuted} style={{ marginHorizontal: spacing.sm }}>
+              <Caption color={colors.textMuted} accessibilityRole="header" aria-level={2} style={{ marginHorizontal: spacing.sm }}>
                 {item.label}
               </Caption>
               <View style={styles.dividerLine} />
@@ -267,7 +276,7 @@ const styles = StyleSheet.create({
   guestBubble: { maxWidth: '86%', backgroundColor: colors.surfaceInverse, borderBottomRightRadius: radii.sm },
   theirBubble: { backgroundColor: colors.surfaceElevated, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, borderTopLeftRadius: radii.sm },
   avatar: { alignItems: 'center', justifyContent: 'center' },
-  avatarPerson: { backgroundColor: colors.accent },
+  avatarPerson: { backgroundColor: colors.accentText },
   avatarConcierge: { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.accent, backgroundColor: colors.surface },
   listRow: { flexDirection: 'row', alignItems: 'flex-start' },
   listTime: { width: 52 },

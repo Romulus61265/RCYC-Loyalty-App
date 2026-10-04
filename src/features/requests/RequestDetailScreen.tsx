@@ -1,7 +1,9 @@
 /** One request: where it stands, who has it, and what was done. */
 import { useState } from 'react';
-import { View } from 'react-native';
+import { View, type Text as RNText, type View as RNView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { focusTarget, useFocusOnChange } from '@/hooks/useFocusOnChange';
+import { useAnnounce } from '@/hooks/useAnnounce';
 import { Button, Caption, ErrorState, FactRow, InlineError, LoadingState, PageHeader, Screen, Section, StatusLine, Text } from '@/components';
 import { colors, spacing } from '@/theme';
 import { BackBar, StatusSteps } from './components/RequestParts';
@@ -12,6 +14,11 @@ export function RequestDetailScreen() {
   const id = String(params.id ?? '');
   const { data: model, loading, error, reload, close, closing, notice, closeError } = useRequestDetail(id);
   const [confirming, setConfirming] = useState(false);
+  // Asking to confirm goes to the question; "Keep it" returns to the button.
+  const confirmRef = useFocusOnChange<RNText>(confirming);
+  const closeRef = useFocusOnChange<RNView>(confirming);
+  useAnnounce(params.submitted ? 'Sent. You will see each update here.' : undefined);
+  useAnnounce(notice);
   const back = () => (router.canGoBack() ? router.back() : router.replace('/requests'));
 
   if (loading && !model) return <LoadingState label="One moment…" />;
@@ -69,7 +76,9 @@ export function RequestDetailScreen() {
         {model.close && !notice ? (
           confirming ? (
             <View style={{ gap: spacing.sm }}>
-              <Text>{model.close.confirm}</Text>
+              <Text ref={confirmRef} {...focusTarget}>
+                {model.close.confirm}
+              </Text>
               <Button
                 label={closing ? 'One moment…' : 'Yes'}
                 disabled={closing}
@@ -80,7 +89,7 @@ export function RequestDetailScreen() {
               <Button label="Keep it" variant="quiet" onPress={() => setConfirming(false)} />
             </View>
           ) : (
-            <Button label={model.close.label} variant="quiet" onPress={() => setConfirming(true)} />
+            <Button ref={closeRef} label={model.close.label} variant="quiet" onPress={() => setConfirming(true)} />
           )
         ) : null}
       </View>

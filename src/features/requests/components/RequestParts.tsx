@@ -8,9 +8,9 @@ import type { RequestRowModel, StepModel } from '../requestsModel';
 /** A quiet way back, for screens outside the tab bar. */
 export function BackBar({ label = 'Back', onBack }: { label?: string; onBack: () => void }) {
   return (
-    <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel={label} hitSlop={12} style={styles.back}>
-      <Ionicons name="chevron-back" size={16} color={colors.accent} />
-      <Eyebrow color={colors.accent} style={{ marginLeft: 4 }}>
+    <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel={label === 'Back' || label === 'Cancel' ? label : `Back to ${label}`} hitSlop={14} style={styles.back}>
+      <Ionicons name="chevron-back" size={16} color={colors.accentText} />
+      <Eyebrow color={colors.accentText} style={{ marginLeft: 4 }}>
         {label}
       </Eyebrow>
     </Pressable>
@@ -40,13 +40,13 @@ export function RequestRow({ row, onOpen }: { row: RequestRowModel; onOpen: () =
 /** Submitted → Acknowledged → In progress → Resolved → Closed. */
 export function StatusSteps({ steps }: { steps: StepModel[] }) {
   return (
-    <View accessibilityRole="list" accessibilityLabel="Request status">
+    <View role="list" aria-label="Request status">
       {steps.map((s, i) => {
         const done = s.state === 'done';
         const current = s.state === 'current';
         const last = i === steps.length - 1;
         return (
-          <View key={s.status} style={styles.step} accessibilityLabel={`${s.label}${current ? ', current' : done ? ', done' : ', not yet'}${s.when ? `, ${s.when}` : ''}`}>
+          <View key={s.status} style={styles.step} accessible role="listitem" accessibilityLabel={`${s.label}${current ? ', current' : done ? ', done' : ', not yet'}${s.when ? `, ${s.when}` : ''}`}>
             <View style={styles.rail}>
               <View style={[styles.node, (done || current) && styles.nodeDone]}>{done || current ? <Ionicons name="checkmark" size={10} color={colors.textInverse} /> : null}</View>
               {!last ? <View style={[styles.line, done && steps[i + 1]?.state !== 'todo' && { backgroundColor: colors.accent }]} /> : null}

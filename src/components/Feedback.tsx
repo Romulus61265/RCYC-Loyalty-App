@@ -2,8 +2,10 @@
  * Small, reusable feedback primitives: skeleton placeholders, status lines,
  * empty notes and section-level errors. All presentational.
  */
-import { useEffect, useState } from 'react';
-import { AccessibilityInfo, Animated, Pressable, StyleSheet, View, type DimensionValue, type StyleProp, type ViewStyle } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Platform, Pressable, StyleSheet, View, type DimensionValue, type StyleProp, type ViewStyle } from 'react-native';
+import { announce, liveRegion, readAs, useAnnounce } from '@/hooks/useAnnounce';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { guestMessage } from '@/core/errors';
 import { colors, radii, spacing } from '@/theme';
 import { TextLink } from './Controls';
@@ -13,15 +15,20 @@ export type StatusTone = 'calm' | 'pending' | 'attention';
 
 const TONE_COLOR: Record<StatusTone, string> = {
   calm: colors.calm,
-  pending: colors.accent,
+  pending: colors.accentText,
   attention: colors.attention,
 };
 
-/** Quiet status: a small dot and words. Never a coloured badge. */
-export function StatusLine({ label, tone, style }: { label: string; tone: StatusTone; style?: ViewStyle }) {
+/**
+ * Quiet status: a small dot and words. Never a coloured badge. The dot is
+ * decoration; the words carry the meaning. `live` reads it out when it
+ * appears or changes (a message after an action).
+ */
+export function StatusLine({ label, tone, style, live }: { label: string; tone: StatusTone; style?: ViewStyle; live?: boolean }) {
+  useAnnounce(live ? label : undefined);
   return (
-    <View style={[styles.status, style]} accessibilityLabel={`Status: ${label}`}>
-      <View style={[styles.dot, { backgroundColor: TONE_COLOR[tone] }]} />
+    <View style={[styles.status, style]} {...(live ? liveRegion('polite') : {})}>
+      <View style={[styles.dot, { backgroundColor: TONE_COLOR[tone] }]} aria-hidden accessibilityElementsHidden importantForAccessibility="no" />
       <Caption color={TONE_COLOR[tone]}>{label}</Caption>
     </View>
   );
@@ -45,13 +52,14 @@ export function EmptyNote({ title, body, actionLabel, onAction }: { title?: stri
 /** Compact, section-level failure. The rest of the screen keeps working. */
 export function InlineError({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   const { title, body } = guestMessage(error);
+  useAnnounce(`${title} ${body}`);
   return (
     <View style={styles.inlineError} accessibilityRole="alert">
       <Text variant="bodyStrong">{title}</Text>
       <Caption style={{ marginTop: 2 }}>{body}</Caption>
       {onRetry ? (
-        <Pressable onPress={onRetry} accessibilityRole="button" hitSlop={12} style={{ marginTop: spacing.sm }}>
-          <Eyebrow color={colors.accent}>Try again</Eyebrow>
+        <Pressable onPress={onRetry} accessibilityRole="button" hitSlop={14} style={{ marginTop: spacing.sm }}>
+          <Eyebrow color={colors.accentText}>Try again</Eyebrow>
         </Pressable>
       ) : null}
     </View>
@@ -63,7 +71,7 @@ export function FactRow({ facts, inverse = false }: { facts: { label: string; va
   return (
     <View style={styles.facts}>
       {facts.map((f) => (
-        <View key={f.label} style={styles.fact}>
+        <View key={f.label} style={styles.fact} {...readAs(`${f.label}: ${f.value === '—' ? 'not recorded' : f.value}`)}>
           <Text variant="title" color={inverse ? colors.textInverse : colors.textPrimary}>
             {f.value}
           </Text>
@@ -81,30 +89,27 @@ export function FactRow({ facts, inverse = false }: { facts: { label: string; va
 export function SkeletonBlock({ height, width = '100%', radius = radii.sm, style }: { height: number; width?: DimensionValue; radius?: number; style?: StyleProp<ViewStyle> }) {
   // Created once; state (not a ref) so it is safe to read during render.
   const [opacity] = useState(() => new Animated.Value(0.55));
+  const reduceMotion = useReducedMotion();
   useEffect(() => {
-    let loop: Animated.CompositeAnimation | undefined;
-    let cancelled = false;
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then((reduce) => {
-        if (reduce || cancelled) return;
-        loop = Animated.loop(
-          Animated.sequence([
-            Animated.timing(opacity, { toValue: 1, duration: 900, useNativeDriver: true }),
-            Animated.timing(opacity, { toValue: 0.55, duration: 900, useNativeDriver: true }),
-          ]),
-        );
-        loop.start();
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-      loop?.stop();
-    };
-  }, [opacity]);
-  return <Animated.View style={[{ height, width, borderRadius: radius, backgroundColor: colors.border, opacity }, style]} />;
+    if (reduceMotion) {
+      opacity.setValue(0.8);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.55, duration: 900, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity, reduceMotion]);
+  // Decorative: the screen's loading label is what assistive technology hears.
+  return <Animated.View aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[{ height, width, borderRadius: radius, backgroundColor: colors.border, opacity }, style]} />;
 }
 
 const styles = StyleSheet.create({
+  visuallyHidden: { position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 },
   status: { flexDirection: 'row', alignItems: 'center' },
   dot: { width: 6, height: 6, borderRadius: 3, marginRight: 6 },
   empty: { paddingVertical: spacing.xs },
@@ -112,3 +117,25 @@ const styles = StyleSheet.create({
   facts: { flexDirection: 'row', gap: spacing.lg, flexWrap: 'wrap' },
   fact: { minWidth: 64 },
 });
+
+/**
+ * Says `message` without showing it, whenever it changes (not on first
+ * render): "12 experiences", "Saved". Always mounted, so web screen
+ * readers hear each change; iOS and Android are told directly.
+ */
+export function LiveAnnouncer({ message }: { message: string }) {
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    announce(message, { everywhere: true });
+  }, [message]);
+  // Present from the start, so the web reads changes rather than the arrival.
+  return (
+    <View style={styles.visuallyHidden} {...(Platform.OS === 'web' ? liveRegion('polite') : { accessibilityElementsHidden: true, importantForAccessibility: 'no-hide-descendants' as const })}>
+      <Text>{message}</Text>
+    </View>
+  );
+}

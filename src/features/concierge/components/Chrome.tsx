@@ -1,7 +1,8 @@
 /** Concierge header, the "speak with a person" panel, quick replies, composer and the requests list. */
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View, type Text as RNText } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { focusTarget, useFocusOnChange } from '@/hooks/useFocusOnChange';
 import type { EscalationTarget } from '@/domain';
 import { Caption, EmptyNote, Eyebrow, Text } from '@/components';
 import { colors, fonts, radii, spacing } from '@/theme';
@@ -14,7 +15,9 @@ export function Header({ model, peopleOpen, onPeople, topInset }: { model: Conci
     <View style={[styles.header, { paddingTop: topInset + spacing.md }]}>
       <View style={{ flex: 1, marginRight: spacing.sm }}>
         <Eyebrow>Concierge</Eyebrow>
-        <Text variant="title">{model.header.title}</Text>
+        <Text variant="title" accessibilityRole="header" aria-level={1}>
+          {model.header.title}
+        </Text>
         <Caption numberOfLines={2}>{model.header.subtitle}</Caption>
       </View>
       <Pressable
@@ -22,7 +25,10 @@ export function Header({ model, peopleOpen, onPeople, topInset }: { model: Conci
         style={[styles.ambassador, peopleOpen && { borderColor: colors.accent }]}
         accessibilityRole="button"
         accessibilityState={{ expanded: peopleOpen }}
-        accessibilityLabel={`Speak with a person: ${a.firstName}, your ${a.title}, or the team`}
+        aria-expanded={peopleOpen}
+        // Starts with the visible words, for voice control.
+        accessibilityLabel={`${a.firstName}, ${peopleOpen ? 'close' : 'a person'}`}
+        accessibilityHint={`Speak with ${a.firstName}, your ${a.title}, or the team`}
       >
         <Avatar initials={a.initials} size={26} />
         <View style={{ marginLeft: 6 }}>
@@ -40,9 +46,13 @@ export function Header({ model, peopleOpen, onPeople, topInset }: { model: Conci
 }
 
 export function PeoplePanel({ model, onChoose, busy }: { model: ConciergeModel; onChoose: (to: EscalationTarget, label: string) => void; busy: boolean }) {
+  // Opening the panel takes the screen reader to it.
+  const headingRef = useFocusOnChange<RNText>('people', { onMount: true });
   return (
     <View style={styles.people}>
-      <Eyebrow style={{ marginBottom: spacing.xs }}>Speak with a person</Eyebrow>
+      <Eyebrow ref={headingRef} {...focusTarget} accessibilityRole="header" aria-level={2} style={{ marginBottom: spacing.xs }}>
+        Speak with a person
+      </Eyebrow>
       {model.people.map((p) => (
         <Pressable
           key={p.to}
@@ -52,7 +62,7 @@ export function PeoplePanel({ model, onChoose, busy }: { model: ConciergeModel; 
           accessibilityLabel={`${p.label}. ${p.detail}`}
           style={({ pressed }) => [styles.person, pressed && { opacity: 0.7 }]}
         >
-          <Ionicons name={p.to === 'suite-ambassador' ? 'person-outline' : p.to === 'medical' ? 'medkit-outline' : 'people-outline'} size={18} color={colors.accent} />
+          <Ionicons name={p.to === 'suite-ambassador' ? 'person-outline' : p.to === 'medical' ? 'medkit-outline' : 'people-outline'} size={18} color={colors.accentText} />
           <View style={{ flex: 1, marginLeft: spacing.sm }}>
             <Text variant="bodyStrong">{p.title}</Text>
             {p.detail ? <Caption>{p.detail}</Caption> : null}
@@ -72,7 +82,7 @@ export function QuickReplies({ replies, onPick }: { replies: string[]; onPick: (
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.replies} style={styles.repliesBar}>
       {replies.map((r) => (
-        <Pressable key={r} onPress={() => onPick(r)} style={({ pressed }) => [styles.reply, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel={`Ask: ${r}`}>
+        <Pressable key={r} onPress={() => onPick(r)} hitSlop={5} style={({ pressed }) => [styles.reply, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel={`Ask: ${r}`}>
           <Caption color={colors.textPrimary}>{r}</Caption>
         </Pressable>
       ))}
@@ -106,7 +116,7 @@ export function Composer({ onSend, sending, bottomInset }: { onSend: (text: stri
         returnKeyType="send"
         accessibilityLabel="Message the concierge"
       />
-      <Pressable onPress={() => void submit()} disabled={empty || sending} accessibilityRole="button" accessibilityLabel="Send" accessibilityState={{ disabled: empty || sending }} style={[styles.send, (empty || sending) && { opacity: 0.4 }]}>
+      <Pressable onPress={() => void submit()} hitSlop={3} disabled={empty || sending} accessibilityRole="button" accessibilityLabel="Send" accessibilityState={{ disabled: empty || sending }} style={[styles.send, (empty || sending) && { opacity: 0.4 }]}>
         <Ionicons name="arrow-up" size={18} color={colors.textInverse} />
       </Pressable>
     </View>
@@ -117,11 +127,13 @@ export function RequestsList({ open, closed, onAsk, unavailable }: { open: Reque
   if (unavailable) return <EmptyNote body="Your requests can’t be shown just now. Your concierge can tell you where each one stands." />;
   return (
     <View style={{ gap: spacing.md }}>
-      <Eyebrow>In hand · {open.length}</Eyebrow>
+      <Eyebrow accessibilityRole="header" aria-level={2}>In hand · {open.length}</Eyebrow>
       {open.length ? open.map((r) => <RequestCard key={r.id} request={r} onAsk={() => onAsk(r)} />) : <EmptyNote body="Nothing is open. Everything you have asked for is complete." />}
       {closed.length ? (
         <>
-          <Eyebrow style={{ marginTop: spacing.md }}>Completed · {closed.length}</Eyebrow>
+          <Eyebrow accessibilityRole="header" aria-level={2} style={{ marginTop: spacing.md }}>
+            Completed · {closed.length}
+          </Eyebrow>
           {closed.map((r) => (
             <RequestCard key={r.id} request={r} />
           ))}
@@ -141,6 +153,6 @@ const styles = StyleSheet.create({
   replies: { paddingHorizontal: spacing.gutter, paddingVertical: spacing.sm, gap: spacing.xs },
   reply: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: radii.pill, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderStrong, backgroundColor: colors.surface },
   composer: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: spacing.gutter, paddingTop: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderStrong, backgroundColor: colors.surface },
-  input: { flex: 1, minWidth: 0, maxHeight: 120, fontFamily: fonts.body, fontSize: 15, color: colors.textPrimary, paddingVertical: 10, paddingHorizontal: 14, borderRadius: radii.lg, backgroundColor: colors.surfaceElevated, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  input: { flex: 1, minWidth: 0, maxHeight: 120, fontFamily: fonts.body, fontSize: 15, color: colors.textPrimary, paddingVertical: 10, paddingHorizontal: 14, borderRadius: radii.lg, backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.borderInput },
   send: { marginLeft: spacing.sm, marginBottom: 2, width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surfaceInverse, alignItems: 'center', justifyContent: 'center' },
 });

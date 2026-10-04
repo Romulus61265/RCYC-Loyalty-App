@@ -9,7 +9,7 @@ export default function NotFoundScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.container}>
         <Eyebrow>Off course</Eyebrow>
-        <Text variant="display" align="center" style={{ marginTop: spacing.sm }}>
+        <Text variant="display" align="center" accessibilityRole="header" aria-level={1} style={{ marginTop: spacing.sm }}>
           This page has drifted away
         </Text>
         <Caption align="center" style={{ marginTop: spacing.sm, marginBottom: spacing.xl, maxWidth: 300 }}>

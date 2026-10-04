@@ -19,7 +19,7 @@ export function ErrorFallback({ error, retry }: ErrorBoundaryProps) {
   return (
     <View style={styles.container} accessibilityRole="alert">
       <Eyebrow>With our apologies</Eyebrow>
-      <Text variant="display" align="center" style={{ marginTop: spacing.sm }}>
+      <Text variant="display" align="center" accessibilityRole="header" aria-level={1} style={{ marginTop: spacing.sm }}>
         {title}
       </Text>
       <Caption align="center" style={{ marginTop: spacing.sm, marginBottom: spacing.xl, maxWidth: 320 }}>

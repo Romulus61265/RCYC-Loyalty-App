@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ErrorState, InlineError, LoadingState, PageHeader, Screen, SegmentedTabs, Section } from '@/components';
+import { ErrorState, InlineError, LiveAnnouncer, LoadingState, PageHeader, Screen, SegmentedTabs, Section } from '@/components';
 import { colors } from '@/theme';
 import { DestinationList, ExperienceResults, FilterPanel, RecommendedRail, RefineBar } from './components/DiscoverSections';
 import {
@@ -76,6 +76,8 @@ export function DiscoverScreen() {
         </Section>
       ) : null}
 
+      {/* Filters change the list in place: say how many there are now. */}
+      <LiveAnnouncer message={category === 'destinations' ? `${model.destinations.length} destinations` : `${results.length} ${results.length === 1 ? 'experience' : 'experiences'}`} />
       {category === 'destinations' ? (
         <DestinationList
           items={model.destinations}

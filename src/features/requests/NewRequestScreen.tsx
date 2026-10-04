@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { router } from 'expo-router';
 import type { ServiceRequestCategory, ServiceRequestPriority } from '@/domain';
 import { Button, Caption, ChoiceGroup, InlineError, PageHeader, Screen, TextField } from '@/components';
+import { liveRegion } from '@/hooks/useAnnounce';
 import { DESCRIPTION_MAX, validateNewRequest, type NewRequestErrors } from '@/services/shared/serviceRequests';
 import { colors, spacing } from '@/theme';
 import { BackBar } from './components/RequestParts';
@@ -32,9 +33,13 @@ export function NewRequestScreen() {
       <BackBar label="Cancel" onBack={() => (router.canGoBack() ? router.back() : router.replace('/requests'))} />
       <PageHeader eyebrow="Service requests" title="Make a request" subtitle="Tell us what you need; the right team will take it from here." />
       <View style={{ paddingHorizontal: spacing.gutter }}>
-        <ChoiceGroup label="What is it about?" options={CATEGORY_OPTIONS} value={category} onChange={(v) => setCategory(v as ServiceRequestCategory | '')} error={errors.category} />
-        {help.hint ? <Caption style={{ marginTop: -spacing.xs, marginBottom: spacing.sm }}>{help.hint}</Caption> : null}
-        <TextField label="Your request" value={description} onChange={setDescription} placeholder={help.placeholder} max={DESCRIPTION_MAX} multiline error={errors.description} />
+        <ChoiceGroup label="What is it about?" options={CATEGORY_OPTIONS} value={category} onChange={(v) => setCategory(v as ServiceRequestCategory | '')} error={errors.category} required />
+        {help.hint ? (
+          <Caption style={{ marginTop: -spacing.xs, marginBottom: spacing.sm }} {...liveRegion('polite')}>
+            {help.hint}
+          </Caption>
+        ) : null}
+        <TextField label="Your request" value={description} onChange={setDescription} placeholder={help.placeholder} max={DESCRIPTION_MAX} multiline error={errors.description} required />
         <ChoiceGroup label="How soon?" options={PRIORITY_OPTIONS} value={priority} onChange={(v) => setPriority((v || 'routine') as ServiceRequestPriority)} error={errors.priority} />
         {priority === 'urgent' ? (
           <Caption color={colors.attention} style={{ marginBottom: spacing.md }} accessibilityRole="alert">

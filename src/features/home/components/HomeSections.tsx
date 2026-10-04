@@ -17,6 +17,7 @@ import {
   FactRow,
   InlineError,
   MediaFrame,
+  LinkCue,
   MediaTile,
   Section,
   StatusLine,
@@ -57,7 +58,7 @@ export function RecognitionStrip({ model, onPrivileges }: { model: RecognitionMo
     <View style={styles.recognition}>
       <View style={styles.recognitionInner}>
         <View style={{ flex: 1, paddingRight: spacing.md }}>
-          <Eyebrow color={colors.accent}>
+          <Eyebrow color={colors.accentText}>
             {model.programme} {model.tierLabel}
           </Eyebrow>
           <Text variant="subtitle" style={{ marginTop: spacing.xxs }}>
@@ -93,14 +94,14 @@ export function AttentionSection({
   return (
     <Section eyebrow="For your attention">
       {recovery ? (
-        <Card onPress={recovery.onOpen} accessibilityLabel={`${recovery.title}. ${recovery.line} ${recovery.cta}`} style={{ padding: spacing.lg, marginBottom: spacing.md, borderColor: colors.accent, borderWidth: StyleSheet.hairlineWidth }}>
+        <Card onPress={recovery.onOpen} accessibilityRole="link" accessibilityLabel={`${recovery.title}. ${recovery.line} ${recovery.cta}`} style={{ padding: spacing.lg, marginBottom: spacing.md, borderColor: colors.accent, borderWidth: StyleSheet.hairlineWidth }}>
           <Eyebrow>{recovery.eyebrow}</Eyebrow>
           <Text variant="bodyStrong" style={{ marginTop: spacing.xs }}>
             {recovery.title}
           </Text>
           <Caption style={{ marginTop: spacing.xs }}>{recovery.line}</Caption>
           <View style={{ marginTop: spacing.md }}>
-            <TextLink label={recovery.cta} onPress={recovery.onOpen} />
+            <LinkCue label={recovery.cta} />
           </View>
         </Card>
       ) : null}
@@ -144,9 +145,9 @@ export function NextActivity({ activity, onOpen }: { activity: ActivityModel | n
   }
   return (
     <Section eyebrow={activity.heading}>
-      <Card onPress={onOpen} accessibilityLabel={`${activity.title}, ${activity.whenLabel}`}>
+      <Card onPress={onOpen} accessibilityRole="link" accessibilityLabel={`${activity.title}, ${activity.whenLabel}, ${activity.where}${activity.note ? `. ${activity.note}` : ''}${activity.status ? `. ${activity.status.label}` : ''}`}>
         <View style={{ flexDirection: 'row' }}>
-          <Ionicons name={(activity.category && CATEGORY_ICON[activity.category]) || 'time-outline'} size={20} color={colors.accent} style={{ marginTop: 4 }} />
+          <Ionicons name={(activity.category && CATEGORY_ICON[activity.category]) || 'time-outline'} size={20} color={colors.accentText} style={{ marginTop: 4 }} />
           <View style={{ flex: 1, marginLeft: spacing.md }}>
             <Caption>{activity.whenLabel}</Caption>
             <Text variant="title" style={{ marginTop: 2 }}>
@@ -184,7 +185,7 @@ export function ArrivalSection({ embarkation, transfer, isNext = false, onOpen }
       title={embarkation ? `${embarkation.dateLabel}, ${embarkation.windowLabel}` : undefined}>
       {transfer ? <TransferCard transfer={transfer} /> : null}
       {embarkation ? (
-        <Card style={transfer ? { marginTop: spacing.sm } : undefined} onPress={onOpen} accessibilityLabel="Embarkation details">
+        <Card style={transfer ? { marginTop: spacing.sm } : undefined} onPress={onOpen} accessibilityRole="link">
           <Eyebrow>Embarkation</Eyebrow>
           <Text variant="bodyStrong" style={{ marginTop: 2 }}>
             {embarkation.terminal}
@@ -208,7 +209,7 @@ export function TransferCard({ transfer }: { transfer: TransferModel }) {
   return (
     <Card>
       <View style={{ flexDirection: 'row' }}>
-        <Ionicons name="car-outline" size={20} color={colors.accent} style={{ marginTop: 2 }} />
+        <Ionicons name="car-outline" size={20} color={colors.accentText} style={{ marginTop: 2 }} />
         <View style={{ flex: 1, marginLeft: spacing.md }}>
           <Eyebrow>Transfer</Eyebrow>
           <Text variant="bodyStrong" style={{ marginTop: 2 }}>
@@ -248,7 +249,7 @@ export function ArrangedSection({ items, error, onOpen, onArrange, onRetry }: { 
             <View key={r.kind}>
               {i > 0 && <Divider />}
               <View style={{ flexDirection: 'row' }}>
-                <Ionicons name={KIND_ICON[r.kind]} size={18} color={colors.accent} style={{ marginTop: 2 }} />
+                <Ionicons name={KIND_ICON[r.kind]} size={18} color={colors.accentText} style={{ marginTop: 2 }} />
                 <View style={{ flex: 1, marginLeft: spacing.md }}>
                   <Eyebrow>{r.label}</Eyebrow>
                   {r.item ? (
@@ -285,7 +286,7 @@ export function VoyageSection({ yacht, suite, onOpen }: { yacht: YachtModel; sui
   return (
     <Section eyebrow="Your voyage">
       <View style={[styles.voyageGrid, twoUp && { flexDirection: 'row' }]}>
-        <Card style={[styles.voyageTile, twoUp && { flex: 1 }]} onPress={onOpen} accessibilityLabel={`Yacht ${yacht.name}`}>
+        <Card style={[styles.voyageTile, twoUp && { flex: 1 }]} onPress={onOpen} accessibilityRole="link">
           <MediaFrame media={yacht.media} height={140} style={styles.tileMedia} />
           <Eyebrow>The yacht</Eyebrow>
           <Text variant="title" style={{ marginTop: 2 }}>
@@ -294,7 +295,7 @@ export function VoyageSection({ yacht, suite, onOpen }: { yacht: YachtModel; sui
           <Caption style={{ marginTop: 2, marginBottom: spacing.md }}>{yacht.tagline}</Caption>
           <FactRow facts={yacht.facts} />
         </Card>
-        <Card style={[styles.voyageTile, twoUp && { flex: 1 }]} onPress={onOpen} accessibilityLabel={suite.title}>
+        <Card style={[styles.voyageTile, twoUp && { flex: 1 }]} onPress={onOpen} accessibilityRole="link">
           <MediaFrame media={suite.media} height={140} style={styles.tileMedia} />
           <Eyebrow>Your suite · {suite.location}</Eyebrow>
           <Text variant="title" style={{ marginTop: 2 }}>
@@ -389,11 +390,11 @@ export function RequestsLine({ onNew, onAll }: { onNew: () => void; onAll: () =>
 export function CelebrationCard({ card, onOpen }: { card: { eyebrow: string; title: string; line: string; cta: string }; onOpen: () => void }) {
   return (
     <Section eyebrow={card.eyebrow}>
-      <Card onPress={onOpen} accessibilityLabel={`${card.title}. ${card.line} ${card.cta}`} style={{ padding: spacing.lg, borderColor: colors.accent, borderWidth: StyleSheet.hairlineWidth }}>
+      <Card onPress={onOpen} accessibilityRole="link" accessibilityLabel={`${card.title}. ${card.line} ${card.cta}`} style={{ padding: spacing.lg, borderColor: colors.accent, borderWidth: StyleSheet.hairlineWidth }}>
         <Text variant="title">{card.title}</Text>
         <Caption style={{ marginTop: spacing.xs }}>{card.line}</Caption>
         <View style={{ marginTop: spacing.md }}>
-          <TextLink label={card.cta} onPress={onOpen} />
+          <LinkCue label={card.cta} />
         </View>
       </Card>
     </Section>
@@ -404,14 +405,14 @@ export function CelebrationCard({ card, onOpen }: { card: { eyebrow: string; tit
 export function WelcomeHomeCard({ card, onOpen }: { card: { title: string; line: string; cta: string; reflections: string }; onOpen: () => void }) {
   return (
     <Section eyebrow="After your voyage">
-      <Card onPress={onOpen} accessibilityLabel={`${card.title} ${card.line} ${card.cta}`} style={{ padding: spacing.lg, borderColor: colors.accent, borderWidth: StyleSheet.hairlineWidth }}>
+      <Card onPress={onOpen} accessibilityRole="link" accessibilityLabel={`${card.title}. ${card.line} ${card.reflections} ${card.cta}`} style={{ padding: spacing.lg, borderColor: colors.accent, borderWidth: StyleSheet.hairlineWidth }}>
         <Text variant="title">{card.title}</Text>
         <Text color={colors.textSecondary} style={{ marginTop: spacing.xs }}>
           {card.line}
         </Text>
         <Caption style={{ marginTop: spacing.sm }}>{card.reflections}</Caption>
         <View style={{ marginTop: spacing.md }}>
-          <TextLink label={card.cta} onPress={onOpen} />
+          <LinkCue label={card.cta} />
         </View>
       </Card>
     </Section>
@@ -424,7 +425,7 @@ export function NotificationBell({ unread, onOpen }: { unread: number; onOpen: (
     <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={unread ? `Notifications, ${unread} unread` : 'Notifications'} hitSlop={12} style={{ padding: 4 }}>
       <Ionicons name="notifications-outline" size={22} color={colors.textInverse} />
       {unread ? (
-        <View style={{ position: 'absolute', top: -2, right: -4, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
+        <View style={{ position: 'absolute', top: -2, right: -4, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: colors.accentText, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
           <Caption color={colors.textInverse} style={{ fontSize: 11, lineHeight: 14 }}>
             {unread > 9 ? '9+' : String(unread)}
           </Caption>

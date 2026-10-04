@@ -65,6 +65,7 @@ In **Concierge**, try:
 | 17 | [After the voyage: Welcome home](docs/17-post-voyage.md) |
 | 18 | [Voyage history](docs/18-voyage-history.md) |
 | 19 | [Product analytics](docs/19-analytics.md) |
+| 20 | [Accessibility](docs/20-accessibility.md) |
 
 ### Replacing mocks with enterprise APIs
 

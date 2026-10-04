@@ -51,15 +51,16 @@ export function CalendarSection({ days, error, onRetry }: { days: CalendarDayMod
   return (
     <>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={{ marginTop: spacing.lg }}>
-        {FILTERS.map((f) => {
+        <View role="radiogroup" aria-label="Show" accessibilityLabel="Show" style={styles.chipRow}>
+          {FILTERS.map((f) => {
           const active = f.key === filter;
           return (
-            <Pressable key={f.key} onPress={() => setFilter(f.key)} accessibilityRole="button" accessibilityState={{ selected: active }}
-            aria-selected={active} style={[styles.chip, active && styles.chipActive]}>
+            <Pressable key={f.key} onPress={() => setFilter(f.key)} role="radio" accessibilityState={{ checked: active }} aria-checked={active} hitSlop={6} style={[styles.chip, active && styles.chipActive]}>
               <Caption color={active ? colors.textInverse : colors.textPrimary}>{f.label}</Caption>
             </Pressable>
           );
-        })}
+          })}
+        </View>
       </ScrollView>
       {visible.length === 0 ? (
         <Section>
@@ -77,7 +78,7 @@ export function CalendarSection({ days, error, onRetry }: { days: CalendarDayMod
                     <Text variant="bodyStrong" style={styles.time}>
                       {e.time}
                     </Text>
-                    <Ionicons name={KIND_ICON[e.kind]} size={16} color={e.suggestion ? colors.textMuted : colors.accent} style={{ marginTop: 3 }} />
+                    <Ionicons name={KIND_ICON[e.kind]} size={16} color={e.suggestion ? colors.textMuted : colors.accentText} style={{ marginTop: 3 }} />
                     <View style={{ flex: 1, marginLeft: spacing.sm }}>
                       <Text color={e.suggestion ? colors.textSecondary : colors.textPrimary}>{e.title}</Text>
                       <Caption>
@@ -136,8 +137,8 @@ export function CategorySection({ model, error, onArrange, onRetry }: { model: C
             <SuggestionRow key={s.id} item={s} />
           ))}
           <View style={{ marginTop: spacing.md }}>
-            <Pressable onPress={onArrange} accessibilityRole="button">
-              <Eyebrow color={colors.accent}>Arrange through the concierge</Eyebrow>
+            <Pressable onPress={onArrange} accessibilityRole="button" hitSlop={14}>
+              <Eyebrow color={colors.accentText}>Arrange through the concierge</Eyebrow>
             </Pressable>
           </View>
         </Section>
@@ -165,7 +166,7 @@ export function DocumentsSection({ summary, items, onHelp }: { summary: string; 
                 <Ionicons
                   name={d.status.tone === 'calm' ? 'checkmark-circle-outline' : d.status.tone === 'pending' ? 'time-outline' : 'ellipse-outline'}
                   size={18}
-                  color={d.status.tone === 'calm' ? colors.calm : d.status.tone === 'pending' ? colors.textMuted : colors.accent}
+                  color={d.status.tone === 'calm' ? colors.calm : d.status.tone === 'pending' ? colors.textMuted : colors.accentText}
                 />
                 <View style={{ flex: 1, marginLeft: spacing.sm }}>
                   <Text variant="bodyStrong">{d.label}</Text>
@@ -179,8 +180,8 @@ export function DocumentsSection({ summary, items, onHelp }: { summary: string; 
         <Caption style={{ marginTop: spacing.md }}>
           Document numbers are never shown in the app. For help with any document, your concierge is a message away.
         </Caption>
-        <Pressable onPress={onHelp} accessibilityRole="button" style={{ marginTop: spacing.sm }}>
-          <Eyebrow color={colors.accent}>Ask for help</Eyebrow>
+        <Pressable onPress={onHelp} accessibilityRole="button" hitSlop={14} style={{ marginTop: spacing.sm }}>
+          <Eyebrow color={colors.accentText}>Ask for help</Eyebrow>
         </Pressable>
       </Section>
     </>
@@ -190,6 +191,7 @@ export function DocumentsSection({ summary, items, onHelp }: { summary: string; 
 const styles = StyleSheet.create({
   chips: { paddingHorizontal: spacing.gutter, gap: spacing.xs },
   chip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: radii.pill, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderStrong },
+  chipRow: { flexDirection: 'row', gap: spacing.xs },
   chipActive: { backgroundColor: colors.surfaceInverse, borderColor: colors.surfaceInverse },
   entry: { flexDirection: 'row', paddingVertical: spacing.xs },
   time: { width: 52 },

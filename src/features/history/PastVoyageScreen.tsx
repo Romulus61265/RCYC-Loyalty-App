@@ -6,6 +6,7 @@
 import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { readAs } from '@/hooks/useAnnounce';
 import { Caption, Card, ErrorState, Eyebrow, FactRow, LoadingState, MediaFrame, Screen, Section, StatusLine, Text } from '@/components';
 import type { PastVoyageMoment } from '@/domain';
 import { BackBar } from '@/features/requests/components/RequestParts';
@@ -82,7 +83,7 @@ export function PastVoyageScreen() {
       ) : null}
 
       <Section eyebrow="Photographs">
-        <View style={styles.photos} accessibilityLabel={e.photos.count ? `${e.photos.count} photographs` : e.photos.placeholder}>
+        <View style={styles.photos} {...readAs(e.photos.count ? `${e.photos.count} photographs` : e.photos.placeholder)}>
           <Ionicons name="images-outline" size={22} color={colors.textMuted} />
           <Caption style={{ marginTop: spacing.xs, textAlign: 'center' }}>{e.photos.count ? `${e.photos.count} photographs` : e.photos.placeholder}</Caption>
         </View>
@@ -95,8 +96,8 @@ function Moments({ list }: { list: PastVoyageMoment[] }) {
   return (
     <Card style={{ padding: spacing.lg }}>
       {list.map((m, i) => (
-        <View key={m.id} style={[styles.moment, i > 0 && { marginTop: spacing.md }]} accessibilityLabel={`${m.title}${isFavourite(m.rating) ? ', a favourite' : ''}. ${m.place ?? ''}`}>
-          <Ionicons name={isFavourite(m.rating) ? 'heart' : 'ellipse-outline'} size={isFavourite(m.rating) ? 14 : 8} color={colors.accent} style={{ marginTop: isFavourite(m.rating) ? 4 : 7, width: 14 }} />
+        <View key={m.id} style={[styles.moment, i > 0 && { marginTop: spacing.md }]} {...readAs(`${m.title}${isFavourite(m.rating) ? ', a favourite' : ''}. ${[m.place, formatShortDate(m.date)].filter(Boolean).join(', ')}${m.note ? `. ${m.note}` : ''}`)}>
+          <Ionicons name={isFavourite(m.rating) ? 'heart' : 'ellipse-outline'} size={isFavourite(m.rating) ? 14 : 8} color={colors.accentText} style={{ marginTop: isFavourite(m.rating) ? 4 : 7, width: 14 }} />
           <View style={{ flex: 1, marginLeft: spacing.sm }}>
             <Text>{m.title}</Text>
             <Caption>{[m.place, formatShortDate(m.date)].filter(Boolean).join(' · ')}</Caption>

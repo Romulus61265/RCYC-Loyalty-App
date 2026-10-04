@@ -5,8 +5,10 @@
  * a cost, acknowledges it).
  */
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type Text as RNText } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { focusTarget, useFocusOnChange } from '@/hooks/useFocusOnChange';
+import { useAnnounce } from '@/hooks/useAnnounce';
 import { Button, Caption, Card, ErrorState, Eyebrow, InlineError, LoadingState, Screen, Section, StatusLine, Text, TextField, TextLink, ToggleRow } from '@/components';
 import type { AppError } from '@/core/errors';
 import { BackBar } from '@/features/requests/components/RequestParts';
@@ -73,10 +75,13 @@ function StepCard({ step, busy, error, justDone, onApprove }: { step: Celebratio
   const [ack, setAck] = useState(false);
   const [note, setNote] = useState('');
   const a = step.action;
+  // Opening the approval goes to it; closing it returns to the step.
+  const focusRef = useFocusOnChange<RNText>(open);
+  useAnnounce(justDone && step.status ? 'Sent. You will see each update in Your requests.' : undefined);
   return (
-    <Card style={styles.card} accessibilityLabel={`${step.heading}: ${step.title}`}>
+    <Card style={styles.card}>
       <Eyebrow>{step.heading}</Eyebrow>
-      <Text variant="bodyStrong" style={{ marginTop: spacing.xs }}>
+      <Text ref={open ? undefined : focusRef} {...focusTarget} variant="bodyStrong" accessibilityRole="header" aria-level={3} style={{ marginTop: spacing.xs }}>
         {step.title}
       </Text>
       {step.meta ? <Caption style={{ marginTop: 2 }}>{step.meta}</Caption> : null}
@@ -104,8 +109,10 @@ function StepCard({ step, busy, error, justDone, onApprove }: { step: Celebratio
       ) : null}
 
       {a && open ? (
-        <View style={styles.approval} accessibilityLabel="Before we send it">
-          <Eyebrow>Before we send it</Eyebrow>
+        <View style={styles.approval}>
+          <Eyebrow ref={focusRef} {...focusTarget} accessibilityRole="header" aria-level={4}>
+            Before we send it
+          </Eyebrow>
           <Text style={{ marginTop: spacing.xs }}>{a.summary}</Text>
           {a.price ? <Caption style={{ marginTop: spacing.xs }}>{a.price}</Caption> : null}
           {a.acknowledgement ? <ToggleRow label={a.acknowledgement} value={ack} onChange={setAck} /> : null}
@@ -115,6 +122,7 @@ function StepCard({ step, busy, error, justDone, onApprove }: { step: Celebratio
             <Button
               label={busy ? 'Sending…' : a.confirmLabel}
               disabled={busy || (a.chargeable && !ack)}
+              hint={a.chargeable && !ack ? 'Turn on the acknowledgement above to send' : undefined}
               onPress={() => {
                 void onApprove({ acknowledgedCharge: a.chargeable ? ack : undefined, note: note.trim() || undefined }).then((ok) => ok && setOpen(false));
               }}

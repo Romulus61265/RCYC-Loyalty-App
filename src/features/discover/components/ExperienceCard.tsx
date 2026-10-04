@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { readAs } from '@/hooks/useAnnounce';
 import { Caption, Card, Divider, Eyebrow, MediaFrame, StatusLine, Text } from '@/components';
 import { colors, spacing } from '@/theme';
 import type { ExperienceCardModel } from '../discoverModel';
@@ -29,18 +30,20 @@ export function ExperienceCard({
     <Card style={{ padding: 0, overflow: 'hidden' }}>
       <MediaFrame media={card.media} height={150} rounded={false}>
         <View style={styles.mediaCaption}>
-          <Eyebrow color={colors.textInverseMuted}>
+          <Eyebrow color={colors.textOnImageMuted}>
             {card.categoryLabel} · {card.destination}
           </Eyebrow>
         </View>
       </MediaFrame>
       <View style={{ padding: spacing.lg }}>
-        <Text variant="title">{card.title}</Text>
+        <Text variant="title" accessibilityRole="header" aria-level={3}>
+          {card.title}
+        </Text>
         <Caption style={{ marginTop: 2 }}>{card.subtitle}</Caption>
 
         {card.recommendation ? (
-          <View style={styles.reason} accessibilityLabel={`Why we suggest it: ${card.recommendation.reason}`}>
-            <Ionicons name="sparkles-outline" size={14} color={colors.accent} style={{ marginTop: 3 }} />
+          <View style={styles.reason} {...readAs(`Why we suggest it: ${card.recommendation.reason}`)}>
+            <Ionicons name="sparkles-outline" size={14} color={colors.accentText} style={{ marginTop: 3 }} aria-hidden />
             <Text variant="subtitle" style={styles.reasonText} color={colors.textSecondary}>
               {card.recommendation.reason}
             </Text>
@@ -76,7 +79,7 @@ export function ExperienceCard({
                 <Eyebrow>Includes</Eyebrow>
                 {card.includes.map((i) => (
                   <View key={i} style={styles.include}>
-                    <Ionicons name="checkmark" size={13} color={colors.accent} style={{ marginTop: 3 }} />
+                    <Ionicons name="checkmark" size={13} color={colors.accentText} style={{ marginTop: 3 }} />
                     <Caption color={colors.textPrimary} style={{ flex: 1, marginLeft: 6 }}>
                       {i}
                     </Caption>
@@ -97,20 +100,21 @@ export function ExperienceCard({
               }
             }}
             accessibilityRole="button"
+            accessibilityLabel={`${open ? 'Fewer details' : 'Details'}, ${card.title}`}
             aria-expanded={open}
             accessibilityState={{ expanded: open }}
-            hitSlop={10}
+            hitSlop={14}
           >
             <Eyebrow color={colors.textPrimary}>{open ? 'Fewer details' : 'Details'}</Eyebrow>
           </Pressable>
           {onSave ? (
-            <Pressable onPress={() => onSave(card)} accessibilityRole="button" aria-pressed={saved} accessibilityState={{ selected: saved }} accessibilityLabel={saved ? `Saved: ${card.title}` : `Save ${card.title}`} hitSlop={10}>
-              <Eyebrow color={saved ? colors.accent : colors.textPrimary}>{saved ? 'Saved' : 'Save'}</Eyebrow>
+            <Pressable onPress={() => onSave(card)} accessibilityRole="button" aria-pressed={saved} accessibilityState={{ selected: saved }} accessibilityLabel={saved ? `Saved: ${card.title}` : `Save ${card.title}`} hitSlop={14}>
+              <Eyebrow color={saved ? colors.accentText : colors.textPrimary}>{saved ? 'Saved' : 'Save'}</Eyebrow>
             </Pressable>
           ) : null}
           {!card.reservation.reserved ? (
-            <Pressable onPress={() => onRequest(card)} accessibilityRole="button" accessibilityLabel={`Ask the concierge about ${card.title}`} hitSlop={10}>
-              <Eyebrow color={colors.accent}>{card.availability.status === 'unavailable' ? 'Ask the concierge' : 'Request'}</Eyebrow>
+            <Pressable onPress={() => onRequest(card)} accessibilityRole="button" accessibilityLabel={`${card.availability.status === 'unavailable' ? 'Ask the concierge' : 'Request'}, ${card.title}`} hitSlop={14}>
+              <Eyebrow color={colors.accentText}>{card.availability.status === 'unavailable' ? 'Ask the concierge' : 'Request'}</Eyebrow>
             </Pressable>
           ) : null}
         </View>

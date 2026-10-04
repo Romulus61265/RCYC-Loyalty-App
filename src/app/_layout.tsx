@@ -11,6 +11,7 @@ import {
   CormorantGaramond_500Medium_Italic,
 } from '@expo-google-fonts/cormorant-garamond';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { ServiceProvider } from '@/services/ServiceProvider';
 import { JourneyProvider } from '@/hooks/useJourney';
 import { AnalyticsTracker } from '@/features/analytics/AnalyticsTracker';
@@ -28,6 +29,8 @@ logger.info('app start');
 export { ErrorFallback as ErrorBoundary } from '@/components';
 
 export default function RootLayout() {
+  // Screens appear in place, rather than slide, when the guest asks for less motion.
+  const reduceMotion = useReducedMotion();
   const [fontsLoaded] = useFonts({
     CormorantGaramond_400Regular,
     CormorantGaramond_500Medium,
@@ -56,7 +59,7 @@ export default function RootLayout() {
         >
           <StatusBar style="dark" />
           <AnalyticsTracker />
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background }, animation: reduceMotion ? 'none' : 'default' }}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="+not-found" options={{ presentation: 'modal' }} />
           </Stack>

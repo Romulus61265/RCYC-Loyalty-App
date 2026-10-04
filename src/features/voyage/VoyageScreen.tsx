@@ -34,7 +34,7 @@ export function VoyageScreen() {
 
   return (
     <Screen>
-      <PageHeader eyebrow={`${model.overview.yachtName} · ${model.overview.dateRange}`} title={model.overview.name} subtitle={`${model.overview.stats[0]?.value} nights · ${model.overview.route}`} />
+      <PageHeader eyebrow={`${model.overview.yachtName} · ${model.overview.dateRange}`} title={model.overview.name} subtitle={model.overview.stats[0] ? `${model.overview.stats[0].value} nights · ${model.overview.route}` : model.overview.route} />
       <SegmentedTabs options={TAB_OPTIONS} value={section} onChange={open} />
       {section === 'overview' && <OverviewSection model={model.overview} onOpen={open} />}
       {section === 'itinerary' && <ItinerarySection ports={model.itinerary} bookingsError={model.errors.bookings} onRetry={reload} />}

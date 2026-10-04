@@ -36,8 +36,8 @@ export function RequestsScreen() {
       </View>
       <SegmentedTabs
         options={[
-          { value: 'active', label: `Active · ${model.active.length}` },
-          { value: 'history', label: `History · ${model.history.length}` },
+          { value: 'active', label: `Active · ${model.active.length}`, accessibilityLabel: `Active, ${model.active.length}` },
+          { value: 'history', label: `History · ${model.history.length}`, accessibilityLabel: `History, ${model.history.length}` },
         ]}
         value={view}
         onChange={(v) => router.setParams({ view: v })}

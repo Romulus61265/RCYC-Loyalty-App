@@ -25,7 +25,7 @@ export default function TabLayout() {
           borderTopColor: colors.border,
           borderTopWidth: 0.5,
         },
-        tabBarLabelStyle: { fontFamily: fonts.bodyMedium, fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase' },
+        tabBarLabelStyle: { fontFamily: fonts.bodyMedium, fontSize: 11, letterSpacing: 0.3, textTransform: 'uppercase' },
       }}
     >
       {tabs.map((t) => (

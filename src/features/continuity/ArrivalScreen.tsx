@@ -6,6 +6,7 @@
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { readAs } from '@/hooks/useAnnounce';
 import { Button, Caption, Card, EmptyNote, ErrorState, Eyebrow, LoadingState, Screen, Section, StatusLine, Text } from '@/components';
 import { BackBar } from '@/features/requests/components/RequestParts';
 import { colors, spacing } from '@/theme';
@@ -27,7 +28,7 @@ export function ArrivalScreen() {
     return (
       <Screen>
         <BackBar onBack={back} />
-        <Section eyebrow="Your arrival">
+        <Section eyebrow="Your arrival" level={1}>
           <EmptyNote body="Your travel to the yacht is on schedule. If anything changes, you will see it here." actionLabel="View your voyage" onAction={() => router.push('/voyage')} />
         </Section>
       </Screen>
@@ -55,8 +56,8 @@ export function ArrivalScreen() {
       <Section eyebrow="What we have done">
         <Card style={{ paddingVertical: spacing.sm }}>
           {model.steps.map((s, i) => (
-            <View key={s.kind} style={[styles.step, i > 0 && styles.divider]} accessibilityLabel={`${s.label}${s.value ? `, ${s.value}` : ''}. ${s.detail}${s.status ? ` ${s.status.label}.` : ''}`}>
-              <Ionicons name={s.icon} size={20} color={colors.accent} style={{ marginTop: 2 }} />
+            <View key={s.kind} style={[styles.step, i > 0 && styles.divider]} {...readAs(`${s.label}${s.value ? `, ${s.value}` : ''}. ${s.detail}${s.status ? ` ${s.status.label}.` : ''}`)}>
+              <Ionicons name={s.icon} size={20} color={colors.accentText} style={{ marginTop: 2 }} />
               <View style={{ flex: 1, marginLeft: spacing.md }}>
                 <View style={styles.head}>
                   <Text variant="bodyStrong" style={{ flex: 1 }}>
@@ -82,7 +83,7 @@ export function ArrivalScreen() {
         <Section eyebrow="Also moving with your flight">
           <View style={{ gap: spacing.md }}>
             {model.alsoAffected.map((a) => (
-              <Card key={a.title} style={{ padding: spacing.lg }} accessibilityLabel={`${a.title}. ${a.detail}`}>
+              <Card key={a.title} style={{ padding: spacing.lg }}>
                 <Text variant="bodyStrong">{a.title}</Text>
                 <Text color={colors.textSecondary} style={{ marginTop: spacing.xs }}>
                   {a.detail}

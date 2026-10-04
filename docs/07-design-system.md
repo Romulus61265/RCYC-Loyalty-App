@@ -25,10 +25,13 @@ The app should feel like a luxury hotel's stationery: heavy paper, generous marg
 | `surfaceInverse` (deep sea) | `#0E1A2B` | Member card, primary buttons, guest chat bubbles |
 | `textPrimary` (ink) | `#1E2530` | Body copy |
 | `textSecondary` (graphite) | `#5B5750` | Supporting copy |
-| `textMuted` (driftwood) | `#9A8F80` | Eyebrows, metadata |
-| `accent` (champagne) | `#B89B6A` | Links, recognition line, active rule |
-| `calm` (sea-glass) | `#7F9C96` | Confirmed / handled |
-| `attention` (coral) | `#B5654A` | Urgent only, rarely shown |
+| `textMuted` (taupe) | `#6E665B` | Eyebrows, metadata (5.1:1 on ivory) |
+| `accent` (champagne) | `#B89B6A` | Rules, dots, fills, the active tab rule; words only on deep sea |
+| `accentText` (champagne deep) | `#7A6544` | Links and champagne words on light surfaces (5.0:1) |
+| `calm` (sea-glass deep) | `#56706A` | Confirmed / handled (4.8:1) |
+| `attention` (terracotta) | `#9E5640` | Urgent and invalid only, rarely shown (4.9:1) |
+| `borderInput` | `#8C8579` | Field and stepper outlines, 1 px (3.3:1) |
+| `textOnImageMuted` | ivory at 88% | Secondary words on imagery, over `scrims.words` |
 
 The imagery fallback tones (`dusk`, `sea`, `stone`, `terracotta`, `olive`, `champagne`, `night`) give each destination an on-brand gradient while DAM imagery loads.
 
@@ -73,6 +76,15 @@ The imagery fallback tones (`dusk`, `sea`, `stone`, `terracotta`, `olive`, `cham
 
 ## Accessibility
 
-* All interactive elements carry an `accessibilityRole` and a label. Imagery carries `alt` through `MediaAsset.alt`.
-* Body text on ivory exceeds WCAG AA contrast. The champagne accent is used only for text 11 pt and larger, with letter-spacing, or for non-essential decoration.
-* Dynamic Type: the typography tokens are relative-friendly. Layouts avoid fixed heights for text containers.
+WCAG 2.2 AA; the full audit and what changed are in [20](20-accessibility.md).
+
+* **Contrast.** Every text colour is at least 4.5:1 on ivory, porcelain and white, and field outlines are at least 3:1. `check:a11y` checks this from the tokens, so a new colour that fails, fails `verify`. Champagne stays the brand colour for rules and fills; its words use `accentText`.
+* **Words on imagery** sit over `scrims.words`: at least 4.5:1 even over a white photograph.
+* **Type scales** with the system setting up to a per-style cap (`MAX_FONT_SCALE`): reading text to 2.2×, headings less. Nothing is under 11 px, and image frames with words grow rather than clip.
+* **Controls.**
+  * Every control has a role and a name that starts with its visible words. Chips are radios, checkboxes or pressed toggles.
+  * A pressable card is one control; its call to action is a `LinkCue`.
+  * Icons are decorative unless marked `meaningfulIcon`.
+  * Targets are at least 44 pt, through `hitSlop` where the visual is smaller.
+* **Structure.** One page heading per screen; section eyebrows are headings.
+* **Focus and motion.** Content that changes in place moves focus (`useFocusOnChange`) or speaks (`useAnnounce`, `LiveAnnouncer`). Motion stops when reduce motion is on (`useReducedMotion`).

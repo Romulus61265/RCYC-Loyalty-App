@@ -12,14 +12,22 @@ export const palette = {
   sand: '#E9E1D5',
   stone: '#CFC5B6',
   driftwood: '#9A8F80',
+  /** Driftwood, deepened for text: 5:1 on ivory (WCAG AA). */
+  taupe: '#6E665B',
   graphite: '#5B5750',
   ink: '#1E2530',
   navy: '#14213D',
   deepSea: '#0E1A2B',
   seaGlass: '#7F9C96',
+  /** Sea-glass, deepened for words and status icons: 4.8:1 on ivory. */
+  seaGlassDeep: '#56706A',
   champagne: '#B89B6A',
+  /** Champagne, deepened for words on light surfaces: 5:1 on ivory. */
+  champagneDeep: '#7A6544',
   champagneSoft: '#E8DCC4',
   coral: '#B5654A',
+  /** Coral, deepened for words: 4.9:1 on ivory. */
+  terracotta: '#9E5640',
   white: '#FFFFFF',
 } as const;
 
@@ -30,16 +38,36 @@ export const colors = {
   surfaceInverse: palette.deepSea,
   border: palette.sand,
   borderStrong: palette.stone,
+  /** Outlines of fields and steppers: 3:1 against ivory, porcelain and white (WCAG 1.4.11). */
+  borderInput: '#8C8579',
   textPrimary: palette.ink,
   textSecondary: palette.graphite,
-  textMuted: palette.driftwood,
+  /** Secondary words, eyebrows, hints. Every text colour meets WCAG AA (4.5:1) on ivory, porcelain and white. */
+  textMuted: palette.taupe,
   textInverse: palette.porcelain,
   textInverseMuted: 'rgba(251,249,246,0.72)',
+  /** Secondary words on imagery (over the words scrim): ≥ 4.5:1 even over a white photograph. */
+  textOnImageMuted: 'rgba(251,249,246,0.88)',
+  /** Champagne for rules, dots and fills; on dark surfaces it may also be text (6.6:1 on deep sea). */
   accent: palette.champagne,
+  /** Champagne words on light surfaces: links, eyebrows, statuses. */
+  accentText: palette.champagneDeep,
   accentSoft: palette.champagneSoft,
-  calm: palette.seaGlass,
-  attention: palette.coral,
+  /** Done, confirmed, settled: words and icons (≥ 4.5:1). */
+  calm: palette.seaGlassDeep,
+  /** Urgent or invalid: words and icons (≥ 4.5:1). */
+  attention: palette.terracotta,
   scrim: 'rgba(14,26,43,0.45)',
+} as const;
+
+/**
+ * Scrims over imagery. `words` sits behind text on a picture: ivory text is
+ * ≥ 4.5:1 from the middle down even over a white photograph (checked in
+ * check:a11y). `top` shades the top edge for a line placed there.
+ */
+export const scrims = {
+  words: { colors: ['rgba(14,26,43,0)', 'rgba(14,26,43,0.7)', 'rgba(14,26,43,0.74)'], locations: [0.15, 0.55, 1] },
+  top: { colors: ['rgba(14,26,43,0.72)', 'rgba(14,26,43,0.7)', 'rgba(14,26,43,0)'], locations: [0, 0.13, 0.28] },
 } as const;
 
 export const fonts = {
