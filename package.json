@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "verify": "npm run typecheck && npm run lint && npm run check:fixtures && npm run check:home && npm run check:voyage && npm run check:discover && npm run check:profile && npm run check:concierge && npm run check:concierge-server && npm run check:personalization && npm run check:requests && npm run check:occasions && npm run check:notifications && npm run check:recovery && npm run check:continuity && npm run check:events && npm run check:post-voyage && npm run check:history && npm run check:analytics && npm run check:a11y && npm run check:perf && npm run check:security && npm run check:supabase",
+    "verify": "npm run typecheck && npm run lint && npm run check:fixtures && npm run check:home && npm run check:voyage && npm run check:discover && npm run check:profile && npm run check:concierge && npm run check:concierge-server && npm run check:personalization && npm run check:requests && npm run check:occasions && npm run check:notifications && npm run check:recovery && npm run check:continuity && npm run check:events && npm run check:post-voyage && npm run check:history && npm run check:analytics && npm run check:a11y && npm run check:perf && npm run check:security && npm run check:demo && npm run check:supabase",
     "doctor": "npx expo-doctor",
     "check:fixtures": "tsx scripts/check-fixtures.ts",
     "check:home": "tsx scripts/check-home.ts",
@@ -35,7 +35,8 @@
     "check:analytics": "tsx scripts/check-analytics.ts",
     "check:a11y": "tsx scripts/check-a11y.ts",
     "check:perf": "tsx scripts/check-perf.ts",
-    "check:security": "tsx scripts/check-security.ts"
+    "check:security": "tsx scripts/check-security.ts",
+    "check:demo": "tsx scripts/check-demo.ts"
   },
   "dependencies": {
     "@expo-google-fonts/cormorant-garamond": "^0.4.1",

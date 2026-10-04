@@ -96,6 +96,10 @@ export interface SuggestionLine {
   reason?: string;
   priceLabel: string;
   where: string;
+  /** For the port's own page: what the experience is, and what it includes. */
+  description?: string;
+  includes?: string[];
+  isPrivate?: boolean;
 }
 
 export interface OverviewModel {
@@ -115,6 +119,7 @@ export interface PortModel {
   dateLabel: string;
   name: string;
   country: string;
+  type: keyof typeof PORT_TYPE;
   typeLabel: string;
   summary: string;
   media: MediaAsset;
@@ -328,12 +333,12 @@ export function buildVoyageViewModel(core: VoyageCoreData, optional: VoyageOptio
         .map((r) => ({ r, e: r.experienceId ? expById.get(r.experienceId) : undefined }))
         // Port experiences on their day; experiences aboard on the sea day, when there is time for them.
         .filter(({ e }) => e && (e.portCallId === p.id || (!e.portCallId && p.type === 'sea')) && !bookedIds.has(e.id))
-        .map(({ r, e }) => ({ id: r.id, title: e!.title, subtitle: e!.subtitle, reason: r.rationale, priceLabel: priceLabel(e!), where: e!.destination ?? `Aboard ${yacht.name}` })),
+        .map(({ r, e }) => ({ id: r.id, title: e!.title, subtitle: e!.subtitle, reason: r.rationale, priceLabel: priceLabel(e!), where: e!.destination ?? `Aboard ${yacht.name}`, description: e!.description, includes: e!.includes, isPrivate: e!.format === 'private' })),
       // Private, unbooked experiences in this port also suit the guest's stated style.
       ...catalogue
         .filter((e) => e.portCallId === p.id && e.privateAvailable && !bookedIds.has(e.id) && !recIds.has(e.id) && e.category !== 'transfer')
         .slice(0, 1)
-        .map((e) => ({ id: `cat_${e.id}`, title: e.title, subtitle: e.subtitle, reason: profile.preferences.excursions.style === 'private' ? 'Private, as you prefer.' : undefined, priceLabel: priceLabel(e), where: e.destination ?? p.portName })),
+        .map((e) => ({ id: `cat_${e.id}`, title: e.title, subtitle: e.subtitle, reason: profile.preferences.excursions.style === 'private' ? 'Private, as you prefer.' : undefined, priceLabel: priceLabel(e), where: e.destination ?? p.portName, description: e.description, includes: e.includes, isPrivate: e.format === 'private' })),
     ];
     return {
       id: p.id,
@@ -341,6 +346,7 @@ export function buildVoyageViewModel(core: VoyageCoreData, optional: VoyageOptio
       dateLabel: formatLongDate(p.date),
       name: p.portName,
       country: p.country,
+      type: p.type,
       typeLabel: PORT_TYPE[p.type],
       summary: p.summary,
       media: p.hero,

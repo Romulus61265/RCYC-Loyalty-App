@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Caption, Card, Divider, EmptyNote, Eyebrow, FactRow, InlineError, MediaFrame, Section, Text } from '@/components';
+import { Button, Caption, Card, Divider, EmptyNote, Eyebrow, FactRow, InlineError, MediaFrame, Section, Text } from '@/components';
 import { colors, spacing } from '@/theme';
 import type { OverviewModel, PortModel, VoyageSectionKey } from '../voyageModel';
 import { BookingRow, FactList, SuggestionRow } from './Rows';
@@ -50,7 +50,7 @@ export function OverviewSection({ model, onOpen }: { model: OverviewModel; onOpe
 
 // ─── Itinerary ─────────────────────────────────────────────────────────────
 
-export function ItinerarySection({ ports, bookingsError, onRetry }: { ports: PortModel[]; bookingsError?: unknown; onRetry: () => void }) {
+export function ItinerarySection({ ports, bookingsError, onRetry, onOpenPort }: { ports: PortModel[]; bookingsError?: unknown; onRetry: () => void; onOpenPort?: (id: string) => void }) {
   return (
     <>
       {bookingsError ? (
@@ -59,13 +59,13 @@ export function ItinerarySection({ ports, bookingsError, onRetry }: { ports: Por
         </Section>
       ) : null}
       {ports.map((p) => (
-        <PortCard key={p.id} port={p} />
+        <PortCard key={p.id} port={p} onOpen={onOpenPort ? () => onOpenPort(p.id) : undefined} />
       ))}
     </>
   );
 }
 
-export function PortCard({ port }: { port: PortModel }) {
+export function PortCard({ port, onOpen }: { port: PortModel; onOpen?: () => void }) {
   return (
     <Section eyebrow={`Day ${port.day} · ${port.dateLabel}${port.isToday ? ' · Today' : ''}`}>
       <Card style={{ padding: 0, overflow: 'hidden' }}>
@@ -109,6 +109,11 @@ export function PortCard({ port }: { port: PortModel }) {
                 <SuggestionRow key={r.id} item={r} />
               ))}
             </>
+          ) : null}
+          {onOpen && port.type !== 'sea' ? (
+            <View style={{ marginTop: spacing.md }}>
+              <Button label={`Explore ${port.name}`} variant="quiet" onPress={onOpen} />
+            </View>
           ) : null}
         </View>
       </Card>

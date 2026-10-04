@@ -55,6 +55,8 @@ import { flightDelayedEvent, registerFlightDelayHandlers } from './events/flight
 import { ApiClient } from './remote/apiClient';
 import { MarriottBonvoyService } from './remote/MarriottBonvoyService';
 import { createSupabaseServices } from './supabase';
+import { inactiveDemo } from './demo';
+import { EXECUTIVE_DEMO_SCRIPT } from './mock/executiveDemoScript';
 
 export const ACCESS_TOKEN_KEY = 'rcyc.session.access';
 
@@ -112,7 +114,7 @@ function devicePush() {
   return new UnsupportedPushRegistrar(Platform.OS === 'ios' || Platform.OS === 'android' ? Platform.OS : 'web');
 }
 
-function createMockServices(device: DeviceData): Services {
+function createMockServices(device: DeviceData, onReset: () => void): Services {
   const profile = new RepositoryGuestProfileService(new MockGuestRecordSource(), preferencesRepository(device));
   const loyalty = new MockLoyaltyService();
   const voyage = new MockVoyageService();
@@ -162,14 +164,39 @@ function createMockServices(device: DeviceData): Services {
     },
     reservation.id,
   );
+  // The last delay's handling, so a demonstration can wait until every arrangement is adjusted.
+  let handled: Promise<unknown> = Promise.resolve();
   travel.subscribe((u) => {
     const event = flightDelayedEvent(u, { guest_id: reservation.leadGuestId, voyage_id: reservation.voyageId, reservation_id: reservation.id });
-    if (event) void events.publish(event).catch((e: unknown) => logger.child('events').warn('publish failed', { reason: e instanceof Error ? e.message : 'unknown' }));
+    if (event) handled = events.publish(event).catch((e: unknown) => logger.child('events').warn('publish failed', { reason: e instanceof Error ? e.message : 'unknown' }));
   });
+  const inbound = data.voyage.flights.find((f) => f.direction === 'inbound')!;
   if (mockDemo() === 'flight-delay') {
     // Arrives while the guest is looking, as a live update would.
-    setTimeout(() => travel.simulateDelay(data.voyage.flights.find((f) => f.direction === 'inbound')!.id, 120), 2500);
+    setTimeout(() => travel.simulateDelay(inbound.id, 120), 2500);
   }
+  // DEMO_MODE=executive: the presenter reports the delay when the story reaches it (docs/23).
+  let inboundDelayed = false;
+  const demo: Services['demo'] =
+    mockDemo() === 'executive'
+      ? {
+          mode: 'executive',
+          script: () => EXECUTIVE_DEMO_SCRIPT,
+          status: async () => ({ inboundDelayed }),
+          async simulateInboundDelay() {
+            if (!inboundDelayed) {
+              inboundDelayed = true;
+              travel.simulateDelay(inbound.id, 120);
+              await handled;
+            }
+            return { inboundDelayed: true };
+          },
+          async reset() {
+            await device.wipe();
+            onReset();
+          },
+        }
+      : inactiveDemo;
   return {
     auth: new MockAuthService(),
     profile,
@@ -191,12 +218,17 @@ function createMockServices(device: DeviceData): Services {
     schedule: new MockScheduleService(),
     audit: new ConsoleAuditService(),
     clock: { now: mockNow },
+    demo,
   };
 }
 
 const log = logger.child('services');
 
-export function createServices(mode: ServiceMode = env.serviceMode): Services {
+/**
+ * `onReset` is called when a demonstration asks to start again; the
+ * ServiceProvider then builds a fresh set of services.
+ */
+export function createServices(mode: ServiceMode = env.serviceMode, { onReset = () => undefined }: { onReset?: () => void } = {}): Services {
   const issues = validateEnv();
   issues.forEach((issue) => log.warn(issue));
   if (issues.some((i) => i.startsWith(SECRET_IN_BUNDLE))) {
@@ -213,7 +245,7 @@ export function createServices(mode: ServiceMode = env.serviceMode): Services {
   }
   log.info('services ready', { mode, appEnv: env.appEnv });
   const device = new DeviceData([asyncStorageStore]);
-  const composed = compose(mode, device);
+  const composed = compose(mode, device, onReset);
   const services = { ...composed, auth: wipingOnSignOut(composed.auth, device) };
   // Product analytics: a vendor adapter replaces the provider; until one is chosen, production sends nothing.
   const analytics = new PrivacyAnalyticsService(env.appEnv === 'production' ? new NoopAnalyticsProvider() : new ConsoleAnalyticsProvider(logger.child('analytics')), {
@@ -223,9 +255,9 @@ export function createServices(mode: ServiceMode = env.serviceMode): Services {
   return instrumentServices(withAnalytics(services, analytics), log);
 }
 
-function compose(mode: ServiceMode, device: DeviceData): Services {
+function compose(mode: ServiceMode, device: DeviceData, onReset: () => void): Services {
   if (mode === 'supabase') return createSupabaseServices(getSupabaseClient, { now: () => new Date() }, devicePush());
-  const mocks = createMockServices(device);
+  const mocks = createMockServices(device, onReset);
   if (mode === 'mock') return mocks;
 
   const api = new ApiClient(() => secureStorage.getItem(ACCESS_TOKEN_KEY));
@@ -234,5 +266,6 @@ function compose(mode: ServiceMode, device: DeviceData): Services {
     clock: { now: () => new Date() },
     // Adapters are introduced one bounded context at a time.
     loyalty: new MarriottBonvoyService(api),
+    demo: inactiveDemo,
   };
 }

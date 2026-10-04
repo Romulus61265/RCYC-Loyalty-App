@@ -68,6 +68,7 @@ In **Concierge**, try:
 | 20 | [Accessibility](docs/20-accessibility.md) |
 | 21 | [Performance](docs/21-performance.md) |
 | 22 | [Security audit](docs/22-security-audit.md) |
+| 23 | [Demo Mode for executive presentations](docs/23-demo-mode.md) |
 
 ### Replacing mocks with enterprise APIs
 

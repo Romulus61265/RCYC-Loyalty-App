@@ -52,7 +52,7 @@ class ListableMemory extends MemoryKeyValueStore implements ListableStore {
 
 async function main() {
   // ─── H6 · Fail closed ────────────────────────────────────────────────────
-  const env = (over: Partial<Env>): Env => ({ appEnv: 'development', serviceMode: 'mock', supabaseUrl: '', supabaseAnonKey: '', apiBaseUrl: '', logLevel: 'info', demoNow: '', mockScenario: 'default', ...over });
+  const env = (over: Partial<Env>): Env => ({ appEnv: 'development', serviceMode: 'mock', supabaseUrl: '', supabaseAnonKey: '', apiBaseUrl: '', logLevel: 'info', demoNow: '', mockScenario: 'default', demoMode: 'off', ...over });
   const release = (appEnv: string | undefined, serviceMode: string | undefined): BuildInfo => ({ release: true, appEnv, serviceMode });
   const unsafe = (issues: string[]) => issues.some((i) => i.startsWith(UNSAFE_BUILD));
   const supa = { serviceMode: 'supabase' as const, supabaseUrl: 'https://abc.supabase.co', supabaseAnonKey: 'sb_publishable_x' };

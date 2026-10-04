@@ -12,6 +12,8 @@
 export type ServiceMode = 'mock' | 'supabase' | 'enterprise';
 export type AppEnv = 'development' | 'staging' | 'production';
 export type LogLevelName = 'debug' | 'info' | 'warn' | 'error';
+/** `executive`: the presenter-led demonstration (docs/23). Mock services only. */
+export type DemoMode = 'off' | 'executive';
 
 const raw = {
   appEnv: process.env.EXPO_PUBLIC_APP_ENV,
@@ -22,6 +24,7 @@ const raw = {
   logLevel: process.env.EXPO_PUBLIC_LOG_LEVEL,
   demoNow: process.env.EXPO_PUBLIC_DEMO_NOW,
   mockScenario: process.env.EXPO_PUBLIC_MOCK_SCENARIO,
+  demoMode: process.env.EXPO_PUBLIC_DEMO_MODE,
 };
 
 function pick<T extends string>(value: string | undefined, allowed: readonly T[], fallback: T): T {
@@ -41,6 +44,8 @@ export const env = {
   demoNow: raw.demoNow ?? '',
   /** Mock-only: force a data condition to exercise empty / loading / error states. */
   mockScenario: pick(raw.mockScenario, ['default', 'empty', 'slow', 'error', 'partial-error'] as const, 'default'),
+  /** DEMO_MODE: a presenter-led demonstration on the fictional dataset (mock services only). */
+  demoMode: pick(raw.demoMode, ['off', 'executive'] as const, 'off') as DemoMode,
 } as const;
 
 export type Env = typeof env;
@@ -114,5 +119,7 @@ export function validateEnv(e: Env = env, build: BuildInfo = thisBuild): string[
     if (!e.supabaseAnonKey) issues.push('EXPO_PUBLIC_SUPABASE_ANON_KEY is required in supabase mode.');
   }
   if (e.demoNow && Number.isNaN(Date.parse(e.demoNow))) issues.push('EXPO_PUBLIC_DEMO_NOW is not a valid ISO date-time.');
+  if (raw.demoMode && raw.demoMode !== e.demoMode) issues.push(`Unknown EXPO_PUBLIC_DEMO_MODE "${raw.demoMode}" — demo mode is off.`);
+  if (e.demoMode !== 'off' && e.serviceMode !== 'mock') issues.push(`EXPO_PUBLIC_DEMO_MODE runs on mock services only; ignored in "${e.serviceMode}" mode.`);
   return issues;
 }

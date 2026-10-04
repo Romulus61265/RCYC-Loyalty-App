@@ -62,7 +62,7 @@ async function main() {
   check('anon JWT is accepted', !isPrivilegedSupabaseKey(fakeJwt('anon')));
   check('publishable key is accepted', !isPrivilegedSupabaseKey('sb_publishable_abc123'));
   check('malformed key is not treated as privileged', !isPrivilegedSupabaseKey('not.a.jwt'));
-  const base: Env = { appEnv: 'development', serviceMode: 'supabase', supabaseUrl: 'https://abc.supabase.co', supabaseAnonKey: fakeJwt('anon'), apiBaseUrl: '', logLevel: 'info', demoNow: '', mockScenario: 'default' };
+  const base: Env = { appEnv: 'development', serviceMode: 'supabase', supabaseUrl: 'https://abc.supabase.co', supabaseAnonKey: fakeJwt('anon'), apiBaseUrl: '', logLevel: 'info', demoNow: '', mockScenario: 'default', demoMode: 'off' };
   check('supabase mode needs no API_BASE_URL', validateEnv(base).length === 0, validateEnv(base));
   check('service-role key is refused, in any mode', validateEnv({ ...base, serviceMode: 'mock', supabaseAnonKey: fakeJwt('service_role') }).some((i) => i.startsWith('SECRET_IN_BUNDLE')));
   check('missing anon key is reported', validateEnv({ ...base, supabaseAnonKey: '' }).some((i) => /ANON_KEY/.test(i)));

@@ -28,6 +28,7 @@
 | `concierge.ts` | Suite Ambassador, greeting, suggested questions, 5 service requests, prior conversation | `DevConciergeData` |
 | `communication.ts` | 3 in-app alerts and 11 notifications (6 delivered, 5 scheduled) | `DevCommunicationData` |
 | `personalization.ts` | 17 signals from past voyages, 5 guest recommendations and 3 crew-only ones | `DevPersonalizationData` |
+| `executiveDemo.ts` | The executive demonstration's dataset, derived from all of the above (docs/23) | `DevDataset` |
 | `tones.ts` | Brand-tone gradients standing in for imagery | — |
 
 Entity shapes come from `src/domain`, so mock services return exactly what enterprise adapters will.

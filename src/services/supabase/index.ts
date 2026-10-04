@@ -29,6 +29,7 @@ import { SupabasePostVoyageStore } from './SupabasePostVoyageStore';
 import { ComposedVoyageHistoryService } from '@/services/history/ComposedVoyageHistoryService';
 import { SupabaseVoyageHistoryStore } from './SupabaseVoyageHistoryStore';
 import { silentAnalytics } from '@/services/analytics/providers';
+import { inactiveDemo } from '@/services/demo';
 
 /** `push`: the device side of push notifications (the app passes its platform's). */
 export function createSupabaseServices(db: Db, clock: ClockService = { now: () => new Date() }, push: PushRegistrar = new UnsupportedPushRegistrar()): Services {
@@ -64,6 +65,7 @@ export function createSupabaseServices(db: Db, clock: ClockService = { now: () =
     // and Edge Functions, which the client cannot alter.
     audit: { record: (entry) => audit.info(entry.action, { resource: entry.resource, resourceId: entry.resourceId, outcome: entry.outcome, ...entry.metadata }) },
     clock,
+    demo: inactiveDemo,
   };
 }
 

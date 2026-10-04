@@ -240,6 +240,17 @@ Prerequisites:
 - [ ] **Concierge.** **Talk to Elena** opens the concierge.
 - [ ] **Unchanged by default.** Without the parameter, no arrival card appears, and `/arrival` says travel is on schedule.
 
+## Executive demonstration (`?demo=executive` or `EXPO_PUBLIC_DEMO_MODE=executive`)
+
+See [23](23-demo-mode.md) for the script.
+
+- [ ] **Home.** It is embarkation morning, 07:30. A **Demo** button sits beside the bell. Titanium Elite recognition, "Today, Barcelona", Grand Suite 612 and "Chosen for you" all show. Nothing is late, and no questionnaire is outstanding.
+- [ ] **Mallorca.** Voyage › Itinerary › **Explore Palma de Mallorca** shows the private Binissalem vineyard under "Chosen for you", with its Barolo reason. **Arrange with the concierge** opens Concierge.
+- [ ] **Anniversary.** "Help me celebrate my anniversary." lists what is in place for 20 May and more ideas. Nothing is booked until you tap.
+- [ ] **Delay.** Demo › **Report the flight delay** returns to Home with "We've adjusted your arrival arrangements". **See what changed** shows the transfer at 12:00 and arrival at 15:30. Concierge has Elena's message.
+- [ ] **Reset.** Demo › **Reset the demonstration** returns to Home as at the start. The delay can be reported again.
+- [ ] **Off.** Without demo mode there is no Demo button, and the Mallorca vineyard is booked, as in the development dataset.
+
 ## After the voyage (`?demo=welcome-home`)
 
 - [ ] **Home.** Open `/?demo=welcome-home`. The hero reads **Welcome home.**, and **After your voyage** reads "Seven nights, six ports and four countries aboard Evrima, in Grand Suite 612." and "A few words, when you are ready."

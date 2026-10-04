@@ -546,6 +546,37 @@ export interface ClockService {
 
 // ─── Registry ──────────────────────────────────────────────────────────────
 
+// ─── Demonstration ─────────────────────────────────────────────────────────
+
+/**
+ * The presenter's controls for a demonstration (DEMO_MODE, docs/23). Outside
+ * one (`mode` null, and always in Supabase mode) it does nothing.
+ */
+/** One step of the presenter's script. */
+export interface DemoStep {
+  n: number;
+  /** What the step shows, as the presenter would announce it. */
+  title: string;
+  /** Where to look, and what to say. */
+  cue: string;
+  /** The in-app route the step happens on. */
+  route?: string;
+  /** A step the presenter performs rather than shows. */
+  action?: 'inbound-delay';
+}
+
+export interface DemoService {
+  /** The demonstration running, or null. */
+  readonly mode: 'executive' | null;
+  /** The presenter's script, in order (empty outside a demonstration). */
+  script(): DemoStep[];
+  status(): Promise<{ inboundDelayed: boolean }>;
+  /** Reports the inbound flight two hours late (simulated), and waits until every arrangement has been adjusted. Once per run. */
+  simulateInboundDelay(): Promise<{ inboundDelayed: true }>;
+  /** Starts the demonstration again from its first moment: fresh services, and nothing left on the device. */
+  reset(): Promise<void>;
+}
+
 export interface Services {
   auth: AuthService;
   profile: GuestProfileService;
@@ -568,4 +599,6 @@ export interface Services {
   schedule: ScheduleService;
   audit: AuditService;
   clock: ClockService;
+  /** Presenter controls; inert outside a demonstration. */
+  demo: DemoService;
 }

@@ -1,5 +1,6 @@
 import { env } from '@/config/env';
 import { devDataset } from '@/data/fixtures';
+import { EXECUTIVE_DEMO_NOW, executiveDemoDataset } from '@/data/fixtures/executiveDemo';
 import { ServiceError } from '@/services/contracts';
 
 export type MockScenario = typeof env.mockScenario;
@@ -39,6 +40,9 @@ export function mockScenario(): MockScenario {
 
 /**
  * A demonstration layered on the data:
+ *  • `?demo=executive` or EXPO_PUBLIC_DEMO_MODE=executive: the presenter-led
+ *    journey for senior audiences (docs/23): embarkation morning, a prepared
+ *    dataset, and the flight delay reported when the presenter chooses;
  *  • `?demo=disruption`: the classic sail in Saint-Tropez cancelled for a
  *    forecast mistral, with its recovery;
  *  • `?demo=flight-delay`: embarkation morning; a few seconds after opening,
@@ -46,9 +50,12 @@ export function mockScenario(): MockScenario {
  *    and the arrival arrangements are adjusted;
  *  • `?demo=welcome-home`: four days after the voyage, at home in Miami.
  */
-export function mockDemo(): 'disruption' | 'flight-delay' | 'welcome-home' | null {
+export type MockDemo = 'executive' | 'disruption' | 'flight-delay' | 'welcome-home';
+
+export function mockDemo(): MockDemo | null {
   const d = urlParam('demo');
-  return d === 'disruption' || d === 'flight-delay' || d === 'welcome-home' ? d : null;
+  if (d === 'executive' || d === 'disruption' || d === 'flight-delay' || d === 'welcome-home') return d;
+  return env.demoMode === 'executive' ? 'executive' : null;
 }
 
 /** Four days after the guests flew home to Miami: where the welcome-home demo starts. */
@@ -56,6 +63,9 @@ export const WELCOME_HOME_DEMO_NOW = '2027-05-26T10:00:00-04:00';
 
 /** Embarkation morning, with AA 7412 in the air: where the flight-delay demo starts. */
 export const FLIGHT_DELAY_DEMO_NOW = '2027-05-15T07:30:00+02:00';
+
+/** Where each demonstration's clock is pinned ('' = the dataset's reference moment). */
+const DEMO_NOW: Record<MockDemo | 'none', string> = { executive: EXECUTIVE_DEMO_NOW, 'flight-delay': FLIGHT_DELAY_DEMO_NOW, 'welcome-home': WELCOME_HOME_DEMO_NOW, disruption: '', none: '' };
 
 /** True when the scenario asks for lists with nothing in them. */
 export const isEmptyScenario = () => mockScenario() === 'empty';
@@ -87,15 +97,15 @@ export function notFound(what: string, id: string): never {
   throw new ServiceError('not_found', `${what} ${id} not found`);
 }
 
-/** The development dataset every mock service reads from. */
-export const data = devDataset;
+/** The dataset every mock service reads from: the development dataset, or its executive-demo preparation. */
+export const data = mockDemo() === 'executive' ? executiveDemoDataset(devDataset) : devDataset;
 
 /**
  * Mock clock — pinned so the journey phase is predictable. Uses
  * EXPO_PUBLIC_DEMO_NOW when set, otherwise the dataset's reference moment.
  */
 export function mockNow(): Date {
-  const pinned = Date.parse(urlParam('now') || (mockDemo() === 'flight-delay' ? FLIGHT_DELAY_DEMO_NOW : mockDemo() === 'welcome-home' ? WELCOME_HOME_DEMO_NOW : '') || env.demoNow || data.meta.referenceNow);
+  const pinned = Date.parse(urlParam('now') || DEMO_NOW[mockDemo() ?? 'none'] || env.demoNow || data.meta.referenceNow);
   return Number.isNaN(pinned) ? new Date() : new Date(pinned);
 }
 

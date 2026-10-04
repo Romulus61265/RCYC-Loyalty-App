@@ -16,6 +16,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { ServiceProvider } from '@/services/ServiceProvider';
 import { JourneyProvider } from '@/hooks/useJourney';
 import { AnalyticsTracker } from '@/features/analytics/AnalyticsTracker';
+import { DemoButton } from '@/features/demo/DemoButton';
 import { SignInScreen } from '@/features/auth/SignInScreen';
 import { LoadingState } from '@/components';
 import { installGlobalErrorHandlers } from '@/core/errors';
@@ -64,6 +65,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="+not-found" options={{ presentation: 'modal' }} />
           </Stack>
+          <DemoButton />
         </JourneyProvider>
       </ServiceProvider>
     </SafeAreaProvider>
