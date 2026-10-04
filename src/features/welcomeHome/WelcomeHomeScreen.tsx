@@ -6,7 +6,7 @@
  */
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { readAs } from '@/hooks/useAnnounce';
 import { Button, Caption, Card, EmptyNote, ErrorState, Eyebrow, LoadingState, MediaFrame, Screen, Section, StatusLine, Text, TextLink } from '@/components';
 import type { RecapMemory, VoyageRecommendation } from '@/domain';

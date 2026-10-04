@@ -1,7 +1,7 @@
 /** Concierge header, the "speak with a person" panel, quick replies, composer and the requests list. */
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View, type Text as RNText } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { focusTarget, useFocusOnChange } from '@/hooks/useFocusOnChange';
 import type { EscalationTarget } from '@/domain';
 import { Caption, EmptyNote, Eyebrow, Text } from '@/components';

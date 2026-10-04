@@ -6,6 +6,7 @@
 import { AppState, Platform } from 'react-native';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { env } from '@/config/env';
+import { coalescingFetch } from './coalescingFetch';
 import { ServiceError } from '@/services/contracts';
 import { supabaseAuthStorage } from '@/security/secureStorage';
 
@@ -16,6 +17,8 @@ export function getSupabaseClient(): SupabaseClient {
   if (!client) {
     const created = createClient(env.supabaseUrl, env.supabaseAnonKey, {
       auth: { storage: supabaseAuthStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+      // Identical reads made together by a screen's services share one request (see coalescingFetch).
+      global: { fetch: coalescingFetch(fetch) },
     });
     // Refresh tokens only while the app is in the foreground (Supabase guidance for React Native).
     if (Platform.OS !== 'web') {

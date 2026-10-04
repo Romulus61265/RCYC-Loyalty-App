@@ -1,4 +1,5 @@
 import { toAppError } from '@/core/errors/AppError';
+import { noteServiceCall } from './dataVersion';
 import type { Logger } from '@/core/logging';
 import type { Services } from './contracts';
 
@@ -31,9 +32,13 @@ function instrument<T extends object>(name: string, target: T, log: Logger): T {
           log.warn(`${prop} failed`, { code: err.code });
           throw err;
         }
-        if (!isPromise(result)) return result;
+        if (!isPromise(result)) {
+          noteServiceCall(prop);
+          return result;
+        }
         return result.then(
           (resolved) => {
+            noteServiceCall(prop);
             const ms = Date.now() - started;
             if (ms > SLOW_MS) log.warn(`${prop} slow`, { ms });
             else log.debug(prop, { ms });

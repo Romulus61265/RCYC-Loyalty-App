@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Button, Caption, Card, Divider, Eyebrow, FactRow, MediaFrame, Section, StatusLine, Text } from '@/components';
 import { colors, spacing } from '@/theme';
 import type { EmbarkationSectionModel, SuiteSectionModel } from '../voyageModel';

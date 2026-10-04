@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { readAs } from '@/hooks/useAnnounce';
 import { Caption, Card, Divider, Eyebrow, MediaFrame, StatusLine, Text } from '@/components';
 import { colors, spacing } from '@/theme';
@@ -10,7 +10,12 @@ import type { ExperienceCardModel } from '../discoverModel';
  * One marketplace experience. Shows every decision-relevant fact at a
  * glance; the full description and inclusions expand on request.
  */
-export function ExperienceCard({
+/**
+ * Memoised: Save, Refine and filter changes re-render the screen, and with
+ * 28 cards that cost 350 ms to the next paint on a 4× slower CPU. The card
+ * objects are stable, so only the card that changed renders again.
+ */
+export const ExperienceCard = memo(function ExperienceCard({
   card,
   onRequest,
   saved = false,
@@ -121,7 +126,7 @@ export function ExperienceCard({
       </View>
     </Card>
   );
-}
+});
 
 function Fact({ icon, text }: { icon: React.ComponentProps<typeof Ionicons>['name']; text: string }) {
   return (

@@ -29,6 +29,7 @@ import { RepositoryGuestProfileService } from '@/services/profile/RepositoryGues
 import { MemoryKeyValueStore } from '@/services/repositories/KeyValueStore';
 import { LocalPreferencesRepository } from '@/services/repositories/PreferencesRepository';
 import { createSupabaseServices } from '@/services/supabase';
+import { coalescingFetch } from '@/services/remote/coalescingFetch';
 import { SupabasePreferencesRepository } from '@/services/remote/SupabasePreferencesRepository';
 import { buildSeedRows, fixtureIdFor, uuidFor } from './seedRows';
 import { claimsChange } from '../../supabase/functions/_shared/concierge/guard.ts';
@@ -181,10 +182,12 @@ async function gateway(clock: () => Date): Promise<{ url: string; close: () => v
 }
 
 const ANON_KEY = jwt({ role: 'anon' });
-const clientFor = (url: string, userId?: string): SupabaseClient =>
+// Through the app's coalescing fetch (as getSupabaseClient does), so every check here also proves
+// that shared reads never hide a write. `global` replaces it (request-profile.ts).
+const clientFor = (url: string, userId?: string, global: { fetch: typeof fetch } = { fetch: coalescingFetch(fetch) }): SupabaseClient =>
   userId
-    ? createClient(url, ANON_KEY, { accessToken: async () => jwt({ sub: userId, role: 'authenticated', aud: 'authenticated' }) })
-    : createClient(url, ANON_KEY, { auth: { persistSession: false } });
+    ? createClient(url, ANON_KEY, { accessToken: async () => jwt({ sub: userId, role: 'authenticated', aud: 'authenticated' }), global })
+    : createClient(url, ANON_KEY, { auth: { persistSession: false }, global });
 
 // ─── Run ───────────────────────────────────────────────────────────────────
 
@@ -755,7 +758,12 @@ async function main() {
   console.log(`✔ Supabase integration: all ${passed} checks passed.`);
 }
 
-main().catch((e: unknown) => {
-  console.error(e);
-  process.exit(1);
-});
+// Imported by request-profile.ts for its gateway and clients; run directly, it runs the checks.
+if (!process.env.INTEGRATION_AS_LIBRARY) {
+  main().catch((e: unknown) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
+
+export { clientFor, gateway, jwt };

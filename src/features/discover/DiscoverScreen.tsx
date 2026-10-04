@@ -3,7 +3,7 @@
  * (`/discover?category=wine`); refinements are local UI state. Filtering is
  * a pure function over the view model, so no data logic lives here.
  */
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ErrorState, InlineError, LiveAnnouncer, LoadingState, PageHeader, Screen, SegmentedTabs, Section } from '@/components';
@@ -32,6 +32,14 @@ export function DiscoverScreen() {
   const [refine, setRefine] = useState<Omit<DiscoverFilters, 'category'>>(DEFAULT_FILTERS);
   const [panelOpen, setPanelOpen] = useState(false);
   const { data: model, loading, error, reload, saved, toggleSave, viewed, requested } = useDiscover();
+  // Stable, so a card that did not change is not re-rendered when the screen's state does.
+  const request = useCallback(
+    (card?: { recommendation?: unknown } & Parameters<typeof requested>[0]) => {
+      if (card) requested(card);
+      router.push('/concierge');
+    },
+    [requested],
+  );
 
   if (loading && !model) return <LoadingState label="Curating your experiences…" />;
   if (error || !model) {
@@ -51,10 +59,6 @@ export function DiscoverScreen() {
     if (c !== category) setCategory(c);
   };
   const clear = () => setRefine(DEFAULT_FILTERS);
-  const request = (card?: { recommendation?: unknown } & Parameters<typeof requested>[0]) => {
-    if (card) requested(card);
-    router.push('/concierge');
-  };
   const results = applyDiscoverFilters(model.cards, filters);
   const heading = DISCOVER_CATEGORIES.find((c) => c.key === category)?.label ?? 'All';
 

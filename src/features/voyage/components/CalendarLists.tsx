@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import type { CalendarEntryKind } from '@/domain';
 import { Caption, Card, Divider, EmptyNote, Eyebrow, InlineError, Section, StatusLine, Text } from '@/components';

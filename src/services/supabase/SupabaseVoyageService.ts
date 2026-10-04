@@ -46,7 +46,12 @@ export class SupabaseVoyageService implements VoyageService {
   private async partyReservations(guestId: ID): Promise<{ reservation: VoyageReservation; start: string; end: string }[]> {
     const id = uuid(guestId, 'Guest');
     const rows = await many<ReservationRow & { voyage: { start_date: string; end_date: string } | null }>(
-      this.db.from('reservations').select(`${RESERVATION_COLUMNS}, voyage:voyages(start_date, end_date)`),
+      // Filtered by the party in the query, not only by RLS: RLS alone checks every reservation in
+      // the fleet (1,052 ms with 20k others, SCALE_PROBE=1); through reservation_guests' index, 1 ms.
+      this.db
+        .from('reservations')
+        .select(`${RESERVATION_COLUMNS}, voyage:voyages(start_date, end_date), mine:reservation_guests!inner(guest_id)`)
+        .eq('mine.guest_id', id),
     );
     return rows
       .map((r) => ({ reservation: toReservation(r), start: r.voyage?.start_date ?? '', end: r.voyage?.end_date ?? '' }))

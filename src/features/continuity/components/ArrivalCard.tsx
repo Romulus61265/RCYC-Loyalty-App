@@ -1,6 +1,6 @@
 /** Home: the arrival update, headline first, then each change in a line. */
 import { StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Caption, Card, Section, Text, TextLink } from '@/components';
 import { colors, spacing } from '@/theme';
 import type { ArrivalCardModel } from '../arrivalModel';

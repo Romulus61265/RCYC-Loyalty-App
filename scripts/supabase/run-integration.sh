@@ -48,10 +48,17 @@ pgrun "$PSQL -d base -f $WORK/00_local_stubs.sql $MIGRATIONS" 2>&1 | grep -v 'NO
 
 echo "── SQL smoke tests"
 {
-  pgrun "$PSQL -d base -At -f $WORK/10_rls_smoke.sql -f $WORK/20_preferences_smoke.sql" 2>&1 | grep -v 'audit_log is append-only\|forbid_audit_mutation'
+  pgrun "$PSQL -d base -At -f $WORK/10_rls_smoke.sql -f $WORK/20_preferences_smoke.sql -f $WORK/40_index_audit.sql" 2>&1 | grep -v 'audit_log is append-only\|forbid_audit_mutation'
   pgrun "$PSQL -d smoke -At -f $WORK/30_integration_smoke.sql" 2>&1
 } | tee "$WORK/sql.out" | grep -E '\|f$|NOT REFUSED|ERROR' && { echo "✘ SQL smoke test failed"; exit 1; }
 echo "✔ $(grep -c '|t$' "$WORK/sql.out") SQL assertions passed"
+
+# Optional: the guest's queries with another voyage's fleet-scale volume in the tables.
+if [ -n "${SCALE_PROBE:-}" ]; then
+  echo "── Scale probe"
+  cp "$ROOT"/supabase/tests/90_scale_probe.sql "$WORK"/; [ ${#RUN_AS[@]} -gt 0 ] && chown postgres "$WORK"/90_scale_probe.sql
+  pgrun "$PSQL -d smoke -At -f $WORK/90_scale_probe.sql" 2>&1 | grep 'scale probe'
+fi
 
 # PostgREST login role; the guest's invited account (linked by the trigger);
 # and a second guest with no reservation.
@@ -88,4 +95,9 @@ GUEST=$(pgrun "$PSQL -d app -At -c \"select auth_user_id from public.guests wher
 cd "$ROOT"
 PGRST_URL="http://127.0.0.1:$REST_PORT" JWT_SECRET="$JWT_SECRET" GUEST_USER_ID="$GUEST" OTHER_USER_ID="b0000000-0000-0000-0000-0000000000b2" \
   CREW_USER_ID="b0000000-0000-0000-0000-0000000000c3" SHORE_USER_ID="b0000000-0000-0000-0000-0000000000d4" \
-  npx tsx scripts/supabase/integration.ts
+  npx tsx "${INTEGRATION_SCRIPT:-scripts/supabase/integration.ts}"
+
+echo "── Requests per screen"
+PGRST_URL="http://127.0.0.1:$REST_PORT" JWT_SECRET="$JWT_SECRET" GUEST_USER_ID="$GUEST" OTHER_USER_ID="b0000000-0000-0000-0000-0000000000b2" \
+  CREW_USER_ID="b0000000-0000-0000-0000-0000000000c3" SHORE_USER_ID="b0000000-0000-0000-0000-0000000000d4" INTEGRATION_AS_LIBRARY=1 \
+  npx tsx scripts/supabase/request-profile.ts

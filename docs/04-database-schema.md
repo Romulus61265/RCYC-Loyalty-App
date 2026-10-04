@@ -268,6 +268,13 @@ Generated from the fictional dataset by `npm run seed:generate`, so do not edit 
   * `personalization-next-best` reads it as the engine's history.
 * See [18](18-voyage-history.md).
 
+## Performance (`20261013000000_performance.sql`)
+
+* `voyage_feedback(reservation_id)` is indexed, for crew reads and its read policy.
+* Every foreign key has an index leading with its columns, apart from 13 audit columns that no query filters on. `supabase/tests/40_index_audit.sql` checks this.
+* The app's reads always filter by the guest, reservation or conversation. A read that leaves RLS to filter checks every row of the table: 1 s for the guest's reservations at 20k others, against 1 ms filtered. `request-profile.ts` fails on such a read.
+* See [21](21-performance.md).
+
 ## Testing
 
 | Command | Needs | Covers |

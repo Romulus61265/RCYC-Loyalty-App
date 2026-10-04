@@ -3,7 +3,7 @@
  * Catalogue, destinations, voyage and profile are required; availability,
  * bookings and recommendations each degrade on their own.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { toAppError } from '@/core/errors';
 import { settle } from '@/features/shared/status';
 import { useAsync } from '@/hooks/useAsync';
@@ -37,19 +37,21 @@ export function useDiscover() {
 
   // Saved for later, this session. Saving tells personalization the guest is interested.
   const [saved, setSaved] = useState<ReadonlySet<string>>(new Set());
+  // Read through a ref, so toggleSave keeps one identity and saving one card re-renders only that card
+  // (every memoised card received the new callback otherwise: ~2,900 renders per Save).
+  const savedRef = useRef(saved);
   const toggleSave = useCallback(
     (card: ExperienceCardModel) => {
-      const on = !saved.has(card.id);
-      setSaved((s) => {
-        const next = new Set(s);
-        if (on) next.add(card.id);
-        else next.delete(card.id);
-        return next;
-      });
+      const on = !savedRef.current.has(card.id);
+      const next = new Set(savedRef.current);
+      if (on) next.add(card.id);
+      else next.delete(card.id);
+      savedRef.current = next;
+      setSaved(next);
       services.analytics.track('experience_saved', { experience_id: card.id, category: card.category, saved: on ? 'yes' : 'no' });
       if (on) void services.personalization.recordFeedback(guestId, card.id, 'saved').catch(() => undefined);
     },
-    [saved, services, guestId],
+    [services, guestId],
   );
   const viewed = useCallback((card: ExperienceCardModel) => services.analytics.track('experience_viewed', { experience_id: card.id, category: card.category, surface: 'discover' }), [services]);
   const requested = useCallback(

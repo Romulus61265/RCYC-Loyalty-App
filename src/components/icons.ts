@@ -5,7 +5,7 @@
  * what it means. An icon that must be heard on its own opts back in with
  * `{...meaningfulIcon('Sensitive information')}`.
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 const Icon = Ionicons as unknown as { defaultProps?: Record<string, unknown> };
 Icon.defaultProps = { ...Icon.defaultProps, accessible: false, accessibilityElementsHidden: true, importantForAccessibility: 'no-hide-descendants', 'aria-hidden': true };

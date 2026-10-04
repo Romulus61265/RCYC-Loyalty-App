@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Caption, Card, Divider, EmptyNote, Eyebrow, FactRow, InlineError, MediaFrame, Section, Text } from '@/components';
 import { colors, spacing } from '@/theme';
 import type { OverviewModel, PortModel, VoyageSectionKey } from '../voyageModel';

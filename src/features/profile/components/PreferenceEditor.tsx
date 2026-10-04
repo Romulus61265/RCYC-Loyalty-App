@@ -4,7 +4,7 @@
  */
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View, type Text as RNText } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { announce } from '@/hooks/useAnnounce';
 import { focusTarget, useFocusOnChange } from '@/hooks/useFocusOnChange';
 import type { GuestPreferences } from '@/domain';

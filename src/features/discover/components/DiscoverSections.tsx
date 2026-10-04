@@ -1,5 +1,6 @@
+import { useDeferredValue } from 'react';
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Caption, Chip, ChipGroup, EmptyNote, Eyebrow, InlineError, MediaFrame, MediaTile, Section, Text } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 import type { DestinationCardModel, DiscoverFilters, DiscoverModel, ExperienceCardModel, InterestKey } from '../discoverModel';
@@ -93,7 +94,7 @@ function FilterRow({ label, kind, children }: { label: string; kind: 'radio' | '
 // ─── Results ───────────────────────────────────────────────────────────────
 
 export function ExperienceResults({
-  cards,
+  cards: incoming,
   heading,
   onRequest,
   onClear,
@@ -109,6 +110,9 @@ export function ExperienceResults({
   onSave?: (c: ExperienceCardModel) => void;
   onView?: (c: ExperienceCardModel) => void;
 }) {
+  // A filter that brings many cards back (all ports again: 26 to mount) paints the chip at once and
+  // fills the list just after, in work that yields to the next tap (408–456 ms to paint before, 4× CPU).
+  const cards = useDeferredValue(incoming);
   const { width } = useWindowDimensions();
   const columns = width >= 760 ? 2 : 1;
   if (cards.length === 0) {

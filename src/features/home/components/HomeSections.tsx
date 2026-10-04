@@ -3,7 +3,7 @@
  * callbacks; none fetches data or knows about services.
  */
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import type { ExperienceCategory, JourneyAlert } from '@/domain';
 import {

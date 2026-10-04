@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import type { GuestPreferences } from '@/domain';
 import { router } from 'expo-router';
 import { liveRegion, readAs } from '@/hooks/useAnnounce';

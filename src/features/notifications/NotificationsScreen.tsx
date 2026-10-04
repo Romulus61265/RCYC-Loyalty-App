@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { router, type Href } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { readAs } from '@/hooks/useAnnounce';
 import { Caption, Chip, ChipGroup, EmptyNote, ErrorState, Eyebrow, LoadingState, PageHeader, Screen, Section, Text, TextLink } from '@/components';
 import type { NotificationType } from '@/domain';

@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode, type Ref } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import type { JourneyAlert } from '@/domain';
 import { colors, radii, spacing } from '@/theme';

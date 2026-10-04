@@ -4,7 +4,7 @@
  */
 import { useId, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Switch, TextInput, View, type TextInputProps } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { announce, useAnnounce } from '@/hooks/useAnnounce';
 import { colors, fonts, radii, spacing } from '@/theme';
 import { Chip, ChipGroup } from './Controls';

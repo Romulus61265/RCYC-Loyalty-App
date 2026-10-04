@@ -5,7 +5,7 @@
  */
 import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { readAs } from '@/hooks/useAnnounce';
 import { Caption, Card, ErrorState, Eyebrow, FactRow, LoadingState, MediaFrame, Screen, Section, StatusLine, Text } from '@/components';
 import type { PastVoyageMoment } from '@/domain';
