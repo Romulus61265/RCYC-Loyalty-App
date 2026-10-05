@@ -7,7 +7,7 @@ import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { readAs } from '@/hooks/useAnnounce';
-import { Caption, Card, ErrorState, Eyebrow, FactRow, LoadingState, MediaFrame, Screen, Section, StatusLine, Text } from '@/components';
+import { Caption, Card, Eyebrow, FactRow, LoadingState, MediaFrame, Screen, ScreenError, Section, StatusLine, Text } from '@/components';
 import type { PastVoyageMoment } from '@/domain';
 import { BackBar } from '@/features/requests/components/RequestParts';
 import { colors, spacing } from '@/theme';
@@ -22,9 +22,7 @@ export function PastVoyageScreen() {
   if (loading && !e) return <LoadingState label="One moment…" />;
   if (error || !e) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
-        <ErrorState error={error} onRetry={reload} />
-      </View>
+      <ScreenError error={error} onRetry={reload} />
     );
   }
   return (

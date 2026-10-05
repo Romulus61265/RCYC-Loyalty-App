@@ -7,7 +7,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { router, type Href } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { readAs } from '@/hooks/useAnnounce';
-import { Caption, Chip, ChipGroup, EmptyNote, ErrorState, Eyebrow, LoadingState, PageHeader, Screen, Section, Text, TextLink } from '@/components';
+import { Caption, Chip, ChipGroup, EmptyNote, Eyebrow, LoadingState, PageHeader, Screen, ScreenError, Section, Text, TextLink } from '@/components';
 import type { NotificationType } from '@/domain';
 import { BackBar } from '@/features/requests/components/RequestParts';
 import { colors, radii, spacing } from '@/theme';
@@ -22,9 +22,7 @@ export function NotificationsScreen() {
   if (loading && !model) return <LoadingState label="One moment…" />;
   if (error || !model) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
-        <ErrorState error={error} onRetry={reload} />
-      </View>
+      <ScreenError error={error} onRetry={reload} />
     );
   }
 

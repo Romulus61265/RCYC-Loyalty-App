@@ -26,13 +26,13 @@ EXPO_PUBLIC_APP_ENV=development EXPO_PUBLIC_SERVICE_MODE=mock EXPO_PUBLIC_DEMO_M
 
 ## The presenter's controls
 
-During a demonstration, a small **Demo** button sits at the top of every screen, beside the notification bell. It opens the **Presenter** screen (`/demo`), which holds:
+During a demonstration, a slim bar sits above every screen: **Demo · fictional data**, with **Presenter ›** on the right. It takes its own place in the layout, and the top safe area, so it never covers content. It opens the **Presenter** screen (`/demo`), which holds:
 
 * the script: every step, with what to show and say, and **Go to step N**;
 * **Report the flight delay** (step 13), the one step the presenter performs rather than shows;
 * **Reset the demonstration**.
 
-The button is labelled "Demo", so the audience is never in doubt that the data is fictional. Outside a demonstration, neither the button nor the screen does anything.
+The bar says the data is fictional, so the audience is never in doubt. Outside a demonstration, neither the bar nor the screen appears.
 
 ## The journey
 
@@ -88,7 +88,7 @@ Closing and reopening the app, or reloading the web page, does the same.
 | | Covers |
 |---|---|
 | `npm run check:demo` (29 checks, in `verify`) | `DEMO_MODE` parsing and refusal outside mock services and in production. The executive dataset: derived without changing the development one, consistent (no dangling bookings or recommendations), Alexander, Evrima, the Grand Suite, Titanium, the unbooked private vineyard with its reason, no outstanding paperwork. The pinned clock; two runs showing the same bookings and recommendations; one run's changes not reaching the next. The script: 15 steps in the briefed order, on routes that exist, with only step 13 performed. |
-| Browser walk-through (outside the repository, with the other browser suites) | All 15 steps through the app, twice; the in-app reset; the Demo button absent outside a demonstration (49 checks) |
+| Browser walk-through (outside the repository, with the other browser suites) | All 15 steps through the app, twice; the in-app reset; the demo bar absent outside a demonstration (49 checks) |
 
 ## Files
 
@@ -100,5 +100,5 @@ Closing and reopening the app, or reloading the web page, does the same.
 | `src/services/mock/executiveDemoScript.ts` | The 15 steps |
 | `src/services/contracts` (`DemoService`), `src/services/demo.ts`, `src/services/registry.ts` | The presenter's controls: script, flight delay, reset; inert outside a demonstration |
 | `src/services/ServiceProvider.tsx` | Builds fresh services on reset |
-| `src/features/demo/` and `src/app/demo.tsx` | The Demo button and the Presenter screen |
+| `src/features/demo/` and `src/app/demo.tsx` | The demo bar (`DemoFrame`) and the Presenter screen |
 | `src/features/voyage/PortScreen.tsx` and `src/app/port/[id].tsx` | A port in full: opened from the itinerary in every mode, not only in the demonstration |

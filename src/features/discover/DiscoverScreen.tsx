@@ -4,10 +4,8 @@
  * a pure function over the view model, so no data logic lives here.
  */
 import { useCallback, useState } from 'react';
-import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ErrorState, InlineError, LiveAnnouncer, LoadingState, PageHeader, Screen, SegmentedTabs, Section } from '@/components';
-import { colors } from '@/theme';
+import { InlineError, LiveAnnouncer, LoadingState, PageHeader, Screen, ScreenError, Section, SegmentedTabs } from '@/components';
 import { DestinationList, ExperienceResults, FilterPanel, RecommendedRail, RefineBar } from './components/DiscoverSections';
 import {
   activeFilterCount,
@@ -44,9 +42,7 @@ export function DiscoverScreen() {
   if (loading && !model) return <LoadingState label="Curating your experiences…" />;
   if (error || !model) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
-        <ErrorState error={error} onRetry={reload} />
-      </View>
+      <ScreenError error={error} onRetry={reload} />
     );
   }
 

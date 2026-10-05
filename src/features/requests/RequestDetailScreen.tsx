@@ -4,7 +4,7 @@ import { View, type Text as RNText, type View as RNView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { focusTarget, useFocusOnChange } from '@/hooks/useFocusOnChange';
 import { useAnnounce } from '@/hooks/useAnnounce';
-import { Button, Caption, ErrorState, FactRow, InlineError, LoadingState, PageHeader, Screen, Section, StatusLine, Text } from '@/components';
+import { Button, Caption, FactRow, InlineError, LoadingState, PageHeader, Screen, ScreenError, Section, StatusLine, Text } from '@/components';
 import { colors, spacing } from '@/theme';
 import { BackBar, StatusSteps } from './components/RequestParts';
 import { useRequestDetail } from './useRequests';
@@ -24,9 +24,7 @@ export function RequestDetailScreen() {
   if (loading && !model) return <LoadingState label="One moment…" />;
   if (error || !model) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
-        <ErrorState error={error} onRetry={reload} />
-      </View>
+      <ScreenError error={error} onRetry={reload} />
     );
   }
 

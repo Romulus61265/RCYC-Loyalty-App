@@ -137,6 +137,15 @@ export function ErrorState({ error, onRetry }: { error?: unknown; onRetry?: () =
   );
 }
 
+/** A whole screen that could not load: the failure state, centred, with a retry. */
+export function ScreenError({ error, onRetry }: { error?: unknown; onRetry?: () => void }) {
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
+      <ErrorState error={error} onRetry={onRetry} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   // Centred reading column: comfortable line lengths on tablets and web.

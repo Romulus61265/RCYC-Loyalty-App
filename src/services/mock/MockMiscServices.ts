@@ -69,7 +69,7 @@ export class MockAuthService implements AuthService {
  * the default preferences. Edits go through the PreferencesRepository.
  */
 export class MockGuestRecordSource implements GuestRecordSource {
-  getProfile(_guestId: ID) {
+  async getProfile(_guestId: ID) {
     failIf('core', 'guest record');
     return latency(guestProfile);
   }
@@ -187,7 +187,7 @@ export class MockJourneyEventService implements JourneyEventService {
     return 'sent';
   }
 
-  listAlerts(_reservationId: ID) {
+  async listAlerts(_reservationId: ID) {
     failIf('optional', 'alerts');
     if (isEmptyScenario()) return latency<JourneyAlert[]>([]);
     return latency(this.alerts.filter((a) => !a.acknowledged));

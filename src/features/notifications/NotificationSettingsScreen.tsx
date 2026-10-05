@@ -2,7 +2,7 @@
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import { announce } from '@/hooks/useAnnounce';
-import { Button, Caption, Chip, ChipGroup, ChoiceGroup, ErrorState, InlineError, LoadingState, PageHeader, Screen, Section, Text, TextLink } from '@/components';
+import { Button, Caption, Chip, ChipGroup, ChoiceGroup, InlineError, LoadingState, PageHeader, Screen, ScreenError, Section, Text, TextLink } from '@/components';
 import { BackBar } from '@/features/requests/components/RequestParts';
 import { colors, spacing } from '@/theme';
 import { useNotificationSettings } from './useNotifications';
@@ -14,9 +14,7 @@ export function NotificationSettingsScreen() {
   if (loading && !view) return <LoadingState label="One moment…" />;
   if (error || !view) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
-        <ErrorState error={error} onRetry={reload} />
-      </View>
+      <ScreenError error={error} onRetry={reload} />
     );
   }
   const p = view.settings.preferences;

@@ -18,6 +18,3 @@ export const IDS = {
     greekIsles: 'dev_voy_il250614',
   },
 } as const;
-
-/** Reserved example domain (RFC 2606) for any e-mail-like value. */
-export const EXAMPLE_DOMAIN = 'example.com';

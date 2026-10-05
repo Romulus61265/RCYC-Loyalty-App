@@ -4,8 +4,8 @@
  */
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Button, EmptyNote, ErrorState, LoadingState, PageHeader, Screen, SegmentedTabs } from '@/components';
-import { colors, spacing } from '@/theme';
+import { Button, EmptyNote, LoadingState, PageHeader, Screen, ScreenError, SegmentedTabs } from '@/components';
+import { spacing } from '@/theme';
 import { BackBar, RequestRow } from './components/RequestParts';
 import { useRequestsList } from './useRequests';
 
@@ -20,9 +20,7 @@ export function RequestsScreen() {
   if (loading && !model) return <LoadingState label="Gathering your requests…" />;
   if (error || !model) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
-        <ErrorState error={error} onRetry={reload} />
-      </View>
+      <ScreenError error={error} onRetry={reload} />
     );
   }
 

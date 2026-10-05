@@ -9,7 +9,7 @@ import { StyleSheet, View, type Text as RNText } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { focusTarget, useFocusOnChange } from '@/hooks/useFocusOnChange';
 import { useAnnounce } from '@/hooks/useAnnounce';
-import { Button, Caption, Card, ErrorState, Eyebrow, InlineError, LoadingState, Screen, Section, StatusLine, Text, TextField, TextLink, ToggleRow } from '@/components';
+import { Button, Caption, Card, Eyebrow, InlineError, LoadingState, Screen, ScreenError, Section, StatusLine, Text, TextField, TextLink, ToggleRow } from '@/components';
 import type { AppError } from '@/core/errors';
 import { BackBar } from '@/features/requests/components/RequestParts';
 import { colors, radii, spacing } from '@/theme';
@@ -27,9 +27,7 @@ export function RecoveryScreen() {
   if (loading && !model) return <LoadingState label="One moment…" />;
   if (error || !model) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
-        <ErrorState error={error} onRetry={reload} />
-      </View>
+      <ScreenError error={error} onRetry={reload} />
     );
   }
 

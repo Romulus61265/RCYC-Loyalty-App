@@ -95,7 +95,9 @@ async function main() {
   const missing = steps.filter((s) => s.route && !existsSync(join(ROOT, routeFile(s.route))));
   check('every step’s route exists', missing.length === 0, missing.map((s) => s.route));
   check('Mallorca’s route is the vineyard’s port', steps.filter((s) => s.route?.startsWith('/port/')).every((s) => s.route === `/port/${EXECUTIVE_DEMO_VINEYARD.portCallId}`));
-  check('the presenter screen and the Demo button exist', existsSync(join(ROOT, 'src/app/demo.tsx')) && /if \(!demo\.mode \|\| path === '\/demo'\) return null;/.test(readFileSync(join(ROOT, 'src/features/demo/DemoButton.tsx'), 'utf8')));
+  const frame = readFileSync(join(ROOT, 'src/features/demo/DemoFrame.tsx'), 'utf8');
+  check('the presenter screen exists, and the demo bar appears only in a demonstration', existsSync(join(ROOT, 'src/app/demo.tsx')) && /if \(!demo\.mode\) return <>\{children\}<\/>;/.test(frame));
+  check('the demo bar takes its own place (never over content)', /SafeAreaInsetsContext\.Provider value=\{\{ \.\.\.insets, top: 0 \}\}/.test(frame) && /<DemoFrame>/.test(readFileSync(join(ROOT, 'src/app/_layout.tsx'), 'utf8')));
   check('a reset wipes the device and builds fresh services', /async reset\(\) \{\n\s+await device\.wipe\(\);\n\s+onReset\(\);/.test(registry) && /key=\{generation\}/.test(readFileSync(join(ROOT, 'src/services/ServiceProvider.tsx'), 'utf8')));
 
   if (failures.length) {

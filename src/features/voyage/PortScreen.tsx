@@ -5,7 +5,7 @@
  */
 import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Button, Caption, Card, Divider, EmptyNote, ErrorState, Eyebrow, FactRow, LoadingState, MediaFrame, Screen, Section, Text } from '@/components';
+import { Button, Caption, Card, Divider, EmptyNote, Eyebrow, FactRow, LoadingState, MediaFrame, Screen, ScreenError, Section, Text } from '@/components';
 import { BackBar } from '@/features/requests/components/RequestParts';
 import { colors, spacing } from '@/theme';
 import { BookingRow } from './components/Rows';
@@ -21,9 +21,7 @@ export function PortScreen() {
   if (loading && !model) return <LoadingState label="One moment…" />;
   if (error || !model || !port) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
-        <ErrorState error={error ?? new Error('This port is not on your voyage')} onRetry={reload} />
-      </View>
+      <ScreenError error={error ?? new Error('This port is not on your voyage')} onRetry={reload} />
     );
   }
 

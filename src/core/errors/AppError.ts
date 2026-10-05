@@ -51,10 +51,6 @@ function defaultRetryable(code: ErrorCode): boolean {
   return code === 'unavailable' || code === 'offline' || code === 'timeout' || code === 'unknown';
 }
 
-export function isAppError(e: unknown): e is AppError {
-  return e instanceof AppError;
-}
-
 /** Normalises anything thrown into an AppError. */
 export function toAppError(e: unknown): AppError {
   if (e instanceof AppError) return e;

@@ -8,7 +8,7 @@ import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { readAs } from '@/hooks/useAnnounce';
-import { Button, Caption, Card, EmptyNote, ErrorState, Eyebrow, LoadingState, MediaFrame, Screen, Section, StatusLine, Text, TextLink } from '@/components';
+import { Button, Caption, Card, EmptyNote, Eyebrow, LoadingState, MediaFrame, Screen, ScreenError, Section, StatusLine, Text, TextLink } from '@/components';
 import type { RecapMemory, VoyageRecommendation } from '@/domain';
 import { BackBar } from '@/features/requests/components/RequestParts';
 import { colors, spacing } from '@/theme';
@@ -24,9 +24,7 @@ export function WelcomeHomeScreen() {
   if (loading && recap === undefined) return <LoadingState label="One moment…" />;
   if (error) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
-        <ErrorState error={error} onRetry={reload} />
-      </View>
+      <ScreenError error={error} onRetry={reload} />
     );
   }
   if (!recap) {

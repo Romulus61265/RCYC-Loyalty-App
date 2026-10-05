@@ -7,7 +7,7 @@ import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { readAs } from '@/hooks/useAnnounce';
-import { Button, Caption, Card, EmptyNote, ErrorState, Eyebrow, LoadingState, Screen, Section, StatusLine, Text } from '@/components';
+import { Button, Caption, Card, EmptyNote, Eyebrow, LoadingState, Screen, ScreenError, Section, StatusLine, Text } from '@/components';
 import { BackBar } from '@/features/requests/components/RequestParts';
 import { colors, spacing } from '@/theme';
 import { useArrival } from './useArrival';
@@ -19,9 +19,7 @@ export function ArrivalScreen() {
   if (loading && model === undefined) return <LoadingState label="One moment…" />;
   if (error) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
-        <ErrorState error={error} onRetry={reload} />
-      </View>
+      <ScreenError error={error} onRetry={reload} />
     );
   }
   if (!model) {

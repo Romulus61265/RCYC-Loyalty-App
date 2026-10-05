@@ -3,10 +3,8 @@
  * lives in the URL (`/voyage?section=documents`) so Home, alerts and push
  * notifications can link straight to it.
  */
-import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ErrorState, LoadingState, PageHeader, Screen, SegmentedTabs } from '@/components';
-import { colors } from '@/theme';
+import { LoadingState, PageHeader, Screen, ScreenError, SegmentedTabs } from '@/components';
 import { CalendarSection, CategorySection, DocumentsSection } from './components/CalendarLists';
 import { ItinerarySection, OverviewSection } from './components/OverviewItinerary';
 import { EmbarkationSection, SuiteSection } from './components/SuiteEmbarkation';
@@ -26,9 +24,7 @@ export function VoyageScreen() {
   if (loading && !model) return <LoadingState label="Gathering your voyage…" />;
   if (error || !model) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
-        <ErrorState error={error} onRetry={reload} />
-      </View>
+      <ScreenError error={error} onRetry={reload} />
     );
   }
 

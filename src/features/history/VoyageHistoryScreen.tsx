@@ -2,7 +2,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Caption, Card, EmptyNote, ErrorState, Eyebrow, LoadingState, MediaFrame, Screen, Section, Text } from '@/components';
+import { Caption, Card, EmptyNote, Eyebrow, LoadingState, MediaFrame, Screen, ScreenError, Section, Text } from '@/components';
 import { BackBar } from '@/features/requests/components/RequestParts';
 import { colors, spacing } from '@/theme';
 import { historySummary, placesLine, voyageLine } from './historyModel';
@@ -14,9 +14,7 @@ export function VoyageHistoryScreen() {
   if (loading && !data) return <LoadingState label="One moment…" />;
   if (error || !data) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
-        <ErrorState error={error} onRetry={reload} />
-      </View>
+      <ScreenError error={error} onRetry={reload} />
     );
   }
   return (

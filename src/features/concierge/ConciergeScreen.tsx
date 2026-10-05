@@ -8,7 +8,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { liveRegion, useAnnounce } from '@/hooks/useAnnounce';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { Caption, ErrorState, LoadingState, SegmentedTabs, StatusLine, TextLink } from '@/components';
+import { Caption, LoadingState, ScreenError, SegmentedTabs, StatusLine, TextLink } from '@/components';
 import { colors, spacing } from '@/theme';
 import { Composer, Header, PeoplePanel, QuickReplies, RequestsList } from './components/Chrome';
 import { ThreadView } from './components/Thread';
@@ -55,9 +55,7 @@ export function ConciergeScreen() {
   if (c.loading) return <LoadingState label="Your concierge is joining…" />;
   if (c.error || !c.model) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
-        <ErrorState error={c.error} onRetry={c.reload} />
-      </View>
+      <ScreenError error={c.error} onRetry={c.reload} />
     );
   }
   const model = c.model;

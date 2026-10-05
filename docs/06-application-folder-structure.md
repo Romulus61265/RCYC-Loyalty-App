@@ -74,7 +74,7 @@ RCYC-Loyalty-App/
 │   ├── security/
 │   │   ├── secureStorage.ts      Keychain/Keystore token storage
 │   │   ├── chunkedStorage.ts     Splits large sessions across keychain entries
-│   │   ├── authorization.ts      Presentation-only permission checks
+│   │   ├── deviceData.ts         What the app keeps on the device, wiped at sign-out
 │   │   └── pii.ts                Masking / redaction for logs & telemetry
 │   ├── services/
 │   │   ├── contracts/            ★ Service interfaces — the presentation boundary

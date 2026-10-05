@@ -15,7 +15,7 @@ export function buildCalendar(): CalendarDay[] {
 }
 
 export class MockScheduleService implements ScheduleService {
-  getCalendar(_reservationId: ID) {
+  async getCalendar(_reservationId: ID) {
     failIf('optional', 'calendar');
     if (isEmptyScenario()) return latency<CalendarDay[]>([]);
     return latency(buildCalendar());

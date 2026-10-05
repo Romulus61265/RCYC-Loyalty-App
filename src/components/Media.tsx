@@ -37,25 +37,6 @@ export function MediaFrame({ media, height, style, children, rounded = true, scr
   );
 }
 
-/** Full-bleed hero with editorial headline. */
-export function Hero({ media, eyebrow, title, subtitle, height = 440, topInset = 0 }: { media: MediaAsset; eyebrow?: string; title: string; subtitle?: string; height?: number; topInset?: number }) {
-  return (
-    <MediaFrame media={media} height={height + topInset} rounded={false}>
-      <View style={[styles.heroContent, { paddingTop: topInset }]}>
-        {eyebrow ? <Eyebrow color={colors.textOnImageMuted}>{eyebrow}</Eyebrow> : null}
-        <Text variant="hero" color={colors.textInverse} accessibilityRole="header" style={{ marginTop: spacing.xs }}>
-          {title}
-        </Text>
-        {subtitle ? (
-          <Text variant="subtitle" color={colors.textOnImageMuted} style={{ marginTop: spacing.xs }}>
-            {subtitle}
-          </Text>
-        ) : null}
-      </View>
-    </MediaFrame>
-  );
-}
-
 /** Editorial tile used in horizontal carousels (Discover, recommendations). */
 export function MediaTile({ media, eyebrow, title, caption, width = 260, height = 320 }: { media: MediaAsset; eyebrow?: string; title: string; caption?: string; width?: number; height?: number }) {
   return (
@@ -78,6 +59,5 @@ export function MediaTile({ media, eyebrow, title, caption, width = 260, height 
 }
 
 const styles = StyleSheet.create({
-  heroContent: { flex: 1, justifyContent: 'flex-end', padding: spacing.gutter, paddingBottom: spacing.xl },
   tileContent: { flex: 1, justifyContent: 'flex-end', padding: spacing.md },
 });

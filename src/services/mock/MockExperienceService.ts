@@ -9,7 +9,7 @@ export class MockExperienceService implements ExperienceService {
   // Copies, so changes stay with this instance (and never touch the fixtures).
   private bookings: ExperienceBooking[] = bookings.map((b) => ({ ...b }));
 
-  listBookings(reservationId: ID, filter?: { category?: ExperienceCategory }) {
+  async listBookings(reservationId: ID, filter?: { category?: ExperienceCategory }) {
     failIf('optional', 'bookings');
     if (isEmptyScenario()) return latency<ExperienceBooking[]>([]);
     return latency(
@@ -30,7 +30,7 @@ export class MockExperienceService implements ExperienceService {
     return day ? latency(day) : notFound('Day', String(dayNumber));
   }
 
-  listDaySchedules(_reservationId: ID) {
+  async listDaySchedules(_reservationId: ID) {
     failIf('optional', 'day schedules');
     if (isEmptyScenario()) return latency(daySchedules.map((d) => ({ ...d, items: [] })));
     return latency(daySchedules);
@@ -49,7 +49,7 @@ export class MockExperienceService implements ExperienceService {
     return found ? latency(found) : notFound('Experience', experienceId);
   }
 
-  listAvailability(_voyageId: ID) {
+  async listAvailability(_voyageId: ID) {
     failIf('optional', 'availability');
     return latency(availability);
   }

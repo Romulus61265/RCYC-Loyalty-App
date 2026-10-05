@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, View, type Text as RNText } from 'react-native';
 import { router } from 'expo-router';
 import { focusTarget, useFocusOnChange } from '@/hooks/useFocusOnChange';
-import { Button, Caption, Card, Chip, ChipGroup, ErrorState, Eyebrow, InlineError, LoadingState, Screen, Text, TextField, TextLink, ToggleRow } from '@/components';
+import { Button, Caption, Card, Chip, ChipGroup, Eyebrow, InlineError, LoadingState, Screen, ScreenError, Text, TextField, TextLink, ToggleRow } from '@/components';
 import type { AppError } from '@/core/errors';
 import type { FeedbackPatch, VoyageFeedback, VoyageRecap } from '@/domain';
 import { BackBar } from '@/features/requests/components/RequestParts';
@@ -22,9 +22,7 @@ export function ReflectionsScreen() {
   if (state.loading && !recap) return <LoadingState label="One moment…" />;
   if (state.error || !recap || !feedback) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
-        <ErrorState error={state.error} onRetry={state.reload} />
-      </View>
+      <ScreenError error={state.error} onRetry={state.reload} />
     );
   }
 
