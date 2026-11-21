@@ -24,6 +24,16 @@ EXPO_PUBLIC_APP_ENV=development EXPO_PUBLIC_SERVICE_MODE=mock EXPO_PUBLIC_DEMO_M
 * **Never in production.** A production build must run on Supabase (docs/22, H6), so it cannot run a demonstration.
 * **Without rebuilding:** any non-production web build opens the same demonstration at `?demo=executive`. The query is read once, when the app opens, so in-app navigation keeps it.
 
+## Hosting on Vercel
+
+`npm run build:web` builds the hosted demonstration into `dist/`: staging, mock services, executive demo mode. `vercel.json` makes Vercel do the same on every deploy:
+
+* runs `npm ci`, then `npm run build:web`;
+* serves `dist/`;
+* answers deep links such as `/voyage` or `/port/dev_pc_2` with `index.html`, so a reload or a shared link opens the right screen.
+
+The variables must be declared at build time. A web export built without them shows "The app isn't quite ready" by design (docs/22, H6), whatever the URL. To host the ordinary mock app instead of the demonstration, remove `EXPO_PUBLIC_DEMO_MODE=executive` from `build:web`. `?demo=executive` still opens the demonstration on demand.
+
 ## The presenter's controls
 
 During a demonstration, a slim bar sits above every screen: **Demo · fictional data**, with **Presenter ›** on the right. It takes its own place in the layout, and the top safe area, so it never covers content. It opens the **Presenter** screen (`/demo`), which holds:

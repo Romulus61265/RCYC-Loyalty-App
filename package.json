@@ -8,6 +8,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "build:web": "EXPO_PUBLIC_APP_ENV=staging EXPO_PUBLIC_SERVICE_MODE=mock EXPO_PUBLIC_DEMO_MODE=executive expo export -p web --clear --output-dir dist",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
